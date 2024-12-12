@@ -37,9 +37,10 @@ import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateBusinessObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateBusinessObjectFromTemplateAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteBusinessObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.EditObjectAction;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.ExecuteClassReportAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.ExecuteClassLevelReportAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.RefreshObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.ShowObjectIdAction;
 import org.inventory.navigation.applicationnodes.objectnodes.properties.DateTypeProperty;
@@ -74,6 +75,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
     protected static OpenLocalExplorerAction explorerAction = new OpenLocalExplorerAction();
     protected CommunicationsStub com;
     protected CreateBusinessObjectAction createAction;
+    protected CreateBusinessObjectFromTemplateAction createFromTemplateAction;
     protected RefreshObjectAction refreshAction;
     protected EditObjectAction editAction;
     protected ShowObjectIdAction showObjectIdAction;
@@ -165,11 +167,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                             return sheet;
                         }
                         LocalObjectListItem val = null;
-                        if (lo.getAttribute(lam.getName()) == null) {
+                        if (lo.getAttribute(lam.getName()) == null) 
                             val = list.get(0); //None
-                        } else {
+                        else {
                             for (LocalObjectListItem loli : list) {
-                                if (lo.getAttribute(lam.getName()).equals(loli.getOid())) {
+                                if (lo.getAttribute(lam.getName()).equals(loli)) {
                                     val = loli;
                                     break;
                                 }
@@ -177,7 +179,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                         }
                         property = new ListTypeProperty(
                                 lam.getName(),
-                                lam.getDisplayName().equals("") ? lam.getName() : lam.getDisplayName(),
+                                lam.getDisplayName(),
                                 lam.getDescription(),
                                 list,
                                 this,
@@ -245,6 +247,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
     public Action[] getActions(boolean context) {
         List<Action> actions = new ArrayList<>();
         actions.add(createAction == null ? createAction = new CreateBusinessObjectAction(this) : createAction);
+        actions.add(createFromTemplateAction == null ? createFromTemplateAction = new CreateBusinessObjectFromTemplateAction() : createFromTemplateAction);
         if (getParentNode() != null) {
             actions.add(SystemAction.get(CopyAction.class));
             actions.add(SystemAction.get(CutAction.class));
@@ -260,7 +263,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
             actions.add(null); //Separator
         }
         
-        actions.add(ExecuteClassReportAction.createExecuteReportAction());
+        actions.add(ExecuteClassLevelReportAction.createExecuteReportAction());
         
         for (GenericObjectNodeAction action : Lookup.getDefault().lookupAll(GenericObjectNodeAction.class)) {
             if (action.getValidator() == null) {
@@ -297,16 +300,22 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         return object;
     }
 
+    //This method is called when the node is copied or cut
     @Override
     public PasteType getDropType(Transferable _obj, final int action, int index) {
-        final ObjectNode dropNode = (ObjectNode) NodeTransfer.node(_obj,
+        final Node dropNode = NodeTransfer.node(_obj,
                 NodeTransfer.DND_COPY_OR_MOVE + NodeTransfer.CLIPBOARD_CUT);
+        
         //When there's no an actual drag/drop operation, but a simple node selection
         if (dropNode == null) 
             return null;
         
+        //The clipboard does not contain an ObjectNode
+        if (!ObjectNode.class.isInstance(dropNode))
+            return null;
+            
         //Ignore those noisy attempts to move it to itself
-        if (dropNode.getObject().equals(object))
+        if (dropNode.getLookup().lookup(LocalObjectLight.class).equals(object))
             return null;
         
         //Can't move to the same parent, only copy
@@ -318,7 +327,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
             public Transferable paste() throws IOException {
                 boolean canMove = false;
                 try {
-                    LocalObjectLight obj = dropNode.getObject();
+                    LocalObjectLight obj = dropNode.getLookup().lookup(LocalObjectLight.class);
                     //Check if the current object can contain the drop node
                     List<LocalClassMetadataLight> possibleChildren = com.getPossibleChildren(object.getClassName(), false);
                     for (LocalClassMetadataLight lcml : possibleChildren) {
@@ -421,9 +430,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
             object = (LocalObjectLight) evt.getSource();
             if (evt.getPropertyName().equals(Constants.PROPERTY_NAME)) {
                 setDisplayName(getDisplayName());
-                //fireDisplayNameChange((String)evt.getOldValue(), (String)evt.getNewValue());
-                fireNameChange(null, object.getName());
-                //firePropertyChange(Constants.PROPERTY_NAME, null, object.getName());
+                fireNameChange(null, object.getName()); //Weird, this should be fireDisplayNameChange, but it isn't
             }
         }
     }

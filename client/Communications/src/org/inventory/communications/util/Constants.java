@@ -41,7 +41,7 @@ public class Constants {
      * Name of the validator to indicate if a given class is a container
      */
     public static final String VALIDATOR_PHYSICAL_CONTAINER = "physicalContainer";
-     /**
+    /**
      * Name of the validator to indicate if a given class is a link
      */
     public static final String VALIDATOR_PHYSICAL_LINK = "physicalLink";
@@ -53,6 +53,14 @@ public class Constants {
      * Name of the validator to indicate if a given class is the endpoint to a link
      */
     public static final String VALIDATOR_PHYSICAL_ENDPOINT = "physicalEndpoint";
+    /**
+     * Name of the validator to indicate if a given class is the logical endpoint to a link
+     */
+    public static final String VALIDATOR_LOGICAL_ENDPOINT = "logicalEndpoint";
+    /**
+     * Name of the validator to indicate if a given class is the logical endpoint to a link
+     */
+    public static final String VALIDATOR_LOGICAL_SET = "logicalSet";
     /**
      * Name of the validator to indicate if a given class is the endpoint to a link
      */
@@ -259,6 +267,10 @@ public class Constants {
      * Property Notification Type
      */
     public static final String PROPERTY_NOTIFICATION_TYPE = "notificationType"; //NOI18N
+    /**
+     * 
+     */
+    public static final String PROPERTY_PARAMETERS = "parameters"; //NOI18N
     /**
      * Property email
      */

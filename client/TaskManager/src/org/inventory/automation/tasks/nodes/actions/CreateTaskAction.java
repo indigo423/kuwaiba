@@ -41,10 +41,10 @@ class CreateTaskAction extends AbstractAction {
     public void actionPerformed(ActionEvent e) {
         CommunicationsStub com = CommunicationsStub.getInstance();
         
-        JTextField txtName = new JTextField(10);
+        JTextField txtName = new JTextField(20);
         txtName.setName("txtName");
         
-        JTextField txtDescription = new JTextField(10);
+        JTextField txtDescription = new JTextField(20);
         txtDescription.setName("txtDescription");
         
         JComplexDialogPanel pnlGeneralInfo = new JComplexDialogPanel(

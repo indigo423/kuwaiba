@@ -22,11 +22,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -115,7 +112,7 @@ public class Util {
      * @param listType Node the list items are supposed to be instance of
      * @return A list of nodes representing the list type items
      */
-    public static List<Node> getRealValue(List<String> values, Node listType) throws InvalidArgumentException{
+    public static List<Node> getRealValue(List<String> values, Node listType) {
         Iterable<Relationship> listTypeItems = listType.getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING);
         List<Node> res = new ArrayList<>();
         
@@ -163,14 +160,15 @@ public class Util {
      * Deletes recursively and object and all its children. Note that the transaction should be handled by the caller
      * @param instance The object to be deleted
      * @param unsafeDeletion True if you want the object to be deleted no matter if it has RELATED_TO and RELATED_TO_SPECIAL relationships
+     * @throws org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException If the object already has relationships
      */
     public static void deleteObject(Node instance, boolean unsafeDeletion) throws OperationNotPermittedException {
         if(!unsafeDeletion){
             if (instance.getRelationships(RelTypes.RELATED_TO, Direction.INCOMING).iterator().hasNext())
-                throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
+                throw new OperationNotPermittedException(String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
 
             if (instance.getRelationships(RelTypes.RELATED_TO_SPECIAL, Direction.INCOMING).iterator().hasNext())
-                throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
+                throw new OperationNotPermittedException(String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
         }
 
         for (Relationship rel : instance.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF, RelTypes.CHILD_OF_SPECIAL))
@@ -182,34 +180,45 @@ public class Util {
         instance.getGraphDatabase().index().forNodes(Constants.INDEX_OBJECTS).remove(instance);
         instance.delete();
     }
+    
+    public static void deleteTemplateObject(Node instance) {
+        for (Relationship rel : instance.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF))
+            deleteTemplateObject(rel.getStartNode());
+
+        for (Relationship rel : instance.getRelationships())
+            rel.delete();
+
+        instance.delete();
+    }
 
     /**
      * Read and returns the bytes of a given file
      * @param fileName file to be opened
      * @return bytes on that file
+     * @throws java.io.FileNotFoundException If the file could not be found
      */
     public static byte[] readBytesFromFile(String fileName) throws FileNotFoundException, IOException{
         byte[] bytes = null;
         File f = new File(fileName);
-        InputStream is = new FileInputStream(f);
-        long length = f.length();
-
-        if (length < Integer.MAX_VALUE) { //checks if the file is too big
-            bytes = new byte[(int)length];
-            // Read in the bytes
-            int offset = 0;
-            int numRead = 0;
-            while (offset < bytes.length
-                   && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
-                offset += numRead;
-            }
-
-            // Ensure all the bytes have been read in
-            if (offset < bytes.length) {
-                throw new IOException("Could not completely read file " + f.getName());
+        try (InputStream is = new FileInputStream(f)) {
+            long length = f.length();
+            
+            if (length < Integer.MAX_VALUE) { //checks if the file is too big
+                bytes = new byte[(int)length];
+                // Read in the bytes
+                int offset = 0;
+                int numRead = 0;
+                while (offset < bytes.length
+                        && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
+                    offset += numRead;
+                }
+                
+                // Ensure all the bytes have been read in
+                if (offset < bytes.length) {
+                    throw new IOException("Could not completely read file " + f.getName());
+                }
             }
         }
-        is.close();
         return bytes;
     }
 
@@ -410,8 +419,21 @@ public class Util {
             (String)instance.getProperty(Constants.PROPERTY_NAME), (String)classNode.getProperty(Constants.PROPERTY_NAME));
     }
     
+    public static RemoteBusinessObjectLight createTemplateElementLightFromNode (Node instance) {
+        Node classNode = instance.getSingleRelationship(RelTypes.INSTANCE_OF_SPECIAL, Direction.OUTGOING).getEndNode();
+        
+        return new RemoteBusinessObjectLight(instance.getId(), 
+            (String)instance.getProperty(Constants.PROPERTY_NAME), (String)classNode.getProperty(Constants.PROPERTY_NAME));
+    }
+    
     public static RemoteBusinessObject createRemoteObjectFromNode (Node instance) throws InvalidArgumentException {
         Node classNode = instance.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).getEndNode();
+        ClassMetadata classMetadata = createClassMetadataFromNode(classNode);
+        return createRemoteObjectFromNode(instance, classMetadata);
+    }
+    
+    public static RemoteBusinessObject createTemplateElementFromNode (Node instance) throws InvalidArgumentException {
+        Node classNode = instance.getSingleRelationship(RelTypes.INSTANCE_OF_SPECIAL, Direction.OUTGOING).getEndNode();
         ClassMetadata classMetadata = createClassMetadataFromNode(classNode);
         return createRemoteObjectFromNode(instance, classMetadata);
     }
@@ -458,10 +480,10 @@ public class Util {
     
     /**
      * Builds a RemoteBusinessObject instance from a node representing a business object
-     * @param instance
-     * @param myClass
-     * @return
-     * @throws InvalidArgumentException if an attribute value can't be mapped into value
+     * @param instance The object as a Node instance.
+     * @param myClass The class metadata to map the node's properties into a RemoteBussinessObject.
+     * @return The business object.
+     * @throws InvalidArgumentException If an attribute value can't be mapped into value.
      */
     public static RemoteBusinessObject createRemoteObjectFromNode(Node instance, ClassMetadata myClass) throws InvalidArgumentException {
         
@@ -651,26 +673,9 @@ public class Util {
     }
 
     /**
-     * Given a plain string, it calculate the MD5 hash. This method is used when authenticating users
-     * Thanks to cholland for the code snippet at http://snippets.dzone.com/posts/show/3686
-     * @param pass
-     * @return the MD5 hash for the given string
-     */
-    public static String getMD5Hash(String pass) {
-        try{
-		MessageDigest m = MessageDigest.getInstance("MD5");
-		byte[] data = pass.getBytes();
-		m.update(data,0,data.length);
-		BigInteger i = new BigInteger(1,m.digest());
-		return String.format("%1$032X", i);
-        }catch(NoSuchAlgorithmException nsa){
-            return null;
-        }
-    }
-
-    /**
      * Retrieves the subclasses of a given class metadata node within the class hierarchy
-     * @return
+     * @param classMetadata The parent class metadata
+     * @return The root node of the list of class metadata nodes
      */
 
     public static Iterable<Node> getAllSubclasses(final Node classMetadata){
@@ -1008,5 +1013,5 @@ public class Util {
         }catch (NumberFormatException ex){} //Does nothing
         
         return null;
-    }  
+    }
 }

@@ -37,7 +37,8 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectLightList;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.core.LocalPool;
-import org.inventory.communications.core.LocalReportDescriptor;
+import org.inventory.communications.core.LocalReport;
+import org.inventory.communications.core.LocalReportLight;
 import org.inventory.communications.core.LocalTaskResultMessage;
 import org.inventory.communications.core.LocalTask;
 import org.inventory.communications.core.LocalTaskNotificationDescriptor;
@@ -67,10 +68,11 @@ import org.kuwaiba.wsclient.RemoteObjectLightArray;
 import org.kuwaiba.wsclient.RemoteObjectSpecialRelationships;
 import org.kuwaiba.wsclient.RemotePool;
 import org.kuwaiba.wsclient.RemoteQueryLight;
+import org.kuwaiba.wsclient.RemoteReport;
+import org.kuwaiba.wsclient.RemoteReportLight;
 import org.kuwaiba.wsclient.RemoteResultMessage;
 import org.kuwaiba.wsclient.RemoteTask;
 import org.kuwaiba.wsclient.RemoteTaskResult;
-import org.kuwaiba.wsclient.ReportDescriptor;
 import org.kuwaiba.wsclient.ResultRecord;
 import org.kuwaiba.wsclient.SdhContainerLinkDefinition;
 import org.kuwaiba.wsclient.SdhPosition;
@@ -99,7 +101,7 @@ public class CommunicationsStub {
     private Cache cache;
     private LocalSession session;
     
-    private static String[] classesWithCustomDeleteActions = new String[] {"ElectricalLink", "RadioLink", "OpticalLink",
+    private static String[] classesWithCustomDeleteActions = new String[] {"ElectricalLink", "RadioLink", "OpticalLink", "MPLSLink",
                                                                     "VC4", "VC4-04", "VC4-16", "VC4TributaryLink", "VC12TributaryLink", "VC3TributaryLink",
                                                                     "STM1", "STM4", "STM16", "STM64", "STM256",
                                                                     "WireContainer", "WirelessContainer",
@@ -181,7 +183,7 @@ public class CommunicationsStub {
             
             this.session = new LocalSession(this.service.createSession(user, password));
             return true;
-        }catch(Exception ex){ 
+        }catch(Exception ex) { 
             this.error =  ex.getMessage();
             return false;
         }
@@ -307,10 +309,9 @@ public class CommunicationsStub {
                 StringArray value = new StringArray();
                 attributeNames.add(key);
                 Object theValue = obj.getAttribute(key);
-                if (theValue instanceof List) {
-                    for (long itemId : (List<Long>)theValue)
-                        value.getItem().add(String.valueOf(itemId));
-                } else {
+                if (theValue instanceof LocalObjectListItem)
+                    value.getItem().add(String.valueOf(((LocalObjectListItem)theValue).getId()));
+                else {
                     if (theValue instanceof Date)
                         value.getItem().add(String.valueOf(((Date)theValue).getTime()));
                     else
@@ -474,17 +475,7 @@ public class CommunicationsStub {
             List<ApplicationLogEntry> myEntries = service.getGeneralActivityAuditTrail(page, limit, this.session.getSessionId());
             
             LocalApplicationLogEntry[] res = new LocalApplicationLogEntry[myEntries.size()];
-            
-            //We sort the array here, since it's not from the source
-            Collections.sort(myEntries, new Comparator<ApplicationLogEntry>(){
-
-                @Override
-                public int compare(ApplicationLogEntry o1, ApplicationLogEntry o2) {
-                    if (o1.getTimestamp() < o2.getTimestamp())
-                        return -1;
-                    return 1;
-                }
-            });
+         
             
             for (int i = 0; i < myEntries.size(); i++)
                 res[i] = new LocalApplicationLogEntry(myEntries.get(i).getId(),
@@ -2444,56 +2435,406 @@ public class CommunicationsStub {
     
     // </editor-fold>
     
-    //<editor-fold defaultstate="collapsed" desc="Reporting methods">
+    //<editor-fold defaultstate="collapsed" desc="Reporting API methods">
     /**
-     * Retrieves the list of reports for a particular class
-     * @param className The class to evaluate
-     * @param limit The limit of results. Use -1 to retrieve all
-     * @return A list of report descriptors or null if something went wrong
+     * Creates a class level report (a report that will be available for all instances of a given class -and its subclasses-)
+     * @param className Class this report is going to be related to. It can be ab abstract class and the report will be available for all its subclasses
+     * @param reportName Name of the report.
+     * @param reportDescription Report description.
+     * @param script Script text.
+     * @param outputType What will be the default output of this report? See ClassLevelReportDescriptor for possible values
+     * @param enabled If enabled, a report can be executed.
+     * @return The local representation of the newly created report. Null in case of error
      */
-    public List<LocalReportDescriptor> getReportsForClass(String className, int limit) {
+    public LocalReportLight createClassLevelReport(String className, String reportName, String reportDescription, String script, 
+            int outputType, boolean enabled) { 
         try {
+            long newPoolId  = service.createClassLevelReport(className, reportName, 
+                    reportDescription, script, outputType, enabled,session.getSessionId());
+            cache.resetReportIndex();
+            return new LocalReportLight(newPoolId, reportName, reportDescription, enabled, outputType);
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }    
+    /**
+     * Creates an inventory level report (a report that is not tied to a particlar instance or class. In most cases, they also receive parameters)
+     * @param reportName Name of the report.
+     * @param reportDescription Report description.
+     * @param script Script text.
+     * @param outputType What will be the default output of this report? See InventoryLevelReportDescriptor for possible values
+     * @param enabled If enabled, a report can be executed.
+     * @param parameterNames Optional (it might be either null or an empty array). The list of the names parameters that this report will support. They will always be captured as strings, so it's up to the author of the report the sanitization and conversion of the inputs
+     * @return The local representation of the newly created report. Null in case of error.
+     */
+    public LocalReportLight createInventoryLevelReport(String reportName, String reportDescription, String script, int outputType, 
+            boolean enabled, List<String> parameterNames) {
+        try {
+            List<StringPair> parameters = new ArrayList<>();
             
-            List<LocalReportDescriptor> localDescriptors = cache.getCachedReports(className);
-            
-            if (localDescriptors == null) {
-                List<ReportDescriptor> remoteDescriptors = service.getReportsForClass(className, limit, session.getSessionId());
-                localDescriptors = new ArrayList<>();
-                
-                for (ReportDescriptor aRemoteDescriptor : remoteDescriptors)
-                    localDescriptors.add(new LocalReportDescriptor(aRemoteDescriptor.getClassName(), aRemoteDescriptor.getId(),
-                                                    aRemoteDescriptor.getName(), aRemoteDescriptor.getDescription()));
-                cache.addReport(className, localDescriptors);
+            if (parameterNames != null) {
+                for (String parameter : parameterNames) {
+                    StringPair stringPair = new StringPair();
+                    stringPair.setKey(parameter);
+                    stringPair.setValue("");
+                    parameters.add(stringPair);
+                }
             }
-            return localDescriptors;
-        }catch(Exception ex) {
+            
+            long newPoolId  = service.createInventoryLevelReport(reportName, reportDescription, 
+                    script, outputType, enabled, parameters,session.getSessionId());
+            return new LocalReportLight(newPoolId, reportName, reportDescription, enabled, outputType);
+        }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
         }
     }
     
     /**
-     * Executes a report
-     * @param reportId Report id
-     * @param arguments Arguments for this report as a key-value structure.
-     * @return the html structure to be rendered
+     * Deletes a report
+     * @param reportId The id of the report.
+     * @return True if successful. False in case of error.
      */
-    public byte[] executeReport(long reportId, HashMap<String, Object> arguments) {
+    public boolean deleteReport(long reportId) {
         try {
-            List<StringPair> remoteArguments = new ArrayList<>();
+            service.deleteReport(reportId, session.getSessionId());
+            cache.resetReportIndex();
+            return true;
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Updates the properties of an existing class level report.
+     * @param reportId Id of the report.
+     * @param reportName The name of the report. Null to leave it unchanged.
+     * @param reportDescription The description of the report. Null to leave it unchanged.
+     * @param enabled Is the report enabled? . Null to leave it unchanged.
+     * @param type Type of the output of the report. See LocalReportLight for possible values
+     * @param script Text of the script. 
+     * @return True if successful. False in case of error.
+     */
+    public boolean updateReport(long reportId, String reportName, String reportDescription, Boolean enabled,
+            Integer type, String script) {
+        try {
+            service.updateReport(reportId, reportName, reportDescription, enabled,
+                                    type, script, session.getSessionId());
+            cache.resetReportIndex();
+            return true;
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Adds or removes parameters in a report.
+     * @param reportId Id of the report
+     * @param parametersToAddOrModify List of parameters to add or modify. Set to null to not add anything
+     * @param parametersToDelete List of parameters to delete. Set to null to not delete anything
+     * @return 
+     */
+    public boolean updateReportParameters(long reportId, String[] parametersToAddOrModify, String[] parametersToDelete) {
+        try {
+            List<StringPair> parameters = new ArrayList<>();
             
-            for (String key : arguments.keySet()) {
-                StringPair remoteArgument = new StringPair();
-                remoteArgument.setKey(key);
-                remoteArgument.setValue(String.valueOf(arguments.get(key)));
-                remoteArguments.add(remoteArgument);
+            if (parametersToAddOrModify != null) {
+                for (String parameter : parametersToAddOrModify) {
+                    StringPair entry = new StringPair();
+                    entry.setKey(parameter);
+                    entry.setValue("");
+                    parameters.add(entry);
+                }
             }
-            return service.executeReport(reportId, remoteArguments, session.getSessionId());
-        }catch(Exception ex){
+            
+            if (parametersToDelete != null) {
+                for (String parameter : parametersToDelete) {
+                    StringPair entry = new StringPair();
+                    entry.setKey(parameter);
+                    entry.setValue(null);
+                    parameters.add(entry);
+                }
+            }
+                
+            service.updateReportParameters(reportId, parameters, session.getSessionId());
+            return true;
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the class level reports associated to the given class (or its superclasses)
+     * @param className The class to extract the reports from.
+     * @param recursive False to get only the directly associated reports. True top get also the reports associate top its superclasses
+     * @param includeDisabled True to also include the reports marked as disabled. False to return only the enabled ones.
+     * @return The list of reports. Null in case of error.
+     */
+    public List<LocalReportLight> getClassLevelReports(String className, boolean recursive, boolean includeDisabled) {
+        try {
+            
+            List<LocalReportLight> cachedClassLevelReportsForClass = cache.getClassLevelReportForClass(className);
+            
+            if (cachedClassLevelReportsForClass != null)
+                return cachedClassLevelReportsForClass;
+            
+            List<RemoteReportLight> remoteClassLevelReports = 
+                    service.getClassLevelReports(className, recursive, includeDisabled, session.getSessionId());
+            
+            List<LocalReportLight> localClassLevelReports = new ArrayList<>();
+            
+            for (RemoteReportLight remoteReport : remoteClassLevelReports)
+                localClassLevelReports.add(new LocalReportLight(remoteReport.getId(), 
+                        remoteReport.getName(), remoteReport.getDescription(), remoteReport.isEnabled(), remoteReport.getType()));
+            
+            cache.addClassLevelReportsForClass(className, localClassLevelReports);            
+            return localClassLevelReports;
+        } catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
         }
     }
+    /**
+     * Gets the inventory class reports.
+     * @param includeDisabled True to also include the reports marked as disabled. False to return only the enabled ones.
+     * @return The list of reports. Null in case of error.
+     */
+    public List<LocalReportLight> getInventoryLevelReports(boolean includeDisabled) {
+        try {
+            List<RemoteReportLight> remoteClassLevelReports = 
+                    service.getInventoryLevelReports(includeDisabled, session.getSessionId());
+            
+            List<LocalReportLight> localClassLevelReports = new ArrayList<>();
+            
+            for (RemoteReportLight remoteReport : remoteClassLevelReports)
+                localClassLevelReports.add(new LocalReportLight(remoteReport.getId(), 
+                        remoteReport.getName(), remoteReport.getDescription(), remoteReport.isEnabled(), remoteReport.getType()));
+            
+            return localClassLevelReports;
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the information related to a class level report.
+     * @param reportId The id of the report.
+     * @return  The report. Null in case of error.
+     */
+    public LocalReport getReport(long reportId) {
+        try {
+            RemoteReport remoteReport = service.getReport(reportId, session.getSessionId());
+            List<String> parameters = new ArrayList<>();
+            
+            for (StringPair remoteParameter : remoteReport.getParameters())
+                parameters.add(remoteParameter.getKey());
+            
+            return new LocalReport(reportId, remoteReport.getName(), remoteReport.getDescription(), 
+                    remoteReport.isEnabled(), remoteReport.getType(), remoteReport.getScript(), parameters);
+            
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Executes a class level report and returns the result.
+     * @param objectClassName The class of the instance that will be used as input for the report.
+     * @param objectId The id of the instance that will be used as input for the report.
+     * @param reportId The id of the report.
+     * @return The result of the report execution. Null in case of error.
+     */
+    public byte[] executeClassLevelReport(String objectClassName, long objectId, long reportId) {
+        try {
+            return service.executeClassLevelReport(objectClassName, objectId, reportId, session.getSessionId());
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Executes an inventory level report and returns the result.
+     * @param reportId The id of the report.
+     * @param parameters List of pairs param name - param value
+     * @return The result of the report execution. Null in case of error.
+     */
+    public byte[] executeInventoryLevelReport(long reportId, HashMap<String, String> parameters) {
+        try {
+            List<StringPair> remoteParameters = new ArrayList<>();
+            
+            for (String paramName : parameters.keySet()) {
+                StringPair parameter = new StringPair();
+                parameter.setKey(paramName);
+                parameter.setValue(parameters.get(paramName));
+                remoteParameters.add(parameter);
+            }
+            
+            return service.executeInventoryLevelReport(reportId, remoteParameters, session.getSessionId());
+        } catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    //</editor-fold>
+    
+    //<editor-fold desc="Templates" defaultstate="collapsed">
+    /**
+     * Creates a template.
+     * @param templateClass The class you want to create a template for.
+     * @param templateName The name of the template. It can not be null.
+     * @return The newly created template as a LocalObjectLight object.
+     */
+    public LocalObjectLight createTemplate(String templateClass, String templateName) {
+        try {
+            return new LocalObjectLight(service.createTemplate(templateClass, templateName, session.getSessionId()), templateName, templateClass);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Creates an object inside a template.
+     * @param templateElementClass Class of the object you want to create.
+     * @param templateElementParentClassName Class of the parent to the obejct you want to create.
+     * @param templateElementParentId Id of the parent to the obejct you want to create.
+     * @param templateElementName Name of the element.
+     * @return The id of the new object.
+     */
+    public LocalObjectLight createTemplateElement(String templateElementClass, String templateElementParentClassName, long templateElementParentId, String templateElementName) {
+            try {
+            return new LocalObjectLight(service.createTemplateElement(templateElementClass, templateElementParentClassName, 
+                    templateElementParentId, templateElementName, session.getSessionId()), templateElementName, templateElementClass);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Updates the value of an attribute of a template element.
+     * @param templateElementClass Class of the element you want to update.
+     * @param templateElementId Id of the element you want to update.
+     * @param attributeNames Names of the attributes that you want to be updated as an array of strings.
+     * @param attributeValues The values of the attributes you want to upfate. For list types, it's the id of the related type
+     * @return <code>true</code> if the update was successful, <code>false</code> otherwise.
+     */
+    public boolean updateTemplateElement(String templateElementClass, long templateElementId, 
+            String[] attributeNames, String[] attributeValues) {
+        try {
+            service.updateTemplateElement(templateElementClass, templateElementId, 
+                    Arrays.asList(attributeNames), Arrays.asList(attributeValues), session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    /**
+     * Deletes an element within a template or a template itself.
+     * @param templateElementClass The template element class.
+     * @param templateElementId The template element id.
+     * @return <code>true</code> if the update was successful, <code>false</code> otherwise.
+     */
+    public boolean deleteTemplateElement(String templateElementClass, long templateElementId) {
+        try {
+            service.deleteTemplateElement(templateElementClass, templateElementId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    /**
+     * Gets the templates available for a given class
+     * @param className Class whose templates we need
+     * @return A list of templates (actually, the top element) as a list of RemoteOObjects
+     */
+    public List<LocalObjectLight> getTemplatesForClass(String className) {
+        try {
+            List<LocalObjectLight> localTemplates = new ArrayList<>();
+            List<RemoteObjectLight> remoteTemplates = service.getTemplatesForClass(className, session.getSessionId());
+            for (RemoteObjectLight remoteTemplate : remoteTemplates)
+                localTemplates.add(new LocalObjectLight(remoteTemplate.getOid(), remoteTemplate.getName(), remoteTemplate.getClassName()));
+            return localTemplates;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Retrieves the children of a given template element.
+     * @param templateElementClass Template element class.
+     * @param templateElementId Template element id.
+     * @return The template element's children as a list of LocalObjectLight instances. It will return null if something went wrong.
+     */
+    public List<LocalObjectLight> getTemplateElementChildren(String templateElementClass, long templateElementId) {
+        try {
+            List<LocalObjectLight> localTemplateElementChildren = new ArrayList<>();
+            List<RemoteObjectLight> remoteTemplateElementChildren = service.getTemplateElementChildren(templateElementClass, templateElementId, session.getSessionId());
+            for (RemoteObjectLight remoteTemplateElementChild : remoteTemplateElementChildren)
+                localTemplateElementChildren.add(new LocalObjectLight(remoteTemplateElementChild.getOid(), remoteTemplateElementChild.getName(), remoteTemplateElementChild.getClassName()));
+            return localTemplateElementChildren;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Retrives all the information of a given template element.
+     * @param templateElementClass Template element class.
+     * @param templateElementId Template element id.
+     * @return The template element information. It will return null if something went wrong.
+     */
+    public LocalObject getTemplateElement(String templateElementClass, long templateElementId) {
+        try {
+            RemoteObject remoteTemplateElement = service.getTemplateElement(templateElementClass, templateElementId, session.getSessionId());
+            LocalClassMetadata lcmd = getMetaForClass(templateElementClass, false);
+            List<List<String>> values = new ArrayList<>();
+            for (StringArray value : remoteTemplateElement.getValues())
+                values.add(value.getItem());
+            
+            return new LocalObject(remoteTemplateElement.getClassName(), remoteTemplateElement.getOid(), 
+                    remoteTemplateElement.getAttributes(), values,lcmd);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Copy template elements within templates. Should not be used to copy entire templates.
+     * @param sourceObjectsClassNames Array with the class names of the elements to be copied.
+     * @param sourceObjectsIds  Array with the ids of the elements to be copied.
+     * @param newParentClassName Class of the parent of the copied objects.
+     * @param newParentId Id of the parent of the copied objects.
+     * @return An array with the ids of the newly created elements in the same order they were provided. Null in case of error.
+     */
+    public List<LocalObjectLight> copyTemplateElements(List<String> sourceObjectsClassNames, List<Long> sourceObjectsIds, 
+            String newParentClassName, long newParentId) {
+        try {
+            List<Long> remoteTemplateElements = service.copyTemplateElements(sourceObjectsClassNames, 
+                    sourceObjectsIds, newParentClassName, newParentId, session.getSessionId());
+            
+            List<LocalObjectLight> localTemplateElements = new ArrayList<>();
+            
+            for (int i = 0; i < sourceObjectsClassNames.size(); i++) 
+                localTemplateElements.add(new LocalObjectLight(sourceObjectsIds.get(i), "", sourceObjectsClassNames.get(i)));
+            
+            return localTemplateElements;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
     //</editor-fold>
     
     // <editor-fold defaultstate="collapsed" desc="Sync/bulk load data methods. Click on the + sign on the left to edit the code.">

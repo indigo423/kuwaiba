@@ -48,6 +48,10 @@
 
 <xs:element name="copyObjectsResponse" type="tns:copyObjectsResponse"/>
 
+<xs:element name="copyTemplateElements" type="tns:copyTemplateElements"/>
+
+<xs:element name="copyTemplateElementsResponse" type="tns:copyTemplateElementsResponse"/>
+
 <xs:element name="createAttribute" type="tns:createAttribute"/>
 
 <xs:element name="createAttributeForClassWithId" type="tns:createAttributeForClassWithId"/>
@@ -62,6 +66,10 @@
 
 <xs:element name="createClass" type="tns:createClass"/>
 
+<xs:element name="createClassLevelReport" type="tns:createClassLevelReport"/>
+
+<xs:element name="createClassLevelReportResponse" type="tns:createClassLevelReportResponse"/>
+
 <xs:element name="createClassResponse" type="tns:createClassResponse"/>
 
 <xs:element name="createCustomer" type="tns:createCustomer"/>
@@ -75,6 +83,10 @@
 <xs:element name="createGroup" type="tns:createGroup"/>
 
 <xs:element name="createGroupResponse" type="tns:createGroupResponse"/>
+
+<xs:element name="createInventoryLevelReport" type="tns:createInventoryLevelReport"/>
+
+<xs:element name="createInventoryLevelReportResponse" type="tns:createInventoryLevelReportResponse"/>
 
 <xs:element name="createListTypeItem" type="tns:createListTypeItem"/>
 
@@ -152,6 +164,14 @@
 
 <xs:element name="createTaskResponse" type="tns:createTaskResponse"/>
 
+<xs:element name="createTemplate" type="tns:createTemplate"/>
+
+<xs:element name="createTemplateElement" type="tns:createTemplateElement"/>
+
+<xs:element name="createTemplateElementResponse" type="tns:createTemplateElementResponse"/>
+
+<xs:element name="createTemplateResponse" type="tns:createTemplateResponse"/>
+
 <xs:element name="createUser" type="tns:createUser"/>
 
 <xs:element name="createUserResponse" type="tns:createUserResponse"/>
@@ -212,6 +232,10 @@
 
 <xs:element name="deleteQueryResponse" type="tns:deleteQueryResponse"/>
 
+<xs:element name="deleteReport" type="tns:deleteReport"/>
+
+<xs:element name="deleteReportResponse" type="tns:deleteReportResponse"/>
+
 <xs:element name="deleteSDHContainerLink" type="tns:deleteSDHContainerLink"/>
 
 <xs:element name="deleteSDHContainerLinkResponse" type="tns:deleteSDHContainerLinkResponse"/>
@@ -236,6 +260,10 @@
 
 <xs:element name="deleteTaskResponse" type="tns:deleteTaskResponse"/>
 
+<xs:element name="deleteTemplateElement" type="tns:deleteTemplateElement"/>
+
+<xs:element name="deleteTemplateElementResponse" type="tns:deleteTemplateElementResponse"/>
+
 <xs:element name="deleteUsers" type="tns:deleteUsers"/>
 
 <xs:element name="deleteUsersResponse" type="tns:deleteUsersResponse"/>
@@ -244,13 +272,17 @@
 
 <xs:element name="downloadBulkLoadLogResponse" type="tns:downloadBulkLoadLogResponse"/>
 
+<xs:element name="executeClassLevelReport" type="tns:executeClassLevelReport"/>
+
+<xs:element name="executeClassLevelReportResponse" type="tns:executeClassLevelReportResponse"/>
+
+<xs:element name="executeInventoryLevelReport" type="tns:executeInventoryLevelReport"/>
+
+<xs:element name="executeInventoryLevelReportResponse" type="tns:executeInventoryLevelReportResponse"/>
+
 <xs:element name="executeQuery" type="tns:executeQuery"/>
 
 <xs:element name="executeQueryResponse" type="tns:executeQueryResponse"/>
-
-<xs:element name="executeReport" type="tns:executeReport"/>
-
-<xs:element name="executeReportResponse" type="tns:executeReportResponse"/>
 
 <xs:element name="executeTask" type="tns:executeTask"/>
 
@@ -302,6 +334,10 @@
 
 <xs:element name="getClassHierarchyResponse" type="tns:getClassHierarchyResponse"/>
 
+<xs:element name="getClassLevelReports" type="tns:getClassLevelReports"/>
+
+<xs:element name="getClassLevelReportsResponse" type="tns:getClassLevelReportsResponse"/>
+
 <xs:element name="getClassResponse" type="tns:getClassResponse"/>
 
 <xs:element name="getClassWithId" type="tns:getClassWithId"/>
@@ -331,6 +367,10 @@
 <xs:element name="getInstanceableListTypes" type="tns:getInstanceableListTypes"/>
 
 <xs:element name="getInstanceableListTypesResponse" type="tns:getInstanceableListTypesResponse"/>
+
+<xs:element name="getInventoryLevelReports" type="tns:getInventoryLevelReports"/>
+
+<xs:element name="getInventoryLevelReportsResponse" type="tns:getInventoryLevelReportsResponse"/>
 
 <xs:element name="getListTypeItems" type="tns:getListTypeItems"/>
 
@@ -416,9 +456,9 @@
 
 <xs:element name="getQueryResponse" type="tns:getQueryResponse"/>
 
-<xs:element name="getReportsForClass" type="tns:getReportsForClass"/>
+<xs:element name="getReport" type="tns:getReport"/>
 
-<xs:element name="getReportsForClassResponse" type="tns:getReportsForClassResponse"/>
+<xs:element name="getReportResponse" type="tns:getReportResponse"/>
 
 <xs:element name="getRootPools" type="tns:getRootPools"/>
 
@@ -499,6 +539,18 @@
 <xs:element name="getTasksForUserResponse" type="tns:getTasksForUserResponse"/>
 
 <xs:element name="getTasksResponse" type="tns:getTasksResponse"/>
+
+<xs:element name="getTemplateElement" type="tns:getTemplateElement"/>
+
+<xs:element name="getTemplateElementChildren" type="tns:getTemplateElementChildren"/>
+
+<xs:element name="getTemplateElementChildrenResponse" type="tns:getTemplateElementChildrenResponse"/>
+
+<xs:element name="getTemplateElementResponse" type="tns:getTemplateElementResponse"/>
+
+<xs:element name="getTemplatesForClass" type="tns:getTemplatesForClass"/>
+
+<xs:element name="getTemplatesForClassResponse" type="tns:getTemplatesForClassResponse"/>
 
 <xs:element name="getUpstreamContainmentHierarchy" type="tns:getUpstreamContainmentHierarchy"/>
 
@@ -620,6 +672,14 @@
 
 <xs:element name="updateObjectResponse" type="tns:updateObjectResponse"/>
 
+<xs:element name="updateReport" type="tns:updateReport"/>
+
+<xs:element name="updateReportParameters" type="tns:updateReportParameters"/>
+
+<xs:element name="updateReportParametersResponse" type="tns:updateReportParametersResponse"/>
+
+<xs:element name="updateReportResponse" type="tns:updateReportResponse"/>
+
 <xs:element name="updateTaskNotificationType" type="tns:updateTaskNotificationType"/>
 
 <xs:element name="updateTaskNotificationTypeResponse" type="tns:updateTaskNotificationTypeResponse"/>
@@ -635,6 +695,10 @@
 <xs:element name="updateTaskSchedule" type="tns:updateTaskSchedule"/>
 
 <xs:element name="updateTaskScheduleResponse" type="tns:updateTaskScheduleResponse"/>
+
+<xs:element name="updateTemplateElement" type="tns:updateTemplateElement"/>
+
+<xs:element name="updateTemplateElementResponse" type="tns:updateTemplateElementResponse"/>
 
 <xs:complexType name="connectPhysicalLinks">
 <xs:sequence>
@@ -833,17 +897,6 @@
 </xs:sequence>
 </xs:complexType>
 
-<xs:complexType name="deleteClass">
-<xs:sequence>
-<xs:element name="className" type="xs:string" minOccurs="0"/>
-<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
-</xs:sequence>
-</xs:complexType>
-
-<xs:complexType name="deleteClassResponse">
-<xs:sequence/>
-</xs:complexType>
-
 <xs:complexType name="getAllClassesLight">
 <xs:sequence>
 <xs:element name="includeListTypes" type="xs:boolean"/>
@@ -855,6 +908,17 @@
 <xs:sequence>
 <xs:element name="return" type="tns:classInfoLight" minOccurs="0" maxOccurs="unbounded"/>
 </xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="deleteClass">
+<xs:sequence>
+<xs:element name="className" type="xs:string" minOccurs="0"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="deleteClassResponse">
+<xs:sequence/>
 </xs:complexType>
 
 <xs:complexType name="getPhysicalPath">
@@ -1038,6 +1102,22 @@
 
 <xs:complexType name="updateTaskParametersResponse">
 <xs:sequence/>
+</xs:complexType>
+
+<xs:complexType name="createTemplateElement">
+<xs:sequence>
+<xs:element name="templateElementClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementParentClassName" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementParentId" type="xs:long"/>
+<xs:element name="templateElementName" type="xs:string" minOccurs="0"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createTemplateElementResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:long"/>
+</xs:sequence>
 </xs:complexType>
 
 <xs:complexType name="deleteSDHTransportLink">
@@ -1251,6 +1331,22 @@
 <xs:sequence/>
 </xs:complexType>
 
+<xs:complexType name="updateReport">
+<xs:sequence>
+<xs:element name="reportId" type="xs:long"/>
+<xs:element name="reportName" type="xs:string" minOccurs="0"/>
+<xs:element name="reportDescription" type="xs:string" minOccurs="0"/>
+<xs:element name="enabled" type="xs:boolean" minOccurs="0"/>
+<xs:element name="type" type="xs:int" minOccurs="0"/>
+<xs:element name="script" type="xs:string" minOccurs="0"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="updateReportResponse">
+<xs:sequence/>
+</xs:complexType>
+
 <xs:complexType name="createBulkPhysicalConnections">
 <xs:sequence>
 <xs:element name="connectionClass" type="xs:string" minOccurs="0"/>
@@ -1403,6 +1499,19 @@
 </xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="getTemplatesForClass">
+<xs:sequence>
+<xs:element name="className" type="xs:string" minOccurs="0"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getTemplatesForClassResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteObjectLight" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="createSubnetPool">
 <xs:sequence>
 <xs:element name="parentId" type="xs:long"/>
@@ -1507,6 +1616,18 @@
 </xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="deleteTemplateElement">
+<xs:sequence>
+<xs:element name="templateElementClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="deleteTemplateElementResponse">
+<xs:sequence/>
+</xs:complexType>
+
 <xs:complexType name="copyObjects">
 <xs:sequence>
 <xs:element name="targetClass" type="xs:string" minOccurs="0"/>
@@ -1535,6 +1656,31 @@
 
 <xs:complexType name="deleteListTypeItemResponse">
 <xs:sequence/>
+</xs:complexType>
+
+<xs:complexType name="getClassLevelReports">
+<xs:sequence>
+<xs:element name="className" type="xs:string" minOccurs="0"/>
+<xs:element name="recursive" type="xs:boolean"/>
+<xs:element name="includeDisabled" type="xs:boolean"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getClassLevelReportsResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteReportLight" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="remoteReportLight">
+<xs:sequence>
+<xs:element name="id" type="xs:long"/>
+<xs:element name="name" type="xs:string" minOccurs="0"/>
+<xs:element name="description" type="xs:string" minOccurs="0"/>
+<xs:element name="enabled" type="xs:boolean" minOccurs="0"/>
+<xs:element name="type" type="xs:int" minOccurs="0"/>
+</xs:sequence>
 </xs:complexType>
 
 <xs:complexType name="removePossibleChildrenForClassWithId">
@@ -1656,6 +1802,19 @@
 <xs:sequence/>
 </xs:complexType>
 
+<xs:complexType name="getInventoryLevelReports">
+<xs:sequence>
+<xs:element name="includeDisabled" type="xs:boolean"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getInventoryLevelReportsResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteReportLight" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="associateObjectsToContract">
 <xs:sequence>
 <xs:element name="objectClass" type="xs:string" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
@@ -1682,29 +1841,6 @@
 <xs:complexType name="createListTypeItemResponse">
 <xs:sequence>
 <xs:element name="return" type="xs:long"/>
-</xs:sequence>
-</xs:complexType>
-
-<xs:complexType name="getReportsForClass">
-<xs:sequence>
-<xs:element name="className" type="xs:string" minOccurs="0"/>
-<xs:element name="limit" type="xs:int"/>
-<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
-</xs:sequence>
-</xs:complexType>
-
-<xs:complexType name="getReportsForClassResponse">
-<xs:sequence>
-<xs:element name="return" type="tns:reportDescriptor" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
-</xs:sequence>
-</xs:complexType>
-
-<xs:complexType name="reportDescriptor" final="extension restriction">
-<xs:sequence>
-<xs:element name="id" type="xs:long"/>
-<xs:element name="name" type="xs:string" minOccurs="0"/>
-<xs:element name="className" type="xs:string" minOccurs="0"/>
-<xs:element name="description" type="xs:string" minOccurs="0"/>
 </xs:sequence>
 </xs:complexType>
 
@@ -1756,6 +1892,30 @@
 
 <xs:complexType name="deleteGroupsResponse">
 <xs:sequence/>
+</xs:complexType>
+
+<xs:complexType name="getReport">
+<xs:sequence>
+<xs:element name="reportId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getReportResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteReport" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="remoteReport">
+<xs:complexContent>
+<xs:extension base="tns:remoteReportLight">
+<xs:sequence>
+<xs:element name="script" type="xs:string" minOccurs="0"/>
+<xs:element name="parameters" type="tns:stringPair" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:extension>
+</xs:complexContent>
 </xs:complexType>
 
 <xs:complexType name="getObjectSpecialChildren">
@@ -1839,23 +1999,17 @@
 <xs:sequence/>
 </xs:complexType>
 
-<xs:complexType name="createAttribute">
+<xs:complexType name="updateTemplateElement">
 <xs:sequence>
-<xs:element name="className" type="xs:string" minOccurs="0"/>
-<xs:element name="name" type="xs:string" minOccurs="0"/>
-<xs:element name="displayName" type="xs:string" minOccurs="0"/>
-<xs:element name="type" type="xs:string" minOccurs="0"/>
-<xs:element name="description" type="xs:string" minOccurs="0"/>
-<xs:element name="administrative" type="xs:boolean"/>
-<xs:element name="visible" type="xs:boolean"/>
-<xs:element name="isReadOnly" type="xs:boolean"/>
-<xs:element name="noCopy" type="xs:boolean"/>
-<xs:element name="unique" type="xs:boolean"/>
+<xs:element name="templateElementClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementId" type="xs:long"/>
+<xs:element name="attributeNames" type="xs:string" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="attributeValues" type="xs:string" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
 <xs:element name="sessionId" type="xs:string" minOccurs="0"/>
 </xs:sequence>
 </xs:complexType>
 
-<xs:complexType name="createAttributeResponse">
+<xs:complexType name="updateTemplateElementResponse">
 <xs:sequence/>
 </xs:complexType>
 
@@ -1894,6 +2048,26 @@
 </xs:complexType>
 
 <xs:complexType name="createAttributeForClassWithIdResponse">
+<xs:sequence/>
+</xs:complexType>
+
+<xs:complexType name="createAttribute">
+<xs:sequence>
+<xs:element name="className" type="xs:string" minOccurs="0"/>
+<xs:element name="name" type="xs:string" minOccurs="0"/>
+<xs:element name="displayName" type="xs:string" minOccurs="0"/>
+<xs:element name="type" type="xs:string" minOccurs="0"/>
+<xs:element name="description" type="xs:string" minOccurs="0"/>
+<xs:element name="administrative" type="xs:boolean"/>
+<xs:element name="visible" type="xs:boolean"/>
+<xs:element name="isReadOnly" type="xs:boolean"/>
+<xs:element name="noCopy" type="xs:boolean"/>
+<xs:element name="unique" type="xs:boolean"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createAttributeResponse">
 <xs:sequence/>
 </xs:complexType>
 
@@ -1963,6 +2137,20 @@
 <xs:complexType name="createUserResponse">
 <xs:sequence>
 <xs:element name="return" type="xs:long"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getTemplateElementChildren">
+<xs:sequence>
+<xs:element name="templateElementClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getTemplateElementChildrenResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteObjectLight" minOccurs="0" maxOccurs="unbounded"/>
 </xs:sequence>
 </xs:complexType>
 
@@ -2113,15 +2301,16 @@
 </xs:sequence>
 </xs:complexType>
 
-<xs:complexType name="executeReport">
+<xs:complexType name="executeClassLevelReport">
 <xs:sequence>
+<xs:element name="objectClassName" type="xs:string" minOccurs="0"/>
+<xs:element name="objectId" type="xs:long"/>
 <xs:element name="reportId" type="xs:long"/>
-<xs:element name="arguments" type="tns:stringPair" minOccurs="0" maxOccurs="unbounded"/>
 <xs:element name="sessionId" type="xs:string" minOccurs="0"/>
 </xs:sequence>
 </xs:complexType>
 
-<xs:complexType name="executeReportResponse">
+<xs:complexType name="executeClassLevelReportResponse">
 <xs:sequence>
 <xs:element name="return" type="xs:base64Binary" nillable="true" minOccurs="0"/>
 </xs:sequence>
@@ -2189,6 +2378,31 @@
 </xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="deleteReport">
+<xs:sequence>
+<xs:element name="reportId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="deleteReportResponse">
+<xs:sequence/>
+</xs:complexType>
+
+<xs:complexType name="executeInventoryLevelReport">
+<xs:sequence>
+<xs:element name="reportId" type="xs:long"/>
+<xs:element name="parameters" type="tns:stringPair" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="executeInventoryLevelReportResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:base64Binary" nillable="true" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="getSDHContainerLinkStructure">
 <xs:sequence>
 <xs:element name="containerLinkClass" type="xs:string" minOccurs="0"/>
@@ -2239,6 +2453,24 @@
 </xs:sequence>
 </xs:extension>
 </xs:complexContent>
+</xs:complexType>
+
+<xs:complexType name="createClassLevelReport">
+<xs:sequence>
+<xs:element name="className" type="xs:string" minOccurs="0"/>
+<xs:element name="reportName" type="xs:string" minOccurs="0"/>
+<xs:element name="reportDescription" type="xs:string" minOccurs="0"/>
+<xs:element name="script" type="xs:string" minOccurs="0"/>
+<xs:element name="outputType" type="xs:int"/>
+<xs:element name="enabled" type="xs:boolean"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createClassLevelReportResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:long"/>
+</xs:sequence>
 </xs:complexType>
 
 <xs:complexType name="getClass">
@@ -2636,6 +2868,20 @@
 </xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="createTemplate">
+<xs:sequence>
+<xs:element name="templateClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateName" type="xs:string" minOccurs="0"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createTemplateResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:long"/>
+</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="deleteSDHTributaryLink">
 <xs:sequence>
 <xs:element name="tributaryLinkClass" type="xs:string" minOccurs="0"/>
@@ -2677,6 +2923,18 @@
 </xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="updateReportParameters">
+<xs:sequence>
+<xs:element name="reportId" type="xs:long"/>
+<xs:element name="parameters" type="tns:stringPair" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="updateReportParametersResponse">
+<xs:sequence/>
+</xs:complexType>
+
 <xs:complexType name="getObjectsOfClassLight">
 <xs:sequence>
 <xs:element name="className" type="xs:string" minOccurs="0"/>
@@ -2688,6 +2946,24 @@
 <xs:complexType name="getObjectsOfClassLightResponse">
 <xs:sequence>
 <xs:element name="return" type="tns:remoteObjectLight" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createInventoryLevelReport">
+<xs:sequence>
+<xs:element name="reportName" type="xs:string" minOccurs="0"/>
+<xs:element name="reportDescription" type="xs:string" minOccurs="0"/>
+<xs:element name="script" type="xs:string" minOccurs="0"/>
+<xs:element name="outputType" type="xs:int"/>
+<xs:element name="enabled" type="xs:boolean"/>
+<xs:element name="parameters" type="tns:stringPair" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="createInventoryLevelReportResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:long"/>
 </xs:sequence>
 </xs:complexType>
 
@@ -2764,6 +3040,22 @@
 <xs:complexType name="getSpecialPossibleChildrenResponse">
 <xs:sequence>
 <xs:element name="return" type="tns:classInfoLight" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="copyTemplateElements">
+<xs:sequence>
+<xs:element name="sourceObjectsClassNames" type="xs:string" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="sourceObjectsIds" type="xs:long" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+<xs:element name="newParentClassName" type="xs:string" minOccurs="0"/>
+<xs:element name="newParentId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="copyTemplateElementsResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:long" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
 </xs:sequence>
 </xs:complexType>
 
@@ -3053,6 +3345,20 @@
 <xs:complexType name="getPoolsInPoolResponse">
 <xs:sequence>
 <xs:element name="return" type="tns:remotePool" minOccurs="0" maxOccurs="unbounded"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getTemplateElement">
+<xs:sequence>
+<xs:element name="templateElementClass" type="xs:string" minOccurs="0"/>
+<xs:element name="templateElementId" type="xs:long"/>
+<xs:element name="sessionId" type="xs:string" minOccurs="0"/>
+</xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getTemplateElementResponse">
+<xs:sequence>
+<xs:element name="return" type="tns:remoteObject" minOccurs="0"/>
 </xs:sequence>
 </xs:complexType>
 

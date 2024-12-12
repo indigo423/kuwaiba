@@ -50,7 +50,7 @@ public class ListTypeProperty extends PropertySupport.ReadWrite<LocalObjectListI
     @Override
     public void setValue(LocalObjectListItem t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         LocalObject update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
-                    new String[]{this.getName()}, new Object[]{((LocalObjectListItem)t).getOid()});
+                    new String[]{this.getName()}, new Object[]{t});
 
         if(!CommunicationsStub.getInstance().saveObject(update))
             NotificationUtil.getInstance().showSimplePopup("Error", 
@@ -59,7 +59,6 @@ public class ListTypeProperty extends PropertySupport.ReadWrite<LocalObjectListI
             value = t;
     }
 
-    
     @Override
     public PropertyEditor getPropertyEditor(){
         return propertyEditor;
