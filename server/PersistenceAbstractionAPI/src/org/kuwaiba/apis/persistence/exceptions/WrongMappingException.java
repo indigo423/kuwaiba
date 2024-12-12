@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public class WrongMappingException extends InventoryException{
 
     public WrongMappingException(String className, String attributeName,
             String attributeType, String attributeValue) {
-        super (new Formatter().format("The value %1s can't mapped to a type %2s for the attribute %3s in class %4s",
+        super (new Formatter().format("Value %s can't mapped into type %s for attribute %s in class %s",
                 attributeValue, attributeType,attributeName,className).toString(), Level.SEVERE);
     }
 

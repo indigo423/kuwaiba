@@ -16,6 +16,7 @@
 
 package org.kuwaiba.ws.toserialize.application;
 
+import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
@@ -26,11 +27,11 @@ import org.kuwaiba.apis.persistence.application.GroupProfile;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class UserGroupInfoLight {
+public class UserGroupInfoLight implements Serializable {
     /**
      * Object id
      */
-    protected Long oid;
+    protected long oid;
     /**
      * UserGroup's name
      */
@@ -43,11 +44,11 @@ public class UserGroupInfoLight {
         this.name = group.getName();
     }
 
-    public Long getOid() {
+    public long getOid() {
         return oid;
     }
 
-    public void setId(Long _oid) {
+    public void setId(long _oid) {
         this.oid = _oid;
     }
 

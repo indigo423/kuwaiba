@@ -20,7 +20,7 @@ import org.kuwaiba.wsclient.RemoteSession;
 import org.kuwaiba.wsclient.StringArray;
 
 /**
- * Uploads initial, test information
+ * Uploads initial, sample information
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class MainTest {
@@ -41,10 +41,10 @@ public class MainTest {
 
             System.out.println("Generating a containment hierarchy...");
             //Let's create the default containment hierarchy
-            port.addPossibleChildrenByClassName(null, Arrays.asList(new String[]{"City"}), session.getSessionId());
+            port.addPossibleChildren(null, Arrays.asList(new String[]{"City"}), session.getSessionId());
             for (String parentClass : c.containmentHierarchy.keySet()){
                 try{
-                    port.addPossibleChildrenByClassName(parentClass, Arrays.asList(c.containmentHierarchy.get(parentClass)), session.getSessionId());
+                    port.addPossibleChildren(parentClass, Arrays.asList(c.containmentHierarchy.get(parentClass)), session.getSessionId());
                 }catch (Exception ex){
                     System.out.println("ERROR: "+ex.getMessage());
                 }
@@ -93,7 +93,7 @@ public class MainTest {
             entry.getItem().add(className + " " + i);
             values.add(entry);
             try{
-                long newObjectId = port.createObject(className, parentClass, parentId, attributes, values, null, session.getSessionId());
+                long newObjectId = port.createObject(className, parentClass, parentId, attributes, values, 0, session.getSessionId());
                 objectCount++;
                 if (c.containmentHierarchy.get(className) != null){
                     for (String anotherClass : c.containmentHierarchy.get(className)){

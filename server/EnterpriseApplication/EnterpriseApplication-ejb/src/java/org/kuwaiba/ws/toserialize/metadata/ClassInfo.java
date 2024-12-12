@@ -33,7 +33,7 @@ public class ClassInfo extends ClassInfoLight{
     /**
      * Attribute ids
      */
-    private Long [] attributeIds;
+    private long [] attributeIds;
     /**
      * Attribute names
      */
@@ -49,11 +49,7 @@ public class ClassInfo extends ClassInfoLight{
     /**
      * Attributes visibility
      */
-    private Boolean [] attributesIsVisible;
-    /**
-     * How the attribute should be rendered. Check AttributeMetadata documentation in the Persistence Abstraction API
-     */
-    private Integer [] attributesMapping;
+    private boolean [] attributesIsVisible;
     /**
      * Attributes descriptions
      */
@@ -66,21 +62,32 @@ public class ClassInfo extends ClassInfoLight{
      * Class description
      */
     protected String description;
+    /**
+     *  ClassMetada's creationDate
+     */
+    public long creationDate;
+    /**
+     *  Indicates if the instances of this class are physical assets
+     *  (in other words, if it's meaningful to have a count on them)
+     *  Classes marked with the annotation NoCount (Slot, Port and the like)
+     *  have this attribute set as false
+     */
+    private Boolean countable;
 
     public ClassInfo(){}
     public ClassInfo(ClassMetadata myClass, Validator[] validators){
         super (myClass, validators);
-        this.abstractClass = myClass.isAbstractClass();
+        this._abstract = myClass.isAbstract();
         this.icon = myClass.getIcon();
         List<AttributeMetadata> ar = myClass.getAttributes();
-        this.attributeIds = new Long[ar.size()];
+        this.attributeIds = new long[ar.size()];
         this.attributeNames = new String[ar.size()];
         this.attributeTypes = new String[this.attributeNames.length];
         this.attributeDisplayNames = new String[this.attributeNames.length];
-        this.attributesIsVisible = new Boolean[this.attributeNames.length];
-        this.attributesMapping = new Integer[this.attributeNames.length];
+        this.attributesIsVisible = new boolean[this.attributeNames.length];
         this.attributesDescription = new String[this.attributeNames.length];
         this.description = myClass.getDescription();
+        this.countable = myClass.isCountable();
         int i = 0;
         for (AttributeMetadata myAtt : ar){
             this.attributeIds[i] = myAtt.getId();
@@ -89,7 +96,6 @@ public class ClassInfo extends ClassInfoLight{
             this.attributeDisplayNames[i] = myAtt.getDisplayName() == null?
                 "":myAtt.getDisplayName();
             this.attributesIsVisible[i] = myAtt.isVisible();
-            this.attributesMapping[i] = myAtt.getMapping();
 
             this.attributesDescription[i] = myAtt.getDescription()==null?
                 "":myAtt.getDescription();
@@ -129,27 +135,19 @@ public class ClassInfo extends ClassInfoLight{
         this.attributesDescription = attributesDescription;
     }
 
-    public Boolean[] getAttributesIsVisible() {
+    public boolean[] getAttributesIsVisible() {
         return attributesIsVisible;
     }
 
-    public void setAttributesIsVisible(Boolean[] attributesIsVisible) {
+    public void setAttributesIsVisible(boolean[] attributesIsVisible) {
         this.attributesIsVisible = attributesIsVisible;
     }
 
-    public Integer[] getAttributesMapping() {
-        return attributesMapping;
-    }
-
-    public void setAttributesMapping(Integer[] attributesMapping) {
-        this.attributesMapping = attributesMapping;
-    }
-
-    public Long[] getAttributeIds() {
+    public long[] getAttributeIds() {
         return attributeIds;
     }
 
-    public void setAttributeIds(Long[] attributeIds) {
+    public void setAttributeIds(long[] attributeIds) {
         this.attributeIds = attributeIds;
     }
 
@@ -167,5 +165,21 @@ public class ClassInfo extends ClassInfoLight{
 
     public void setIcon(byte[] icon) {
         this.icon = icon;
+    }
+    
+    public long getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(long creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public Boolean isCountable() {
+        return countable;
+    }
+
+    public void setCountable(Boolean countable) {
+        this.countable = countable;
     }
 }

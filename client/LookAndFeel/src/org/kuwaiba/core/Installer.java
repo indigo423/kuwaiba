@@ -31,10 +31,8 @@ public class Installer extends ModuleInstall {
     @Override
     public void restored() {
         try{
-           //UIManager.setLookAndFeel("org.pushingpixels.substance.api.skin.SubstanceNebulaBrickWallLookAndFeel");
-           //UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
-
-            if (System.getProperty("no-laf") == null){
+            //if (System.getProperty("no-laf") == null) {
+            if (false){
                 NimRODTheme nt = new NimRODTheme();
                 //Shades, button border, scroll bar border
                 nt.setPrimary1( new Color(199,199,199));
@@ -58,9 +56,9 @@ public class Installer extends ModuleInstall {
                 NimRODLookAndFeel NimRODLF = new NimRODLookAndFeel();
                 NimRODLookAndFeel.setCurrentTheme( nt);
                 UIManager.setLookAndFeel( NimRODLF);
-            }
+            }           
         }catch(Exception ex){
-            ex.printStackTrace();
+            System.out.println("Error loading LaF: " + ex.getMessage());
         }
     }
 }

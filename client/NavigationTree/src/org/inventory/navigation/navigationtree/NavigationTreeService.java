@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010 - 2013 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.openide.util.Lookup;
 
 /**
  * Provides the business logic for the related TopComponent
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class NavigationTreeService {
     private NavigationTreeTopComponent component;
@@ -34,7 +34,7 @@ public class NavigationTreeService {
         this.component = _component;
     }
     public LocalObjectLight[] getRootChildren(){
-        List<LocalObjectLight> rootChildren = com.getObjectChildren(null, null);
+        List<LocalObjectLight> rootChildren = com.getObjectChildren(-1, -1);
         if(rootChildren != null)
             return rootChildren.toArray(new LocalObjectLight[0]);
         else{

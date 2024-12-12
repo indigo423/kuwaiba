@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,6 +16,12 @@
 
 package org.kuwaiba.persistenceservice.util;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,98 +29,83 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
-import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
 import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
-import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
-import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
+import org.kuwaiba.apis.persistence.exceptions.UnsupportedPropertyException;
+import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.CategoryMetadata;
+import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
-import org.kuwaiba.persistenceservice.impl.ApplicationEntityManagerImpl;
-import org.kuwaiba.persistenceservice.impl.BusinessEntityManagerImpl;
-import org.kuwaiba.persistenceservice.impl.MetadataEntityManagerImpl;
+import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
 import org.kuwaiba.persistenceservice.impl.RelTypes;
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ReturnableEvaluator;
 import org.neo4j.graphdb.StopEvaluator;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.Traverser;
 import org.neo4j.graphdb.Traverser.Order;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
+import org.neo4j.graphdb.traversal.Evaluators;
+import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.kernel.Traversal;
 
 /**
  * Utility class containing misc methods to perform common tasks
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class Util {
-
-     
-     /**
-     * Gets an attribute type by traversing through the "HAS" relationship of a given class metadata node
-     * @param classNode
-     * @param attributeName
-     * @return attribute's type. 0 if it can't find the attribute
-     */
-//    public static int getTypeOfAttribute (Node classNode, String attributeName){
-//        Iterable<Relationship> attributes = classNode.getRelationships(RelTypes.HAS_ATTRIBUTE);
-//        while (attributes.iterator().hasNext()){
-//            Relationship rel = attributes.iterator().next();
-//            if (rel.getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_NAME).equals(attributeName))
-//                return Integer.valueOf(rel.getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_TYPE).toString());
-//        }
-//        return 0;
-//    }
-
     /**
      * Converts a String value to an object value based on a give mapping. This method
      * does not convert binary or relationship-like attributes
      * @param value Value as String
-     * @param type Mapping. The allowed values are the AttributeMetadata.MAPPING_XXX
      * @return the converted value
      * @throws InvalidArgumentException If the type can't be converted
      */
-    public static Object getRealValue(String value, int mapping, String type) throws InvalidArgumentException{
+    public static Object getRealValue(String value, String type) throws InvalidArgumentException {
         if (value == null)
             return null;
         try{
-            switch(mapping){
-                case AttributeMetadata.MAPPING_PRIMITIVE:
-                    if(type.equals("Float"))
-                        return Float.valueOf(value);
+            if(type.equals("String"))
+                return value;
+            else
+                if(type.equals("Float"))
+                    return Float.valueOf(value);
+                else
+                    if(type.equals("Long"))
+                        return Long.valueOf(value);
                     else
-                        if(type.equals("Long"))
-                            return Long.valueOf(value);
+                        if(type.equals("Integer"))
+                            return Integer.valueOf(value);
                         else
-                            if(type.equals("Integer"))
-                                return Integer.valueOf(value);
+                            if(type.equals("Boolean"))
+                                return Boolean.valueOf(value);
                             else
-                                if(type.equals("Boolean"))
-                                    return Boolean.valueOf(value);
-                    return value;
-                case AttributeMetadata.MAPPING_DATE:
-                    return new Date(Long.valueOf(value));
-                case AttributeMetadata.MAPPING_TIMESTAMP:
-                    return Timestamp.valueOf(value);
-                default:
-                    throw new InvalidArgumentException(formatString("Can not convert value %1s to a typ %2s", value, type), Level.WARNING);
-            }
-
+                                if(type.equals("Date"))
+                                    return new Date(Long.valueOf(value));
+                                else
+                                    if(type.equals("Timestamp"))
+                                        return Timestamp.valueOf(value);
+                                    else
+                                        throw new InvalidArgumentException(String.format("Type %s not found",type),Level.WARNING);
         }catch (Exception e){
-            throw new InvalidArgumentException(formatString("Can not convert value %1s to a typ %2s", value, type), Level.WARNING);
+            throw new InvalidArgumentException(String.format("Can not convert value %s to a type %s", value, type), Level.WARNING);
         }
     }
 
@@ -136,7 +127,7 @@ public class Util {
     }
 
     /**
-     * Releases all relationships related to an object given its direction and a relationsship's property value
+     * Releases all relationships related to an object given its direction and a relationship's property value
      * @param instance Object from/to the relationships are connected
      * @param relationshipType Relationship type
      * @param relationshipDirection Relationship Direction
@@ -159,10 +150,10 @@ public class Util {
     public static void deleteObject(Node instance, boolean releaseAll) throws OperationNotPermittedException {
         if(!releaseAll){
             if (instance.getRelationships(RelTypes.RELATED_TO, Direction.INCOMING).iterator().hasNext())
-                throw new OperationNotPermittedException("deleteObject",Util.formatString("The object with id %1s can not be deleted since it has relationships", instance.getId()));
+                throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
 
             if (instance.getRelationships(RelTypes.RELATED_TO_SPECIAL, Direction.OUTGOING).iterator().hasNext())
-                throw new OperationNotPermittedException("deleteObject",Util.formatString("The object with id %1s can not be deleted since it has relationships", instance.getId()));
+                throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
         }
 
         for (Relationship rel : instance.getRelationships(RelTypes.CHILD_OF,Direction.INCOMING))
@@ -171,24 +162,73 @@ public class Util {
         for (Relationship rel : instance.getRelationships())
             rel.delete();
 
-        instance.getGraphDatabase().index().forNodes(BusinessEntityManagerImpl.INDEX_OBJECTS).remove(instance);
+        instance.getGraphDatabase().index().forNodes(Constants.INDEX_OBJECTS).remove(instance);
         instance.delete();
     }
 
-    public static Node copyObject(Node templateObject, Node newParentNode, boolean recursive, GraphDatabaseService graphDb) {
-        Node newInstance = graphDb.createNode();
-        for (String property : templateObject.getPropertyKeys())
-            newInstance.setProperty(property, templateObject.getProperty(property));
-        for (Relationship rel : templateObject.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING))
-            newInstance.createRelationshipTo(rel.getEndNode(), RelTypes.RELATED_TO).setProperty(MetadataEntityManagerImpl.PROPERTY_NAME, rel.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
+    /**
+     * Read and returns the bytes of a given file
+     * @param fileName file to be opened
+     * @return bytes on that file
+     */
+    public static byte[] readBytesFromFile(String fileName) throws FileNotFoundException, IOException{
+        byte[] bytes = null;
+        File f = new File(fileName);
+        InputStream is = new FileInputStream(f);
+        long length = f.length();
 
-        newInstance.createRelationshipTo(templateObject.getRelationships(RelTypes.INSTANCE_OF).iterator().next().getEndNode(), RelTypes.INSTANCE_OF);
-        newInstance.createRelationshipTo(newParentNode, RelTypes.CHILD_OF);
-        if (recursive){
-            for (Relationship rel : templateObject.getRelationships(RelTypes.CHILD_OF, Direction.INCOMING))
-                copyObject(rel.getStartNode(), newInstance, true, graphDb);
+        if (length < Integer.MAX_VALUE) { //checks if the file is too big
+            bytes = new byte[(int)length];
+            // Read in the bytes
+            int offset = 0;
+            int numRead = 0;
+            while (offset < bytes.length
+                   && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
+                offset += numRead;
+            }
+
+            // Ensure all the bytes have been read in
+            if (offset < bytes.length) {
+                throw new IOException("Could not completely read file "+f.getName());
+            }
         }
-        return newInstance;
+        is.close();
+        return bytes;
+    }
+
+
+    /**
+     * Saves a file, receiving the file name and the contents as parameters. If the directory structure doesn't exist, it's created
+     * @param directory
+     * @param fileName
+     * @param content
+     * @throws FileNotFoundException
+     * @throws IOException
+     */
+    public static void saveFile(String directory, String fileName, byte[] content) throws FileNotFoundException, IOException {
+        File imgDir = new File(directory);
+        imgDir.mkdirs();
+        FileOutputStream fos = new FileOutputStream(directory + "/" + fileName); //NOI18N
+        fos.write(content);
+        fos.close();
+    }
+
+    /**
+     * Gets an object's class name given the node representing it
+     * @param objectNode The node to e evaluated
+     * @return The object's class name.
+     * @throws MetadataObjectNotFoundException if no class node is associated to this node (this should not happen)
+     * @throws UnsupportedPropertyException if the class node is malformed
+     */
+    public static String getObjectClassName(Node objectNode) throws MetadataObjectNotFoundException, UnsupportedPropertyException {
+        Iterator<Relationship> iterator = objectNode.getRelationships(RelTypes.INSTANCE_OF).iterator();
+        if (!iterator.hasNext())
+            throw new MetadataObjectNotFoundException(String.format("The object with id %s does not have a class associated to it", objectNode.getId()));
+        
+        Node classNode = iterator.next().getEndNode();
+        if (!classNode.hasProperty(Constants.PROPERTY_NAME))
+            throw new UnsupportedPropertyException(Constants.PROPERTY_NAME);
+        return (String)classNode.getProperty(Constants.PROPERTY_NAME);
     }
 
     /**
@@ -199,55 +239,48 @@ public class Util {
      * @return the converted value
      * @throws InvalidArgumentException If the type can't be converted
      */
-    public Integer setRealValue(String value, int mapping, String type) throws InvalidArgumentException{
+    /*public Integer setRealValue(String value, int mapping, String type) throws InvalidArgumentException{
 
         try{
             if(type.equals("Float") || type.equals("Long")
-                    || type.equals("Integer") || type.equals("Boolean") || type.equals("byte[]"))
+                    || type.equals("Integer") || type.equals("Boolean"))
                 return AttributeMetadata.MAPPING_PRIMITIVE;
             else if(type.equals("Date"))
                 return AttributeMetadata.MAPPING_DATE;
-
+            else if (type.equals("byte[]"))
+                return AttributeMetadata.MAPPING_BINARY;
             else
                 return AttributeMetadata.MAPPING_MANYTOONE;
-             
 //            throw new InvalidArgumentException("Can not retrieve the correct value for ("+
 //                value+" "+type+"). Please check your mappings", Level.WARNING);
-
-
         }catch (Exception e){
-            throw new InvalidArgumentException("Can not retrieve the correct value for ("+
-                            value+" "+type+"). Please check your mappings", Level.WARNING);
+            throw new InvalidArgumentException(String.format("Can not retrieve the correct value for %s (%s). Please check your mappings", value, type), Level.WARNING);
         }
-    }
+    }*/
 
     /**
      * Creates a ClassMetadata with default values
      * @param classMetadata
      * @return
      */
-    public static ClassMetadata createDefaultClassMetadata(ClassMetadata classDefinition) throws MetadataObjectNotFoundException{
-
-        Integer color = null;
-
-        if(classDefinition.getName() == null)
-            throw new MetadataObjectNotFoundException(Util.formatString(
-                         "Can not create a ClassMetada without a name"));
-
-        if(classDefinition.getDisplayName() == null)
+    public static ClassMetadata setDefaultsForClassMetadata(ClassMetadata classDefinition) throws MetadataObjectNotFoundException{
+        if(classDefinition.getName() == null){
+            throw new MetadataObjectNotFoundException("Can not create a class metadata entry without a name");
+        }
+        if(classDefinition.getDisplayName() == null){
             classDefinition.setDisplayName("");
-
-        if(classDefinition.getDescription() == null)
-            classDefinition.setDisplayName("");
-
-        if(classDefinition.getIcon() == null)
+        }
+        if(classDefinition.getDescription() == null){
+            classDefinition.setDescription("");
+        }
+        if(classDefinition.getIcon() == null){
             classDefinition.setIcon(new byte[0]);
-
-        if(classDefinition.getSmallIcon() == null)
+        }
+        if(classDefinition.getSmallIcon() == null){
             classDefinition.setSmallIcon(new byte[0]);
-
+        }
         try {
-            color = Integer.valueOf(classDefinition.getColor());
+            Integer.valueOf(classDefinition.getColor());
         } catch (NumberFormatException e) {
             classDefinition.setColor(0);
         }
@@ -255,31 +288,19 @@ public class Util {
         return classDefinition;
     }
 
-    /**
-     * Creates default values for a AttirbuteMetadata
-     * @param AttributeMetadata
-     * @return
-     */
-    public static AttributeMetadata createDefaultAttributeMetadata(AttributeMetadata AttributeDefinition) throws MetadataObjectNotFoundException{
-
-        //Integer mapping = null;
-
-        if(AttributeDefinition.getName() == null)
-            throw new MetadataObjectNotFoundException(Util.formatString(
-                         "Can not create an attribute without a name"));
-
-        if(AttributeDefinition.getDisplayName() == null)
-            AttributeDefinition.setDisplayName("");
-
-        if(AttributeDefinition.getDescription() == null)
-            AttributeDefinition.setDisplayName("");
-
-        if(AttributeDefinition.getType() == null)
-            AttributeDefinition.setType("");
-
-        return AttributeDefinition;
+    public static CategoryMetadata createDefaultCategoryMetadata(CategoryMetadata categoryDefinition) throws MetadataObjectNotFoundException{
+        if(categoryDefinition.getName() == null){
+            throw new MetadataObjectNotFoundException("Can not create a category without a name");
+        }
+        if(categoryDefinition.getDescription() == null){
+            categoryDefinition.setDescription("");
+        }
+        if(categoryDefinition.getDisplayName() == null){
+            categoryDefinition.setDisplayName("");
+        }
+        return categoryDefinition;
     }
-
+    
     /**
      * Converts a class metadata node into a ClassMetadataLight object
      * @param classNode
@@ -287,23 +308,23 @@ public class Util {
      */
     public static ClassMetadataLight createClassMetadataLightFromNode(Node classNode)
     {
-        ClassMetadataLight myClass = new ClassMetadataLight(classNode.getId(),(String)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME),(String)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_DISPLAY_NAME));
+        ClassMetadataLight myClass = new ClassMetadataLight(classNode.getId(),(String)classNode.getProperty(Constants.PROPERTY_NAME),(String)classNode.getProperty(Constants.PROPERTY_DISPLAY_NAME));
         
-        myClass.setAbstractClass((Boolean)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_ABSTRACT));
-        myClass.setSmallIcon((byte[])classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_SMALL_ICON));
-        myClass.setViewable((Boolean)isSubClass(MetadataEntityManagerImpl.CLASS_VIEWABLEOBJECT, classNode));
+        myClass.setAbstract((Boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT));
+        myClass.setSmallIcon((byte[])classNode.getProperty(Constants.PROPERTY_SMALL_ICON));
+        myClass.setCustom((Boolean)classNode.getProperty(Constants.PROPERTY_CUSTOM));
+        myClass.setInDesign((Boolean)classNode.getProperty(Constants.PROPERTY_IN_DESIGN));
+        myClass.setViewable((Boolean)isSubClass(Constants.CLASS_VIEWABLEOBJECT, classNode));
+        myClass.setListType((Boolean)isSubClass(Constants.CLASS_GENERICOBJECTLIST, classNode));
         myClass.setId(classNode.getId());
         
         //Parent
-        if (classNode.getSingleRelationship(RelTypes.EXTENDS, Direction.OUTGOING) != null)
-            myClass.setParentClassName(
-                    classNode.getSingleRelationship(
-                        RelTypes.EXTENDS, Direction.OUTGOING).getEndNode().getProperty(
-                            MetadataEntityManagerImpl.PROPERTY_NAME).toString());
+        if (classNode.getSingleRelationship(RelTypes.EXTENDS, Direction.OUTGOING) != null){
+            myClass.setParentClassName(classNode.getSingleRelationship(
+                    RelTypes.EXTENDS, Direction.OUTGOING).getEndNode().getProperty(Constants.PROPERTY_NAME).toString());
+        }
         else
             myClass.setParentClassName(null);
-
-
         return myClass;
     }
 
@@ -318,69 +339,73 @@ public class Util {
         List<AttributeMetadata> listAttributes = new ArrayList();
         CategoryMetadata ctgr = new CategoryMetadata();
 
-        myClass.setName((String)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
-        myClass.setAbstractClass((Boolean)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_ABSTRACT));
-        myClass.setColor((Integer)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_COLOR));
-        myClass.setCountable((Boolean)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_COUNTABLE));
-        myClass.setCustom((Boolean)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_CUSTOM));
-        myClass.setDescription((String)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_DESCRIPTION));
-        myClass.setDisplayName((String)classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_DISPLAY_NAME));
-        myClass.setIcon((byte[])classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_ICON));
-        myClass.setSmallIcon((byte[])classNode.getProperty(MetadataEntityManagerImpl.PROPERTY_SMALL_ICON));
+        myClass.setName((String)classNode.getProperty(Constants.PROPERTY_NAME));
+        myClass.setAbstract((Boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT));
+        myClass.setColor((Integer)classNode.getProperty(Constants.PROPERTY_COLOR));
+        myClass.setCountable((Boolean)classNode.getProperty(Constants.PROPERTY_COUNTABLE));
+        myClass.setInDesign((Boolean)classNode.getProperty(Constants.PROPERTY_IN_DESIGN));
+        myClass.setCustom((Boolean)classNode.getProperty(Constants.PROPERTY_CUSTOM));
+        myClass.setDescription((String)classNode.getProperty(Constants.PROPERTY_DESCRIPTION));
+        myClass.setDisplayName((String)classNode.getProperty(Constants.PROPERTY_DISPLAY_NAME));
+        myClass.setIcon((byte[])classNode.getProperty(Constants.PROPERTY_ICON));
+        myClass.setSmallIcon((byte[])classNode.getProperty(Constants.PROPERTY_SMALL_ICON));
         myClass.setId(classNode.getId());
-        myClass.setListType(isSubClass(MetadataEntityManagerImpl.CLASS_GENERICOBJECTLIST, classNode));
+        myClass.setListType(isSubClass(Constants.CLASS_GENERICOBJECTLIST, classNode));
         //Is Viewable if is subclass of
-        myClass.setViewable((Boolean)isSubClass(MetadataEntityManagerImpl.CLASS_VIEWABLEOBJECT, classNode));
+        myClass.setViewable((Boolean)isSubClass(Constants.CLASS_VIEWABLEOBJECT, classNode));
         //Parent
-        if (classNode.getSingleRelationship(RelTypes.EXTENDS, Direction.OUTGOING) != null)
+        if (classNode.getSingleRelationship(RelTypes.EXTENDS, Direction.OUTGOING) != null){
             myClass.setParentClassName(
                     classNode.getSingleRelationship(
                         RelTypes.EXTENDS, Direction.OUTGOING).getEndNode().getProperty(
-                            MetadataEntityManagerImpl.PROPERTY_NAME).toString());
+                            Constants.PROPERTY_NAME).toString());
+        }
         else
             myClass.setParentClassName(null);
+        
         //Attributes
-        String cypherQuery = "START metadataclass = node({classid}) ".concat(
-                             "MATCH metadataclass -[:").concat(RelTypes.HAS_ATTRIBUTE.toString()).concat("]->attribute ").concat(
-                             "RETURN attribute ").concat(
-                             "ORDER BY attribute.name ASC");
-
-        Map<String, Object> params = new HashMap<String, Object>();
-        params.put("classid", classNode.getId());//NOI18N
-
-        ExecutionEngine engine = new ExecutionEngine(classNode.getGraphDatabase());
-        ExecutionResult result = engine.execute(cypherQuery, params);
-        Iterator<Node> n_column = result.columnAs("attribute");
-        for (Node attributeNode : IteratorUtil.asIterable(n_column))
-        {
-             listAttributes.add(createAttributeMetadataFromNode(attributeNode));
-        }
-
+//        String cypherQuery = "START metadataclass = node({classid}) ".concat(
+//                             "MATCH metadataclass -[:").concat(RelTypes.HAS_ATTRIBUTE.toString()).concat("]->attribute ").concat(
+//                             "RETURN attribute ").concat(
+//                             "ORDER BY attribute.name ASC");
+//
+//        Map<String, Object> params = new HashMap<String, Object>();
+//        params.put("classid", classNode.getId());//NOI18N
+//
+//        ExecutionEngine engine = new ExecutionEngine(classNode.getGraphDatabase());
+//        ExecutionResult result = engine.execute(cypherQuery, params);
+//        Iterator<Node> n_column = result.columnAs("attribute");
+//        for (Node attributeNode : IteratorUtil.asIterable(n_column))
+//             listAttributes.add(createAttributeMetadataFromNode(attributeNode));
+        
+        for (Relationship rel : classNode.getRelationships(RelTypes.HAS_ATTRIBUTE))
+            listAttributes.add(createAttributeMetadataFromNode(rel.getEndNode()));
+        
         myClass.setAttributes(listAttributes);
 
         //Category
         if(classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH) != null)
         {
-            ctgr.setName((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
-            ctgr.setDisplayName((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_DISPLAY_NAME));
-            ctgr.setDescription((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_DESCRIPTION));
+            ctgr.setName((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(Constants.PROPERTY_NAME));
+            ctgr.setDisplayName((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(Constants.PROPERTY_DISPLAY_NAME));
+            ctgr.setDescription((String)classNode.getSingleRelationship(RelTypes.BELONGS_TO_GROUP, Direction.BOTH).getEndNode().getProperty(Constants.PROPERTY_DESCRIPTION));
 
             myClass.setCategory(ctgr);
         }
-
         //Possible Children
         for (Relationship rel : classNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_CHILD))
         {
-
-            if((Boolean)rel.getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_ABSTRACT)){
+            if((Boolean)rel.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)){
                 Traverser traverserMetadata = Util.getAllSubclasses(rel.getEndNode());
                 for (Node childNode : traverserMetadata) {
-                    if(!(Boolean)childNode.getProperty(MetadataEntityManagerImpl.PROPERTY_ABSTRACT))
-                        myClass.getPossibleChildren().add((String)childNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
+                    if(!(Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)){
+                        myClass.getPossibleChildren().add((String)childNode.getProperty(Constants.PROPERTY_NAME));
+                    }
                 }//end for
             }//end if
-            else
-                myClass.getPossibleChildren().add((String)rel.getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
+            else{
+                myClass.getPossibleChildren().add((String)rel.getEndNode().getProperty(Constants.PROPERTY_NAME));
+            }
         }
 
         return myClass;
@@ -388,33 +413,29 @@ public class Util {
 
     /**
      * Converts a attribute metadata node into a AttrributeMetadata object
-     * @param AttibuteNode
+     * @param AttributeNode
      * @return
      */
-    public static AttributeMetadata createAttributeMetadataFromNode(Node AttibuteNode)
+    public static AttributeMetadata createAttributeMetadataFromNode(Node attributeNode)
     {
         AttributeMetadata attribute =  new AttributeMetadata();
         try{
-            attribute.setName((String)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME));
-            attribute.setDescription((String)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_DESCRIPTION));
-            attribute.setDisplayName((String)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_DISPLAY_NAME));
-            attribute.setMapping((Integer)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_MAPPING));
-            attribute.setReadOnly((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_READONLY));
-            attribute.setType((String)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_TYPE));
-            attribute.setVisible((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_VISIBLE));
-            attribute.setAdministrative((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_ADMINISTRATIVE));
-            attribute.setNoCopy((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NO_COPY));
-            attribute.setNoSerialize((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NO_SERIALIZE));
-            attribute.setUnique((Boolean)AttibuteNode.getProperty(MetadataEntityManagerImpl.PROPERTY_UNIQUE));
-            attribute.setId(AttibuteNode.getId());
-
+            attribute.setName((String)attributeNode.getProperty(Constants.PROPERTY_NAME));
+            attribute.setDescription((String)attributeNode.getProperty(Constants.PROPERTY_DESCRIPTION));
+            attribute.setDisplayName((String)attributeNode.getProperty(Constants.PROPERTY_DISPLAY_NAME));
+            attribute.setReadOnly((Boolean)attributeNode.getProperty(Constants.PROPERTY_READ_ONLY));
+            attribute.setType((String)attributeNode.getProperty(Constants.PROPERTY_TYPE));
+            attribute.setVisible((Boolean)attributeNode.getProperty(Constants.PROPERTY_VISIBLE));
+            attribute.setAdministrative((Boolean)attributeNode.getProperty(Constants.PROPERTY_ADMINISTRATIVE));
+            attribute.setNoCopy((Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY));
+            attribute.setUnique((Boolean)attributeNode.getProperty(Constants.PROPERTY_UNIQUE));
+            attribute.setId(attributeNode.getId());
         }catch(Exception e){
             return null;
         }
 
         return attribute;
     }
-
     
     /**
      * Builds a RemoteBusinessObject instance from a node representing a business object
@@ -431,14 +452,11 @@ public class Util {
             //Only set the attributes existing in the current node. Please note that properties can't be null in
             //Neo4J, so a null value is actually a non-existing relationship/value
             if (instance.hasProperty(myAtt.getName())){
-               if (myAtt.getMapping() == AttributeMetadata.MAPPING_MANYTOMANY ||
-                       myAtt.getMapping() == AttributeMetadata.MAPPING_MANYTOONE){
-                   continue;
-               }else{
-                   if (myAtt.getMapping() != AttributeMetadata.MAPPING_BINARY) {
-                            List<String> attributeValue = new ArrayList<String>();
-                            attributeValue.add(instance.getProperty(myAtt.getName()).toString());
-                            attributes.put(myAtt.getName(),attributeValue);
+               if (AttributeMetadata.isPrimitive(myAtt.getType())) {
+                   if (!myAtt.getType().equals("Binary")) {
+                        List<String> attributeValue = new ArrayList<String>();
+                        attributeValue.add(instance.getProperty(myAtt.getName()).toString());
+                        attributes.put(myAtt.getName(),attributeValue);
                     }
                 }
             }
@@ -448,10 +466,10 @@ public class Util {
         Iterable<Relationship> relationships = instance.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING);
         while(relationships.iterator().hasNext()){
             Relationship relationship = relationships.iterator().next();
-            if (!relationship.hasProperty(MetadataEntityManagerImpl.PROPERTY_NAME))
-                throw new InvalidArgumentException(Util.formatString("The object with id %1s is malformed", instance.getId()), Level.SEVERE);
+            if (!relationship.hasProperty(Constants.PROPERTY_NAME))
+                throw new InvalidArgumentException(String.format("The object with id %s is malformed", instance.getId()), Level.SEVERE);
 
-            String attributeName = (String)relationship.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME);
+            String attributeName = (String)relationship.getProperty(Constants.PROPERTY_NAME);
             for (AttributeMetadata myAtt : myClass.getAttributes()){
                 if (myAtt.getName().equals(attributeName)){
                     if (attributes.get(attributeName)==null)
@@ -478,19 +496,19 @@ public class Util {
        for (Relationship relationship : relationships) {
             Node groupNode = relationship.getEndNode();
             groups.add(new GroupProfile(groupNode.getId(),
-                        (String)groupNode.getProperty(GroupProfile.PROPERTY_GROUPNAME),
-                        (String)groupNode.getProperty(GroupProfile.PROPERTY_DESCRIPTION),
-                        (Long)groupNode.getProperty(GroupProfile.PROPERTY_CREATION_DATE))
+                        (String)groupNode.getProperty(Constants.PROPERTY_NAME),
+                        (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION),
+                        (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE))
                      );
         }
 
        UserProfile user =  new UserProfile(
                 userNode.getId(),
-                (String)userNode.getProperty(UserProfile.PROPERTY_USERNAME),
-                (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
-                (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
-                (Boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
-                (Long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                (String)userNode.getProperty(Constants.PROPERTY_NAME),
+                (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
+                (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
+                (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
+                (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
                 null);
 
        user.setGroups(groups);
@@ -503,34 +521,41 @@ public class Util {
      * @param groupNode
      * @return
      */
-    public static GroupProfile createGroupProfileFromNode(Node groupNode)
-    {
+    public static GroupProfile createGroupProfileFromNode(Node groupNode){
         Iterable<Relationship> relationships = groupNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.INCOMING);
         List<UserProfile> users = new ArrayList<UserProfile>();
 
         for (Relationship relationship : relationships) {
             Node userNode = relationship.getStartNode();
             users.add(new UserProfile(userNode.getId(),
-                        (String)userNode.getProperty(UserProfile.PROPERTY_USERNAME),
-                        (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
-                        (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
-                        (Boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
-                        (Long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                        (String)userNode.getProperty(Constants.PROPERTY_NAME),
+                        (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
+                        (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
+                        (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
+                        (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
                         null)
                      );
         }
-
         GroupProfile group =  new GroupProfile(
                 groupNode.getId(),
-                (String)groupNode.getProperty(GroupProfile.PROPERTY_GROUPNAME),
-                (String)groupNode.getProperty(GroupProfile.PROPERTY_DESCRIPTION),
-                (Long)groupNode.getProperty(GroupProfile.PROPERTY_CREATION_DATE),
+                (String)groupNode.getProperty(Constants.PROPERTY_NAME),
+                (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION),
+                (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
                 null,
                 null);
-
         group.setUsers(users);
-
         return group;
+    }
+    
+    /**
+     * Creates a generic object list (a list type) from a node
+     * @param listTypeNode the list type node
+     * @return a list type
+     */
+    public static GenericObjectList createGenericObjectListFromNode(Node listTypeNode){
+        GenericObjectList listType = new GenericObjectList(listTypeNode.getId(), 
+                (String)listTypeNode.getProperty(Constants.PROPERTY_NAME));
+        return listType;
     }
 
     /**
@@ -547,7 +572,7 @@ public class Util {
 
         Node parentNode = parent.iterator().next().getEndNode();
 
-        if (parentNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME).equals(allegedParentClass))
+        if (parentNode.getProperty(Constants.PROPERTY_NAME).equals(allegedParentClass))
             return true;
 
         return isSubClass(allegedParentClass, parentNode);
@@ -565,7 +590,7 @@ public class Util {
         for(Relationship parent : parents){
             Node parentNode = parent.getStartNode();
 
-            if (parentNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME).equals(allegedParentClass))
+            if (parentNode.getProperty(Constants.PROPERTY_NAME).equals(allegedParentClass))
                 return true;
         }
         return false;
@@ -590,24 +615,14 @@ public class Util {
     }
 
     /**
-     * Formats a String. It's basically a wrapper for Formatter.format() method
-     * @param stringToFormat String to be formatted
-     * @param args a variable set of arguments to be used with the formatter
-     * @return The resulting string of merging @stringToFormat with @args
-     */
-    public static String formatString(String stringToFormat,Object ... args){
-        return new Formatter().format(stringToFormat, args).toString();
-    }
-
-    /**
      * Retrieves the subclasses of a given class metadata node within the class hierarchy
      * @param ClassMetadata
      * @return
      */
 
-    public static Traverser getAllSubclasses(final Node ClassMetadata)
+    public static Traverser getAllSubclasses(final Node classMetadata)
     {
-        return ClassMetadata.traverse(Order.BREADTH_FIRST,
+        return classMetadata.traverse(Order.BREADTH_FIRST,
                 StopEvaluator.END_OF_GRAPH,
                 ReturnableEvaluator.ALL_BUT_START_NODE, RelTypes.EXTENDS,
                 Direction.INCOMING);
@@ -623,12 +638,11 @@ public class Util {
      * @return
      */
     public static String getAttributeFromNode(Node objectNode, String attribute){
-
         if(objectNode.hasProperty(attribute)){
             Object property = objectNode.getProperty(attribute);
-            if(attribute.equals(MetadataEntityManagerImpl.PROPERTY_CREATION_DATE)){
+            if(attribute.equals(Constants.PROPERTY_CREATION_DATE)){
                 Date creationDate = new Date((Long)property);
-                SimpleDateFormat formatoDeFecha = new SimpleDateFormat(ApplicationEntityManagerImpl.DATE_FORMAT);//NOI18N
+                SimpleDateFormat formatoDeFecha = new SimpleDateFormat(Constants.DATE_FORMAT);//NOI18N
                     return formatoDeFecha.format(creationDate);
             }
             else
@@ -648,37 +662,33 @@ public class Util {
         //get attribute type
         Iterable<Relationship> attributeRels = classNode.getRelationships(RelTypes.HAS_ATTRIBUTE, Direction.OUTGOING);
         for (Relationship attrRel:  attributeRels) {
-                    Node endNode = attrRel.getEndNode();
-                    if(attributeName.equals((String)endNode.getProperty(MetadataEntityManagerImpl.PROPERTY_NAME))){
-                        return (String)endNode.getProperty(MetadataEntityManagerImpl.PROPERTY_TYPE);
-                    }
+            Node endNode = attrRel.getEndNode();
+            if(attributeName.equals((String)endNode.getProperty(Constants.PROPERTY_NAME)))
+                return (String)endNode.getProperty(Constants.PROPERTY_TYPE);
         }
         return "";
     }
-
+    
     /**
-     * Evals a
+     * Evaluates attribute type
      * @param attributeType
      * @param attributeName
      * @param attributeValue
      * @return
      */
-    public static Object evalAttributeType(String attributeType, String attributeName, String attributeValue){
+    public static Object evalAttributeType(String attributeType, String attributeValue){
 
         if(attributeType.equals("String"))//NOI18N
-            return attributeValue;
-
-        if(attributeValue.contains("(?i)"))
-                    attributeValue = attributeValue.substring(4, attributeValue.length());
+            return "(?i)".concat(attributeValue);
 
         if(attributeType.equals("Date")){//NOI18N
             //the date you are looking for into long
             Long attrbtDate = (long)0;
-            SimpleDateFormat dateFormat = new SimpleDateFormat(ApplicationEntityManagerImpl.DATE_FORMAT);//NOI18N
+            SimpleDateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);//NOI18N
             try {
                 attrbtDate = dateFormat.parse(attributeValue).getTime();
             } catch (ParseException ex) {
-                System.out.println("wrong date format should be "+ApplicationEntityManagerImpl.DATE_FORMAT);//NOI18N
+                System.out.println("Wrong date format. It should be " + Constants.DATE_FORMAT);//NOI18N
             }
             return attrbtDate;
         }//end if is date
@@ -704,6 +714,237 @@ public class Util {
         Iterable<Relationship> aClass = instance.getRelationships(RelTypes.INSTANCE_OF, Direction.OUTGOING);
         if (!aClass.iterator().hasNext())
             return null;
-        return (String)aClass.iterator().next().getEndNode().getProperty(MetadataEntityManagerImpl.PROPERTY_NAME);
+        return (String)aClass.iterator().next().getEndNode().getProperty(Constants.PROPERTY_NAME);
+    }
+       
+    public static void createAttribute(Node classNode, AttributeMetadata attributeDefinition) throws InvalidArgumentException{
+            final TraversalDescription UPDATE_TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING);
+
+        for(Path p : UPDATE_TRAVERSAL.traverse(classNode)){
+            String currentClassName = (String) p.endNode().getProperty(Constants.PROPERTY_NAME);
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)){
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeDefinition.getName()))
+                    throw new InvalidArgumentException(String.format("Class %s already has an attribute named %s", 
+                            currentClassName, attributeDefinition.getName()), Level.INFO);
+                
+            }
+            
+            Node attrNode = classNode.getGraphDatabase().createNode();
+            attrNode.setProperty(Constants.PROPERTY_NAME, attributeDefinition.getName()); //This should not be null. That should be checked in the caller
+            attrNode.setProperty(Constants.PROPERTY_DESCRIPTION, attributeDefinition.getDescription() ==  null ? "" : attributeDefinition.getDescription());
+            attrNode.setProperty(Constants.PROPERTY_DISPLAY_NAME, attributeDefinition.getDisplayName() == null ? "" : attributeDefinition.getDisplayName());
+            attrNode.setProperty(Constants.PROPERTY_TYPE, attributeDefinition.getType() == null ? "String" : attributeDefinition.getType());
+            attrNode.setProperty(Constants.PROPERTY_READ_ONLY, attributeDefinition.isReadOnly() == null ? false : attributeDefinition.isReadOnly());
+            attrNode.setProperty(Constants.PROPERTY_VISIBLE, attributeDefinition.isVisible() == null ? true : attributeDefinition.isVisible());
+            attrNode.setProperty(Constants.PROPERTY_ADMINISTRATIVE, attributeDefinition.isAdministrative() == null ? false : attributeDefinition.isAdministrative());
+            attrNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
+            attrNode.setProperty(Constants.PROPERTY_NO_COPY, attributeDefinition.isNoCopy() == null ? false : attributeDefinition.isNoCopy());
+            attrNode.setProperty(Constants.PROPERTY_UNIQUE, attributeDefinition.isUnique() == null ? false : attributeDefinition.isUnique());
+
+            p.endNode().createRelationshipTo(attrNode, RelTypes.HAS_ATTRIBUTE);
+        }
+    }
+    
+    /**
+     * Transactions are not handled here
+     * @param classNode
+     * @param attributeName
+     * @param attributeType 
+     */
+    public static void changeAttributeTypeIfPrimitive (Node classNode, String attributeName, String newAttributeType) throws InvalidArgumentException {
+        final TraversalDescription UPDATE_TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING);
+
+        for(Path p : UPDATE_TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)){
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeName)){
+                    rel.getEndNode().setProperty(Constants.PROPERTY_TYPE, newAttributeType);
+                    break;
+                }
+            }
+            
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING)){
+                if(rel.getStartNode().hasProperty(attributeName)){
+                    Object currentValue = rel.getStartNode().getProperty(attributeName);                   
+                    Object newValue = Util.convertIfPossible(currentValue, newAttributeType);
+                    if (newValue != null)
+                        rel.getStartNode().setProperty(attributeName, newValue);
+                    else
+                        rel.getStartNode().removeProperty(attributeName);
+                }
+            }
+        }//end for
+    }
+    
+    public static void changeAttributeTypeIfListType (Node classNode, String attributeName, String newAttributeType) throws InvalidArgumentException {
+        final TraversalDescription UPDATE_TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING);
+
+        for(Path p : UPDATE_TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)){
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeName)){
+                    rel.getEndNode().setProperty(Constants.PROPERTY_TYPE, newAttributeType);
+                    break;
+                }
+            }
+            
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING)){
+                for(Relationship listTypeRel : rel.getStartNode().getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO, RelTypes.RELATED_TO_SPECIAL)){
+                    if (listTypeRel.getProperty(Constants.PROPERTY_NAME).equals(attributeName))
+                        listTypeRel.delete();
+                }
+            }
+        }//end for
+    }
+    
+    public static void changeAttributeProperty (Node classNode, String attributeName, String propertyName, Object propertyValue) throws InvalidArgumentException {
+        final TraversalDescription UPDATE_TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING);
+
+        for(Path p : UPDATE_TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)) {
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeName)){
+                    rel.getEndNode().setProperty(propertyName, propertyValue);
+                    break;
+                }
+            }
+        }//end for
+    }
+    
+    /**
+     * 
+     * @param classNode
+     * @param oldAttributeName
+     * @param newAttributeName
+     * @throws InvalidArgumentException 
+     */
+    public static void changeAttributeName(Node classNode, String oldAttributeName, String newAttributeName) {
+        final TraversalDescription UPDATE_TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING);
+
+        for(Path p : UPDATE_TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)) {
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(oldAttributeName)){
+                    rel.getEndNode().setProperty(Constants.PROPERTY_NAME, newAttributeName);
+                    break;
+                }
+            }
+            
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING)){
+                if(rel.getStartNode().hasProperty(oldAttributeName)){
+                    Object currentValue = rel.getStartNode().getProperty(oldAttributeName);
+                    rel.getStartNode().removeProperty(oldAttributeName);
+                    rel.getStartNode().setProperty(newAttributeName, currentValue);
+                }
+            }           
+        }//end for
+    }
+    
+    public static void show(Node node){
+        String output = "";
+        Transaction tx = node.getGraphDatabase().beginTx();
+        try{
+        final TraversalDescription TRAVERSAL = Traversal.description().
+                    breadthFirst().
+                    relationships(RelTypes.EXTENDS, Direction.INCOMING).
+                    relationships(RelTypes.INSTANCE_OF, Direction.INCOMING).
+                    evaluator(Evaluators.all());
+            for(Path p : TRAVERSAL.traverse(node)){
+                if(p.endNode().hasRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING)){
+                    output += "Instance: " ;
+                }
+                output += p.endNode().getProperty("name") +" id: "+ p.endNode().getId() +"\n";
+                for (Relationship attrRel: p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE, Direction.OUTGOING)){
+                    output += "-" + attrRel.getEndNode().getProperty("name") + "\n";
+                }
+            }
+        System.out.println("stop");
+        }catch(Exception ex){
+            Logger.getLogger("Delete attribute: "+ex.getMessage()); //NOI18N
+            if (tx != null)
+                tx.failure();
+            throw new RuntimeException(ex.getMessage());
+        } finally {
+            if (tx != null)
+                tx.finish();
+        }
+    }
+    
+    public static void deleteAttributeIfPrimitive(Node classNode, String attributeName){
+        final TraversalDescription TRAVERSAL = Traversal.description().
+                    breadthFirst().relationships(RelTypes.EXTENDS, Direction.INCOMING);
+        
+        for(Path p : TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)) {
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeName)){
+                    rel.getEndNode().delete();
+                    rel.delete();
+                    break;
+                }
+            }
+            
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING)){
+                if(rel.getStartNode().hasProperty(attributeName))
+                    rel.getStartNode().removeProperty(attributeName);
+            }           
+        }//end for
+    }
+    
+    public static void deleteAttributeIfListType(Node classNode, String attributeName){
+        final TraversalDescription TRAVERSAL = Traversal.description().
+                    breadthFirst().relationships(RelTypes.EXTENDS, Direction.INCOMING);
+        
+        for(Path p : TRAVERSAL.traverse(classNode)){
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE)) {
+                if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeName)){
+                    rel.getEndNode().delete();
+                    rel.delete();
+                    break;
+                }
+            }
+            
+            for(Relationship rel : p.endNode().getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING)){
+                for (Relationship relatedElement : rel.getStartNode().getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO, RelTypes.RELATED_TO_SPECIAL)){
+                    if(relatedElement.getProperty(Constants.PROPERTY_NAME).equals(attributeName))
+                        relatedElement.delete();
+                }
+            }           
+        }//end for
+    }
+    
+    /**
+     * Tries to convert an attribute value to a new attribute type. It only works with primitive types String, Integer, Float, Boolean, Long, Date and Timestamp
+     * @param oldValue The old value
+     * @param convertTo The type we want to convert the old value to
+     * @return The converted value
+     * @throws InvalidArgumentException If it's not possible to perform the conversion
+     */
+    public static Object convertIfPossible(Object oldValue, String convertTo) throws InvalidArgumentException {
+        if (oldValue == null)
+            return null;
+        
+        String easierToHandleOldValue = oldValue.toString();
+        if (convertTo.equals("String"))
+            return easierToHandleOldValue;
+        try {
+            if (convertTo.equals("Integer"))
+                return Integer.valueOf(easierToHandleOldValue);
+            if (convertTo.equals("Float"))
+                return Float.valueOf(easierToHandleOldValue);
+            if (convertTo.equals("Boolean"))
+                return Boolean.valueOf(easierToHandleOldValue);
+            if (convertTo.equals("Long") || convertTo.equals("Date") || convertTo.equals("Timestamp"))
+                return Integer.valueOf(easierToHandleOldValue);
+        }catch (NumberFormatException ex){} //Does nothing
+        
+        return null;
+        
+        //throw  new InvalidArgumentException(String.format("Can not convert %s into %s", oldValue, convertTo), Level.WARNING);
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,18 +16,20 @@
 
 package org.kuwaiba.ws.toserialize.metadata;
 
+import java.io.Serializable;
+
 /**
  * This is a wrapper class for AttributeMetadata, containing the info required for the clients
  * to render the object attributes in the right way
  *
- * @author Adrian Martinez Molina <adrian.martinez@gmail.com>
+ * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
-public class AttributeInfo {
+public class AttributeInfo implements Serializable {
 
     /**
      * Attribute's id
      */
-    private Long id;
+    private long id;
     /**
      * Attribute's name
      */
@@ -43,45 +45,80 @@ public class AttributeInfo {
     /**
      * Flag to mark an attribute to be used for administrative purposes (beyond the operational inventory)
      */
-    private boolean administrative;
+    private Boolean administrative;
     /**
      * Attribute's visibility
      */
-    private boolean visible;
+    private Boolean visible;
      /**
      * Marks the attribute as read only
      */
-    private boolean readOnly;
+    private Boolean readOnly;
     /**
      * Marks the attribute as unique
      */
-    private boolean unique;
+    private Boolean unique;
     /**
      * Attribute's short description
      */
     private String description;
     /**
-     * Indicates how this attribute should be mapped (into a primitive type, a relationship, etc)
+     * Indicates if an attribute is copy when the copy/paste is made
      */
-    private int mapping;
+    private Boolean noCopy;
+    /**
+     * Cannot change or delete a locked attribute
+     */
+    private Boolean locked;
+
+    public AttributeInfo() {
+    }
 
     public AttributeInfo(String name, String displayName, String type, 
-                         boolean administrative, boolean visible,
-                         String description, int mapping) {
+            Boolean administrative, Boolean visible, String description) {
         this.name = name;
         this.displayName = displayName;
         this.type = type;
         this.administrative = administrative;
         this.visible = visible;
         this.description = description;
-        this.mapping = mapping;
     }
 
-    public boolean isAdministrative() {
+    public AttributeInfo(long id, String name, String displayName, String type, 
+            Boolean administrative, Boolean visible, Boolean readOnly, 
+            Boolean unique, String description, Boolean noCopy) {
+        this.id = id;
+        this.name = name;
+        this.displayName = displayName;
+        this.type = type;
+        this.administrative = administrative;
+        this.visible = visible;
+        this.readOnly = readOnly;
+        this.unique = unique;
+        this.description = description;
+        this.noCopy = noCopy;
+    }
+    
+    public AttributeInfo(String name, String displayName, String type, 
+                         Boolean administrative, Boolean visible, 
+                         Boolean readOnly, Boolean unique, String description, 
+                         Boolean noCopy) {
+        this.name = name;
+        this.displayName = displayName;
+        this.type = type;
+        this.administrative = administrative;
+        this.visible = visible;
+        this.readOnly = readOnly;
+        this.unique = unique;
+        this.description = description;
+        this.noCopy = noCopy;
+    }
+
+    public Boolean isAdministrative() {
         return administrative;
     }
 
-    public void setAdministrative(boolean administrative) {
+    public void setAdministrative(Boolean administrative) {
         this.administrative = administrative;
     }
 
@@ -101,20 +138,12 @@ public class AttributeInfo {
         this.displayName = displayName;
     }
 
-    public Long getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
-    }
-
-    public int getMapping() {
-        return mapping;
-    }
-
-    public void setMapping(int mapping) {
-        this.mapping = mapping;
     }
 
     public String getName() {
@@ -133,28 +162,43 @@ public class AttributeInfo {
         this.type = type;
     }
 
-    public boolean isVisible() {
+    public Boolean isVisible() {
         return visible;
     }
 
-    public void setVisible(boolean visible) {
+    public void setVisible(Boolean visible) {
         this.visible = visible;
     }
 
-    public boolean isReadOnly() {
+    public Boolean isReadOnly() {
         return readOnly;
     }
 
-    public void setReadOnly(boolean readOnly) {
+    public void setReadOnly(Boolean readOnly) {
         this.readOnly = readOnly;
     }
 
-    public boolean isUnique() {
+    public Boolean isUnique() {
         return unique;
     }
 
-    public void setUnique(boolean unique) {
+    public void setUnique(Boolean unique) {
         this.unique = unique;
     }
-    
+
+    public Boolean isNoCopy() {
+        return noCopy;
+    }
+
+    public void setNoCopy(Boolean noCopy) {
+        this.noCopy = noCopy;
+    }
+
+    public Boolean isLocked() {
+        return locked;
+    }
+
+    public void setLocked(Boolean locked) {
+        this.locked = locked;
+    }
 }

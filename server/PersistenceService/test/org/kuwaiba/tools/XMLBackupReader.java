@@ -40,6 +40,7 @@ public class XMLBackupReader {
 
     MetadataEntityManagerImpl mem;
     ConnectionManagerImpl cm;
+    String sub= "";
 
     public XMLBackupReader() {
         try {
@@ -50,8 +51,6 @@ public class XMLBackupReader {
             Logger.getLogger(XMLBackupReader.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    String sub= "";    
 
     public void read(byte[] xmlDocument) throws Exception{
         QName hierarchyTag = new QName("hierarchy"); //NOI18N
@@ -69,9 +68,8 @@ public class XMLBackupReader {
                     this.serverVersion = reader.getAttributeValue(null, "serverVersion"); //NOI18N
                     this.date = new Date(Long.valueOf(reader.getAttributeValue(null, "date"))); //NOI18N
                 }else
-                    if (reader.getName().equals(classTag)){
+                    if (reader.getName().equals(classTag))
                         roots.add(readClassNode(reader));
-                    }
             }
         }
         reader.close();
@@ -84,12 +82,14 @@ public class XMLBackupReader {
     private LocalClassWrapper readClassNode(XMLStreamReader reader) throws XMLStreamException{
         LocalClassWrapper aClass = new LocalClassWrapper();
 
-        aClass.setName(reader.getAttributeValue(null, "name"));
-        aClass.setApplicationModifiers(Integer.valueOf(reader.getAttributeValue(null, "applicationModifiers")));
-        aClass.setJavaModifiers(Integer.valueOf(reader.getAttributeValue(null, "javaModifiers")));
-        aClass.setClassType(Integer.valueOf(reader.getAttributeValue(null, "classType")));
+        aClass.setName(reader.getAttributeValue(null, "name")); //NOI18N
+        aClass.setApplicationModifiers(Integer.valueOf(reader.getAttributeValue(null, "applicationModifiers"))); //NOI18N
+        aClass.setJavaModifiers(Integer.valueOf(reader.getAttributeValue(null, "javaModifiers"))); //NOI18N
+        aClass.setClassType(Integer.valueOf(reader.getAttributeValue(null, "classType"))); //NOI18N
+        aClass.setClassPackage(reader.getAttributeValue(null, "classPackage")); //NOI18N
         QName attributeTag = new QName("attribute"); //NOI18N
         QName classTag = new QName("class"); //NOI18N
+        
 
         while (true){
             int event = reader.next();
@@ -153,9 +153,9 @@ public class XMLBackupReader {
         return bytes;
     }
 
-    public void axu(){
+    public void load(){
         try {
-            readRoots(roots, "");
+            readRoots(roots, null);
         } catch (Exception ex) {
             Logger.getLogger(XMLBackupReader.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -164,28 +164,30 @@ public class XMLBackupReader {
     public void readRoots(List<LocalClassWrapper> listNodes, String parentClassName) throws Exception{
 
         ClassMetadata clmt = new ClassMetadata();
-        byte[] x = new byte[1];
+//        CategoryMetadata ctgry = new CategoryMetadata();
 
-//        dC.setName("defaul-category");
-//        dC.setDisplayName("defaul-category");
-//        dC.setDescription("Default category to test");
 
         for (LocalClassWrapper lcw: listNodes) {
 
-            clmt.setAbstractClass(Modifier.isAbstract(lcw.getJavaModifiers()));
+//            ctgry.setName(lcw.getClassPackage());
+//            ctgry.setDescription(null);
+//            ctgry.setDisplayName(null);
+            
+            clmt.setAbstract(Modifier.isAbstract(lcw.getJavaModifiers()));
             clmt.setCategory(null);
             clmt.setColor(0);
             clmt.setCountable((lcw.getApplicationModifiers() & LocalClassWrapper.MODIFIER_NOCOUNT) != LocalClassWrapper.MODIFIER_NOCOUNT);
             clmt.setCustom(false);
             clmt.setDescription("");
             clmt.setDisplayName("");
-            clmt.setIcon(x);
+            clmt.setIcon(new byte[0]);
             clmt.setInterfaces(null);
             clmt.setListType(false);
             clmt.setName(lcw.getName());
             clmt.setParentClassName(parentClassName);
-            clmt.setSmallIcon(x);
-
+            clmt.setSmallIcon(new byte[0]);
+            clmt.setInDesign(false);
+            
             List<AttributeMetadata> attList = new ArrayList<AttributeMetadata>();
             
             for (LocalAttributeWrapper law : lcw.getAttributes())
@@ -196,22 +198,12 @@ public class XMLBackupReader {
                 attr.setDisplayName("");
                 attr.setDescription("");
                 attr.setType(law.getType());
-                //everithing is technicial by default
                 attr.setAdministrative(false);
-
-                if(law.getType().equals("Float") || law.getType().equals("Long") || law.getType().equals("String")
-                    || law.getType().equals("Integer") || law.getType().equals("Boolean") || law.getType().equals("byte[]"))
-                    attr.setMapping(AttributeMetadata.MAPPING_PRIMITIVE);
-                else if(law.getType().equals("Date"))
-                    attr.setMapping(AttributeMetadata.MAPPING_DATE);
-                else
-                    attr.setMapping(AttributeMetadata.MAPPING_MANYTOONE);
                 
                 int applicationModifiers = law.getApplicationModifiers();
 
                 attr.setReadOnly((applicationModifiers & LocalAttributeWrapper.MODIFIER_READONLY) != LocalAttributeWrapper.MODIFIER_READONLY);
                 attr.setNoCopy((applicationModifiers & LocalAttributeWrapper.MODIFIER_NOCOPY) != LocalAttributeWrapper.MODIFIER_NOCOPY);
-                attr.setNoSerialize((applicationModifiers & LocalAttributeWrapper.MODIFIER_NOSERIALIZE) != LocalAttributeWrapper.MODIFIER_NOSERIALIZE);
                 attr.setUnique(false);
                 attr.setVisible(true);
 
@@ -219,14 +211,14 @@ public class XMLBackupReader {
                     attList.add(attr);
             }
             clmt.setAttributes(attList);
-
-            mem.createClass(clmt);
-
-            if(lcw.getDirectSubClasses().size() >1){
-                
-                readRoots(lcw.getDirectSubClasses(), lcw.getName());
+            try{
+                mem.createClass(clmt);
+            }catch (Exception ex){
+                System.out.println(String.format("Class %s could not be created: %s", lcw.getName(), ex.getMessage()));
             }
-            
+            //The subclasses are processed even if the parent class failed
+            if(lcw.getDirectSubClasses().size() > 0)
+                readRoots(lcw.getDirectSubClasses(), lcw.getName());
         }
     }
 }

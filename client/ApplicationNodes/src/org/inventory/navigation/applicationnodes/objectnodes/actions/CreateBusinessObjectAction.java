@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012, 2013 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,16 +15,16 @@
  */
 package org.inventory.navigation.applicationnodes.objectnodes.actions;
 
-import org.inventory.core.services.utils.MenuScroller;
 import java.awt.event.ActionEvent;
 import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
@@ -32,7 +32,10 @@ import org.openide.nodes.Node;
 import org.openide.util.Lookup;
 import org.openide.util.actions.Presenter.Popup;
 
-
+/**
+ * Action that requests a business object creation
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ */
 public final class CreateBusinessObjectAction extends AbstractAction implements Popup{
     private Node node;
     private CommunicationsStub com;
@@ -55,13 +58,13 @@ public final class CreateBusinessObjectAction extends AbstractAction implements 
     @Override
     public void actionPerformed(ActionEvent ev) {
         NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
-        LocalObjectLight myLol = CommunicationsStub.getInstance().createObject(
+        LocalObjectLight myLol = com.createObject(
                 ((JMenuItem)ev.getSource()).getName(),
                 (node instanceof RootObjectNode) ? null : (((ObjectNode)node)).getObject().getClassName(),
-                (node instanceof RootObjectNode) ? null : (((ObjectNode)node)).getObject().getOid(), null);
+                (node instanceof RootObjectNode) ? -1 : (((ObjectNode)node)).getObject().getOid(), 0);
         if (myLol == null)
             nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.ERROR,
-                    CommunicationsStub.getInstance().getError());
+                    com.getError());
         else{
             ((ObjectChildren)node.getChildren()).add(new ObjectNode[]{new ObjectNode(myLol)});
             nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.INFO,
@@ -75,7 +78,7 @@ public final class CreateBusinessObjectAction extends AbstractAction implements 
 
         List<LocalClassMetadataLight> items;
         if (node instanceof RootObjectNode) //For the root node
-            items = CommunicationsStub.getInstance().getPossibleChildren(null, false);
+            items = com.getPossibleChildren(null, false);
         else
             items = CommunicationsStub.getInstance().
                     getPossibleChildren(((ObjectNode)node).getObject().getClassName(),false);

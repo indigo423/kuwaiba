@@ -16,10 +16,11 @@
 
 package org.inventory.communications;
 
-import java.awt.Point;
 import javax.xml.stream.XMLStreamException;
+import org.inventory.communications.core.LocalAttributeMetadataImpl;
 import org.inventory.communications.core.LocalAttributeWrapperImpl;
 import org.inventory.communications.core.LocalClassMetadataImpl;
+import org.inventory.communications.core.LocalClassMetadataLightImpl;
 import org.inventory.communications.core.LocalClassWrapperImpl;
 import org.inventory.communications.core.LocalObjectImpl;
 import org.inventory.communications.core.LocalObjectLightImpl;
@@ -27,17 +28,20 @@ import org.inventory.communications.core.queries.LocalTransientQueryImpl;
 import org.inventory.communications.core.views.LocalEdgeImpl;
 import org.inventory.communications.core.views.LocalNodeImpl;
 import org.inventory.communications.core.views.LocalObjectViewImpl;
+import org.inventory.communications.core.views.LocalObjectViewLightImpl;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
 import org.inventory.core.services.api.metadata.LocalAttributeWrapper;
 import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.api.metadata.LocalClassWrapper;
 import org.inventory.core.services.api.queries.LocalQuery;
 import org.inventory.core.services.api.queries.LocalTransientQuery;
 import org.inventory.core.services.api.visual.LocalEdge;
-import org.inventory.core.services.api.visual.LocalLabel;
 import org.inventory.core.services.api.visual.LocalNode;
 import org.inventory.core.services.api.visual.LocalObjectView;
+import org.inventory.core.services.api.visual.LocalObjectViewLight;
 
 /**
  * This is a factory used to provide implementations for all the interfaces implemented in this module
@@ -56,6 +60,10 @@ public class LocalStuffFactory {
         return new LocalAttributeWrapperImpl();
     }
 
+    public static LocalAttributeMetadata createLocalAttributeMetadata() {
+        return new LocalAttributeMetadataImpl();
+    }
+
     public static LocalClassWrapper createLocalClassWrapper() {
         return new LocalClassWrapperImpl();
     }
@@ -70,11 +78,11 @@ public class LocalStuffFactory {
         //return null;
     }
 
-    public static LocalEdge createLocalEdge(LocalObjectLight toAdd, LocalNode nodeA, LocalNode nodeB, Point[] controlPoints) {
+    public static LocalEdge createLocalEdge(LocalObjectLight toAdd, LocalNode nodeA, LocalNode nodeB, double[][] controlPoints) {
         return new LocalEdgeImpl(toAdd, nodeB, nodeB, controlPoints);
     }
 
-    public static LocalEdge createLocalEdge(LocalObjectLight container, Point[] controlPoints) {
+    public static LocalEdge createLocalEdge(LocalObjectLight container, double[][] controlPoints) {
         return new LocalEdgeImpl(container, controlPoints);
     }
 
@@ -86,11 +94,19 @@ public class LocalStuffFactory {
         return new LocalNodeImpl(node, lastX, i);
     }
 
-    public static LocalObjectView createLocalObjectView(LocalNode[] myNodes, LocalEdge[] myEdges, LocalLabel[] myLabels) {
-        return new LocalObjectViewImpl(myNodes, myEdges, myLabels);
+    public static LocalObjectViewLight createLocalObjectViewLight (long id, String name, String description, int type) {
+        return new LocalObjectViewLightImpl(id, name, description, type);
+    }
+
+    public static LocalObjectView createLocalObjectView (long id, String name, String description, int type, byte[] structure, byte[] background) {
+        return new LocalObjectViewImpl(id, name, description, type, structure, background);
     }
 
     public static LocalClassMetadata createLocalClassMetadata() {
         return new LocalClassMetadataImpl();
+    }
+    
+    public static LocalClassMetadataLight createLocalClassMetadataLight() {
+        return new LocalClassMetadataLightImpl();
     }
 }

@@ -123,7 +123,7 @@ public class ExtendedQuery implements Serializable{
         this.page = page;
         this.limit = limit;
     }
-
+ 
     public List<String> getAttributeNames() {
         return attributeNames;
     }

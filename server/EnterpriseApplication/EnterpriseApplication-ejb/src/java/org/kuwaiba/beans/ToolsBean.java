@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -77,5 +77,15 @@ public class ToolsBean implements ToolsBeanRemote {
             }
         }
         return aem;
+    }
+
+    @Override
+    public void connect() throws ServerSideException {
+        try {
+            //
+        } catch (Exception ex) {
+            Logger.getLogger(ToolsBean.class.getName()).log(Level.INFO, ex.getMessage());
+            throw new ServerSideException(Level.SEVERE, ex.getMessage());
+        }
     }
 }

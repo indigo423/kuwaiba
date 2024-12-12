@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,25 +22,24 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.visual.LocalNode;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.widget.general.IconNodeWidget;
 import org.openide.util.ImageUtilities;
 
 /**
  * This widget represents a node (as in the navigation tree)
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ObjectNodeWidget extends IconNodeWidget implements ActionListener{
     private LocalObjectLight object;
     public static final Font defaultFont = new Font(Font.SANS_SERIF,Font.BOLD,12);
 
-    public ObjectNodeWidget(ViewScene scene, LocalNode node){
+    public ObjectNodeWidget(ViewScene scene, LocalObjectLight node){
         super(scene);
-        this.object = node.getObject();
-        setLabel(node.getObject().getName());
+        this.object = node;
+        setLabel(node.getName());
         getLabelWidget().setFont(defaultFont);
-        Image myIcon = CommunicationsStub.getInstance().getMetaForClass(node.getObject().getClassName(), false).getIcon();
+        Image myIcon = CommunicationsStub.getInstance().getMetaForClass(node.getClassName(), false).getIcon();
         if(myIcon == null)
             myIcon = ImageUtilities.loadImage("org/inventory/views/objectview/res/default_32.png");
         setImage(myIcon);

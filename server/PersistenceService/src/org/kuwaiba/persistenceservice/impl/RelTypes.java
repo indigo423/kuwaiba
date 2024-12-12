@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import org.neo4j.graphdb.RelationshipType;
 
 
 /**
- * Possible attribute types
+ * Possible relationship types
  * @author Adrian Fernando Martinez Molina <adrian.martinez@kuwaiba.org>
  */
 public enum RelTypes implements RelationshipType{
@@ -34,10 +34,13 @@ public enum RelTypes implements RelationshipType{
     RELATED_TO, //Represents the many-to-one, many-to-may relationships (like type, responsible, etc)
     BELONGS_TO_GROUP, //Used to associate a user to a group (group of user)
     OWNS_QUERY, //Used to asociate a user to a query
+    OWNS_POOL, //Used to asociate a user to a pool
     DUMMY_ROOT, //Used to associate the db root object with application dummy root
     POSSIBLE_CHILD, //Used to build the containment hierarchy
     HAS_VIEW, //Used to link an object to a particular view
     HAS_HISTORY_ENTRY, //Used to link an object to a particular historic entry
     RELATED_TO_SPECIAL, //Used to implement relationships for domain specific models
     CHILD_OF_SPECIAL, //Used to implement the parent-child relationship for domain specific models
+    GROUPS_ROOT_NODE, //Used to associate root node whit the root group node
+    HAS_PRIVILEGE, //Used to associate the groups nodes with methods group node
 }

@@ -16,17 +16,16 @@
 package org.inventory.communications.core;
 
 import java.util.HashMap;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
 import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
 import org.inventory.core.services.utils.Utils;
 import org.kuwaiba.wsclient.RemoteObject;
-import org.kuwaiba.wsclient.StringArray;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Represents the whole information related to an object. Instances if this class
  * are actually proxies representing a business object. They can be cities, buildings, port, etc
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 @ServiceProvider(service=LocalObject.class)
 public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject {
@@ -34,10 +33,14 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
     //Reference to the metadata associated to this object's class
     private LocalClassMetadata myMetadata;
 
+    /**
+     * This constructor is called to create dummy objects where the id is not important
+     */
+    public LocalObjectImpl() {
+        super();
+    }
 
-    public LocalObjectImpl(){}
-
-    public LocalObjectImpl(String className, Long _oid, String[] atts, Object[] vals){
+    public LocalObjectImpl(String className, long _oid, String[] atts, Object[] vals){
         HashMap<String,Object> dict = new HashMap<String, Object>();
         this.className = className;
         this.oid = _oid;
@@ -64,15 +67,18 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
                     Utils.getRealValue(lcmdt.getTypeForAttribute(ro.getAttributes().get(i)), lcmdt.getMappingForAttribute(ro.getAttributes().get(i)), ro.getValues().get(i).getItem()));
     }
 
+    @Override
     public LocalClassMetadata getObjectMetadata() {
         return myMetadata;
     }
 
+    @Override
     public void setObjectMetadata(LocalClassMetadata metaForClass) {
         this.myMetadata = metaForClass;
     }
 
 
+    @Override
     public void setLocalObject(String className, String[] attributes, Object[] values){
         HashMap<String,Object> dict = new HashMap<String, Object>();
         this.className = className;
@@ -87,26 +93,19 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
      */
     public Class getTypeOf(String name){
         return attributes.get(name).getClass();
-    }
-
-
-    @Override
-    public Long getOid(){
-        return this.oid;
-    }
-    public void setOid(Long id){
-        this.oid = id;
-    }
+    }   
 
     @Override
     public String toString(){
         return this.getAttribute("name")==null?"":this.getAttribute("name").toString();
     }
 
+    @Override
     public HashMap<String,Object> getAttributes() {
         return this.attributes;
     }
 
+    @Override
     public Object getAttribute(String name){
         return attributes.get(name);
     }

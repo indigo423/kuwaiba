@@ -16,6 +16,7 @@
 
 package org.kuwaiba.ws.todeserialize;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
@@ -30,7 +31,7 @@ import java.util.ArrayList;
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 
-public class TransientQuery {
+public class TransientQuery implements Serializable {
     
     /**
      * OR logical connector
@@ -105,6 +106,10 @@ public class TransientQuery {
      * As stated before, joins will be treated like simple subqueries
      */
     private ArrayList<TransientQuery> joins;
+    /**
+     * As stated before, parent will be treated like simple subqueries
+     */
+    private TransientQuery parent;
     /**
      * Indicates if the current LocalQuery object is a join or the master query. It will
      * be used later to determine if
@@ -190,6 +195,14 @@ public class TransientQuery {
 
     public void setJoins(ArrayList<TransientQuery> joins) {
         this.joins = joins;
+    }
+
+    public TransientQuery getParent() {
+        return parent;
+    }
+
+    public void setParent(TransientQuery parent) {
+        this.parent = parent;
     }
 
     public void setLimit(int limit) {

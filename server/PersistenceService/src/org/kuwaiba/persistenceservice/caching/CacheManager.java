@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ import org.kuwaiba.apis.persistence.application.GroupProfile;
 import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
-import org.kuwaiba.persistenceservice.util.Util;
+import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
+import org.kuwaiba.persistenceservice.util.Constants;
 
 /**
  * Manages the caching strategy
@@ -37,6 +38,10 @@ public class CacheManager {
      * Class cache
      */
     private HashMap<String, ClassMetadata> classIndex;
+    /**
+     * List type cache, the key is the listype 
+     */
+    private HashMap<String, GenericObjectList> listTypeIndex;
     /**
      * Possible children index. The key is the class, the value its possible children. Note that a blank key ("") represents the navigation tree root
      */
@@ -56,6 +61,7 @@ public class CacheManager {
         userIndex = new HashMap<String, UserProfile>();
         groupIndex = new HashMap<String, GroupProfile>();
         possibleChildrenIndex = new HashMap<String, List<String>>();
+        listTypeIndex = new HashMap<String, GenericObjectList>();
     }
 
     public static CacheManager getInstance(){
@@ -79,6 +85,14 @@ public class CacheManager {
      */
     public void putClass(ClassMetadata newClass){
         classIndex.put(newClass.getName(), newClass);
+    }
+    
+    /**
+     * Remove a class from cache
+     * @param className The class name
+     */
+    public void removeClass(String className){
+        classIndex.remove(className);
     }
 
     /**
@@ -109,8 +123,12 @@ public class CacheManager {
 
     public List<String> getPossibleChildren(String parent){
         if (parent == null)
-            return possibleChildrenIndex.get("");
+            return possibleChildrenIndex.get(Constants.DUMMYROOT);
         return possibleChildrenIndex.get(parent);
+    }
+    
+    public void clearContainmentCache(){
+        possibleChildrenIndex.clear();
     }
 
     /**
@@ -130,10 +148,10 @@ public class CacheManager {
         userIndex.put(newUser.getUserName(), newUser);
     }
 
-        /**
+    /**
      * Tries to retrieve a cached user
      * @param userName the class to be retrieved from the cache
-     * @return the cached version of the class. Null if it's  not cached
+     * @return the cached version of the group. Null if it's  not cached
      */
     public GroupProfile getGroup(String groupName){
         return groupIndex.get(groupName);
@@ -162,13 +180,40 @@ public class CacheManager {
     public void removeGroup(String groupName){
         userIndex.remove(groupName);
     }
+    
+    /**
+     * Tries to retrieve a cached list type
+     * @param listTypeName the list type to be retrieved from the cache
+     * @return the cached version of the group. Null if it's  not cached
+     */
+    public GenericObjectList getListType(String listTypeName){
+        return listTypeIndex.get(listTypeName);
+    }
+    
+    /**
+     * Put/replaces an entry into the list type cache
+     * @param newListType list type to be added
+     */
+    public void putListType(GenericObjectList newListType){
+        listTypeIndex.put(newListType.getClassName(), newListType);
+    }
+    
+    /**
+     * Removes an entry into the list type
+     * @param listTypeName list type to be deleted
+     */
+    public void removeListType(String listTypeName){
+        listTypeIndex.remove(listTypeName);
+    }
     /**
      * Clear the cache
      */
     public void clear() {
         classIndex.clear();
         userIndex.clear();
+        groupIndex.clear();
         possibleChildrenIndex.clear();
+        listTypeIndex.clear();
     }
 
      /**
@@ -186,7 +231,7 @@ public class CacheManager {
         ClassMetadata currentClass = getClass(className);
 
         if (currentClass == null)
-            throw new MetadataObjectNotFoundException(Util.formatString("Class %1s can not be found", className));
+            throw new MetadataObjectNotFoundException(String.format("Can not find a class with id %s", className));
 
         if (allegedParentClass.equals(className))
             return true;
@@ -223,4 +268,5 @@ public class CacheManager {
         }
         return false;
     }
+    
 }

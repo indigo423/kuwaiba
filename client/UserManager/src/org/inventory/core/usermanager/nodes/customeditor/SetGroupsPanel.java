@@ -16,7 +16,6 @@
 
 package org.inventory.core.usermanager.nodes.customeditor;
 
-import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,7 +91,7 @@ public final class SetGroupsPanel extends JPanel{
         for(LocalUserGroupObjectLight group : allGroups){
             JCheckBox checkbox = new JCheckBox(group.getName());
             for(LocalUserGroupObjectLight myGroup : myGroups){
-                if(myGroup.getOid().equals(group.getOid())){
+                if(myGroup.getOid() == group.getOid()){
                     checkbox.setSelected(true);
                     break;
                 }
@@ -112,14 +111,14 @@ public final class SetGroupsPanel extends JPanel{
      * Returns the groups to be added to the current user
      * @return An array with groups to be added to the current user
      */
-    public List<Long> toBeAdded(){
+    public long[] toBeAdded(){
         List<Long> res = new ArrayList<Long>();
         for (JCheckBox checkbox : checkBoxes){
             Long oid = Long.valueOf(checkbox.getName());
             if (checkbox.isSelected()){
                 boolean isPresent = false;
                 for (LocalUserGroupObjectLight group : myGroups){
-                    if (group.getOid().equals(oid)){
+                    if (group.getOid() == oid){
                         isPresent = true;
                         break;
                     }
@@ -128,7 +127,11 @@ public final class SetGroupsPanel extends JPanel{
                     res.add(oid);
             }
         }
-        return res;
+        //TODO this is awful, but the user editor will be changed in the near future
+        long[] myRes = new long[res.size()];
+        for (int i = 0; i< res.size(); i++)
+            myRes[i] = res.get(i);
+        return myRes;
     }
 
     /**
@@ -142,7 +145,7 @@ public final class SetGroupsPanel extends JPanel{
             if (!checkbox.isSelected()){
                 boolean isPresent = false;
                 for (LocalUserGroupObjectLight group : myGroups){
-                    if (group.getOid().equals(oid)){
+                    if (group.getOid() == oid){
                         isPresent = true;
                         break;
                     }

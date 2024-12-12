@@ -15,6 +15,7 @@
  */
 package org.kuwaiba.ws.toserialize.metadata;
 
+import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
@@ -26,10 +27,12 @@ import org.kuwaiba.ws.toserialize.application.Validator;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ClassInfoLight {
-    protected Long id;
-    protected Boolean abstractClass;
+public class ClassInfoLight implements Serializable {
+    protected long id;
+    protected Boolean _abstract;
     protected Boolean viewable;
+    protected Boolean custom;
+    protected Boolean inDesign;
     protected Boolean listType;
     protected Validator[] validators;
     protected String className;
@@ -47,23 +50,27 @@ public class ClassInfoLight {
         this.className = myClassLight.getName();
         this.parentClassName = myClassLight.getParentClassName();
         this.smallIcon = myClassLight.getSmallIcon();
-        this.abstractClass = myClassLight.isAbstractClass();
+        this._abstract = myClassLight.isAbstract();
         this.displayName = myClassLight.getDisplayName();
         this.validators = validators;
         this.viewable = myClassLight.isViewable();
         this.listType = myClassLight.isListType();
+        this.custom = myClassLight.isCustom();
+        this.inDesign = myClassLight.isInDesign();
     }
 
-    public ClassInfoLight(Long id, String name, String displayName,Validator[] validators, boolean isViewable,
-            boolean isAbstract, boolean isListType, byte[] smallIcon) {
+    public ClassInfoLight (long id, String className, String displayName, Validator[] validators, boolean viewable, boolean _abstract, boolean custom, boolean inDesign, String parentClassName, boolean listType, byte[] smallIcon){
         this.id = id;
-        this.abstractClass = isAbstract;
-        this.validators = validators;
-        this.viewable = isViewable;
-        this.className = name;
+        this.className = className;
         this.displayName = displayName;
+        this.viewable = viewable;
+        this._abstract = _abstract;
+        this.custom = custom;
+        this.inDesign = inDesign;
+        this.parentClassName = parentClassName;
+        this.validators = validators;
         this.smallIcon = smallIcon;
-        this.listType = isListType;
+        this.listType = listType;
     }
 
     public String getClassName() {
@@ -74,20 +81,12 @@ public class ClassInfoLight {
         this.className = className;
     }
 
-    public Long getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
-    }
-
-    public Boolean isAbstract() {
-        return abstractClass;
-    }
-
-    public void setIsAbstract(Boolean isAbstract) {
-        this.abstractClass = isAbstract;
     }
 
     public String getDisplayName() {
@@ -106,28 +105,12 @@ public class ClassInfoLight {
         this.smallIcon = smallIcon;
     }
 
-    public Boolean getAbstractClass() {
-        return abstractClass;
-    }
-
-    public void setAbstractClass(Boolean abstractClass) {
-        this.abstractClass = abstractClass;
-    }
-
     public String getParentClassName() {
         return parentClassName;
     }
 
     public void setParentClassName(String parentClassName) {
         this.parentClassName = parentClassName;
-    }
-    
-    public Boolean isViewable() {
-        return viewable;
-    }
-
-    public void setViewable(Boolean viewable) {
-        this.viewable = viewable;
     }
 
     public Validator[] getValidators() {
@@ -138,7 +121,39 @@ public class ClassInfoLight {
         this.validators = validators;
     }
 
-    public Boolean getListType() {
+    public Boolean isAbstract() {
+        return _abstract;
+    }
+
+    public void setAbstract(Boolean _abstract) {
+        this._abstract = _abstract;
+    }
+
+    public Boolean isViewable() {
+        return viewable;
+    }
+
+    public void setViewable(Boolean viewable) {
+        this.viewable = viewable;
+    }
+
+    public Boolean isCustom() {
+        return custom;
+    }
+
+    public void setCustom(Boolean custom) {
+        this.custom = custom;
+    }
+
+    public Boolean isInDesign() {
+        return inDesign;
+    }
+
+    public void setInDesign(Boolean inDesign) {
+        this.inDesign = inDesign;
+    }
+
+    public Boolean isListType() {
         return listType;
     }
 
@@ -146,21 +161,23 @@ public class ClassInfoLight {
         this.listType = listType;
     }
 
+
     @Override
     public boolean equals(Object obj){
         if (obj == null)
             return false;
         if (!(obj instanceof ClassInfoLight))
             return false;
-        if (((ClassInfoLight)obj).getId().longValue() == getId().longValue())
+        if (((ClassInfoLight)obj).getId() == getId())
             return true;
         return false;
     }
 
     @Override
     public int hashCode() {
-        int hash = 5;
-        hash = 43 * hash + (this.id != null ? this.id.hashCode() : 0);
+        int hash = 7;
+        hash = 47 * hash + (int) (this.id ^ (this.id >>> 32));
+        hash = 47 * hash + (this.className != null ? this.className.hashCode() : 0);
         return hash;
     }
 }

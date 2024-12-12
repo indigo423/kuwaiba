@@ -26,18 +26,13 @@ import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadata extends ClassMetadataLight{
-
-    /**
-     *  Shows if this is a core class (the ones provided in the official release) or a custom one
-     */
-    private boolean custom;
     /**
      *  Indicates if the instances of this class are physical assets
      *  (in other words, if it's meaningful to have a count on them)
      *  Classes marked with the annotation NoCount (Slot, Port and the like)
      *  have this attribute set as false
      */
-    private boolean countable;
+    private Boolean countable;
     /**
      * List of interfaces this class implements
      */
@@ -45,7 +40,7 @@ public class ClassMetadata extends ClassMetadataLight{
     /**
      *  Color assigned to the instances when displayed
      */
-    private Integer color;
+    private int color;
     /**
      *  Icon to show in views
      */
@@ -69,37 +64,28 @@ public class ClassMetadata extends ClassMetadataLight{
     /**
      *  ClassMetada's creationDate
      */
-    private Long creationDate;
+    private long creationDate;
 
     public ClassMetadata() {
         attributes = new ArrayList<AttributeMetadata>();
         possibleChildren = new ArrayList<String>();
     }
-
-
+    
    // <editor-fold defaultstate="collapsed" desc="getters and setters methods. Click on the + sign on the left to edit the code.">
-    public Integer getColor() {
+    public int getColor() {
         return color;
     }
 
-    public void setColor(Integer color) {
+    public void setColor(int color) {
         this.color = color;
     }
 
-    public boolean isCountable() {
+    public Boolean isCountable() {
         return countable;
     }
 
-    public void setCountable(boolean countable) {
+    public void setCountable(Boolean countable) {
         this.countable = countable;
-    }
-
-    public boolean isCustom() {
-        return custom;
-    }
-
-    public void setCustom(boolean custom) {
-        this.custom = custom;
     }
 
     public List<InterfaceMetadata> getInterfaces() {
@@ -142,11 +128,11 @@ public class ClassMetadata extends ClassMetadataLight{
         this.description = description;
     }
     
-    public Long getCreationDate() {
+    public long getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Long creationDate) {
+    public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
     }
 
@@ -156,8 +142,7 @@ public class ClassMetadata extends ClassMetadataLight{
 
     public void setPossibleChildren(List<String> possibleChildren) {
         this.possibleChildren = possibleChildren;
-    }
-    // </editor-fold>
+    }// </editor-fold>
 
     public boolean implementsInterface(String interfaceName){
         if (interfaces == null)
@@ -180,20 +165,6 @@ public class ClassMetadata extends ClassMetadataLight{
                 return true;
         }
         return false;
-    }
-
-    /**
-     * Gets the mapping for a given attribute
-     * @param attributeName
-     * @return
-     * @throws InvalidArgumentException
-     */
-    public int getAttributeMapping(String attributeName) throws InvalidArgumentException{
-        for (AttributeMetadata eachAttribute : attributes){
-            if (eachAttribute.getName().equals(attributeName))
-                return eachAttribute.getMapping();
-        }
-        throw new InvalidArgumentException("Attribute cannot be found in this class", Level.WARNING);
     }
 
     public String getType(String attributeName)  throws InvalidArgumentException{

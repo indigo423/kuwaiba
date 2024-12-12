@@ -15,6 +15,7 @@
  */
 package org.kuwaiba.ws.toserialize.application;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -26,7 +27,7 @@ import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
  */
 
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ObjectList {
+public class ObjectList implements Serializable {
     /**
      * Class representing the list type (Vendor, AntennaType, etc)
      */
@@ -51,7 +52,7 @@ public class ObjectList {
     public ObjectList(GenericObjectList listType){
         this.className = listType.getClassName();
         this.type = listType.getType();
-        this.displayName = listType.getDislayName();
+        this.displayName = listType.getDisplayName();
         this.list = new HashMap<Long, String>();
         for (org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight item : listType.getList())
             this.list.put(item.getId(), item.getName());

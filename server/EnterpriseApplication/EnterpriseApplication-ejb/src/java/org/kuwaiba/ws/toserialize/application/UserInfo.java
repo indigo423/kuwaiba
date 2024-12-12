@@ -16,6 +16,7 @@
 
 package org.kuwaiba.ws.toserialize.application;
 
+import java.io.Serializable;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -27,11 +28,11 @@ import org.kuwaiba.apis.persistence.application.UserProfile;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-public class UserInfo {
+public class UserInfo implements Serializable {
     /**
      * User's oid
      */
-    private Long oid;
+    private long oid;
    /**
     * User's login name
     */
@@ -47,11 +48,11 @@ public class UserInfo {
    /**
     * User's creation date
     */
-    private Long creationDate;
+    private long creationDate;
    /**
     * Indicates if this account is enabled
     */
-    protected Boolean enabled;
+    protected boolean enabled;
 
     private UserGroupInfoLight[] groups;
 
@@ -67,16 +68,14 @@ public class UserInfo {
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
         if (user.getCreationDate() == null)
-            this.creationDate = null;
+            this.creationDate = 0;
         else
             this.creationDate = user.getCreationDate();
         if (user.getPrivileges() == null)
             this.privileges = new int[0];
-        else{
-            this.privileges = new int[user.getPrivileges().size()];
-            for (int i = 0; i <user.getPrivileges().size(); i++)
-                this.privileges[i] = user.getPrivileges().get(i);
-        }
+        else
+            this.privileges = user.getPrivileges();
+
         List<GroupProfile> entityGroups = user.getGroups();
         if (entityGroups == null)
             this.groups = null;
@@ -122,11 +121,11 @@ public class UserInfo {
         this.userName = userName;
     }
 
-    public Long getOid() {
+    public long getOid() {
         return oid;
     }
 
-    public void setOid(Long oid) {
+    public void setOid(long oid) {
         this.oid = oid;
     }
 
@@ -138,11 +137,11 @@ public class UserInfo {
         this.enabled = isEnabled;
     }
 
-    public Long getCreationDate() {
+    public long getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Long creationDate) {
+    public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
     }
 }

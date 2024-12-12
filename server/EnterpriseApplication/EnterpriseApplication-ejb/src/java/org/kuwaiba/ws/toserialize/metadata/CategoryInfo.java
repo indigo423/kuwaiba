@@ -16,20 +16,22 @@
 
 package org.kuwaiba.ws.toserialize.metadata;
 
+import java.io.Serializable;
+
 /**
  * This is a wrapper class for CategoryMetadata, containing the info required for the clients
  * to render the object category in the right way
  *
  * @author Adrian Martinez Molina <adrian.martinez@gmail.com>
  */
-public class CategoryInfo {
+public class CategoryInfo implements Serializable {
 
      /**
      * Category name
      */
     private String name;
     /**
-     * Category Displayname
+     * Category display name
      */
     private String displayName;
     /**
@@ -39,24 +41,24 @@ public class CategoryInfo {
     /**
      * category creation date
      */
-    private Long creationDate;
+    private long creationDate;
 
     public CategoryInfo() {
     }
 
     public CategoryInfo(String name, String displayName, String description,
-                        Long creationDate) {
+                        long creationDate) {
         this.name = name;
         this.displayName = displayName;
         this.description = description;
         this.creationDate = creationDate;
     }
 
-    public Long getCreationDate() {
+    public long getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Long creationDate) {
+    public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
     }
 

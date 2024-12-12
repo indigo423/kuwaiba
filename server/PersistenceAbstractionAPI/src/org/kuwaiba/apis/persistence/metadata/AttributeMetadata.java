@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,33 +25,9 @@ import java.io.Serializable;
 public class AttributeMetadata implements Serializable{
 
     /**
-     * Integer, Float, Long, Boolean, String or Text
-     */
-    public static final int MAPPING_PRIMITIVE = 1;
-    /**
-     * Dates
-     */
-    public static final int MAPPING_DATE = 2;
-    /**
-     * Timestamp
-     */
-    public static final int MAPPING_TIMESTAMP = 3;
-    /**
-     * Binary
-     */
-    public static final int MAPPING_BINARY = 4;
-    /**
-     * Many to one relationship (such as types)
-     */
-    public static final int MAPPING_MANYTOONE = 5;
-    /**
-     * Many to Many relationship (such as accountable persons for a given equipment)
-     */
-    public static final int MAPPING_MANYTOMANY = 6;
-    /**
      * Attribute's id
      */
-    private Long id;
+    private long id;
     /**
      * Attribute's name
      */
@@ -67,46 +43,42 @@ public class AttributeMetadata implements Serializable{
     /**
      * Flag to mark an attribute to be used for administrative purposes (beyond the operational inventory)
      */
-    private boolean administrative;
+    private Boolean administrative;
     /**
      * Should this be shown or hidden
      */
-    private boolean visible;
+    private Boolean visible;
     /**
      * Attribute's short description
      */
     private String description;
     /**
-     * Indicates how this attribute should be mapped (into a primitive type, a relationship, etc)
-     */
-    private Integer mapping;
-    /**
-     * Marks the attribute as read only
-     */
-    private boolean readOnly;
-    /**
      * Marks the attribute as unique
      */
-    private boolean unique;
+    private Boolean unique;
     /**
      * Attribute's creation Date
      */
-    private Long creationDate;
+    private long creationDate;
     /**
-     *
+     * Indicates if an attribute could be copy in the copy/paste operation
      */
-    private boolean noCopy;
+    private Boolean noCopy;
     /**
-     *
+     * Marks the attribute as read only
      */
-    private boolean noSerialize;
+    private Boolean readOnly;
+    /**
+     * Cannot change or delete a locked attribute
+     */
+    private Boolean locked;
 
     // <editor-fold defaultstate="collapsed" desc="getters and setters methods. Click on the + sign on the left to edit the code.">
-    public boolean isAdministrative() {
+    public Boolean isAdministrative() {
         return administrative;
     }
 
-    public void setAdministrative(boolean administrative) {
+    public void setAdministrative(Boolean administrative) {
         this.administrative = administrative;
     }
 
@@ -134,16 +106,12 @@ public class AttributeMetadata implements Serializable{
         this.name = name;
     }
 
-    public boolean isReadOnly() {
+    public Boolean isReadOnly() {
         return readOnly;
     }
 
-    public void setReadOnly(boolean readOnly) {
+    public void setReadOnly(Boolean readOnly) {
         this.readOnly = readOnly;
-    }
-
-    public void setMapping(int mapping) {
-        this.mapping = mapping;
     }
 
     public String getType() {
@@ -154,60 +122,82 @@ public class AttributeMetadata implements Serializable{
         this.type = type;
     }
 
-    public boolean isVisible() {
+    public Boolean isVisible() {
         return visible;
     }
 
-    public void setVisible(boolean visible) {
+    public void setVisible(Boolean visible) {
         this.visible = visible;
     }
 
-    public boolean isUnique() {
+    public Boolean isUnique() {
         return unique;
     }
 
-    public void setUnique(boolean unique) {
+    public void setUnique(Boolean unique) {
         this.unique = unique;
     }
 
-    public Long getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
 
-    public Long getCreationDate() {
+    public long getCreationDate() {
         return creationDate;
     }
 
-    public void setCreationDate(Long creationDate) {
+    public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
     }
 
-    public Integer getMapping() {
-        return mapping;
-    }
-
-    public void setMapping(Integer mapping) {
-        this.mapping = mapping;
-    }
-
-    public boolean isNoCopy() {
+    public Boolean isNoCopy() {
         return noCopy;
     }
 
-    public void setNoCopy(boolean noCopy) {
+    public void setNoCopy(Boolean noCopy) {
         this.noCopy = noCopy;
     }
-
-    public boolean isNoSerialize() {
-        return noSerialize;
+    
+    public Boolean isLocked() {
+        return locked;
     }
 
-    public void setNoSerialize(boolean noSerialize) {
-        this.noSerialize = noSerialize;
-    }// </editor-fold>
+    public void setLocked(Boolean locked) {
+        this.locked = locked;
+    }
+    // </editor-fold>
     
+    @Override
+    public boolean equals(Object obj){
+        if (obj == null)
+            return false;
+        if (!(obj instanceof AttributeMetadata))
+            return false;
+        
+        return this.getId() == ((AttributeMetadata)obj).getId();
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 37 * hash + (this.name != null ? this.name.hashCode() : 0);
+        return hash;
+    }
+    
+    /**
+     * Checks if a given type is primitive (String, Integer, Float, Long, Boolean, Date or Timestamp)
+     * @param type The type to be matched
+     * @return true if the given type is primitive, false otherwise
+     */
+    public static boolean isPrimitive(String type){
+        if (type.equals("String") || type.equals("Integer") || type.equals("Float") 
+                || type.equals("Long") || type.equals("Boolean") || type.equals("Date")
+                 || type.equals("Timestamp"))
+            return true;
+        return false;
+    }
 }

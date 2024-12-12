@@ -27,9 +27,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import org.inventory.communications.SharedInformation;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.api.visual.LocalObjectViewLight;
 import org.inventory.core.services.utils.Utils;
 import org.inventory.views.objectview.scene.actions.CustomAddRemoveControlPointAction;
 import org.inventory.views.objectview.scene.actions.CustomMoveAction;
@@ -110,6 +112,10 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      */
     private LocalObjectLight currentObject;
     /**
+     * Current view (if any, null if the current view does is just about to be created)
+     */
+    private LocalObjectViewLight currentView;
+    /**
      * Action listeners
      */
     private List<ActionListener> listeners;
@@ -135,14 +141,10 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      */
     public final static int SCENE_OBJECTSELECTED = 3;
     /**
-     * Version of the XML format used to store this view (see getAsXML method)
-     */
-    private final static String FORMAT_VERSION = "1.0";
-    /**
      * Default notifier
      */
     private NotificationUtil notifier;
-
+    
     public ViewScene (NotificationUtil notifier){
         interactionLayer = new LayerWidget(this);
         backgroundLayer = new LayerWidget(this);
@@ -150,10 +152,12 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         edgesLayer = new LayerWidget(this);
         labelsLayer = new LayerWidget(this);
         myConnectionProvider = new PhysicalConnectionProvider();
+        
         addChild(backgroundLayer);
         addChild(nodesLayer);
         addChild(edgesLayer);
         addChild(labelsLayer);
+        
         getActions().addAction(ActionFactory.createZoomAction());
         getActions().addAction(ActionFactory.createPanAction());
         //getActions().addAction(ActionFactory.createRectangularSelectAction(this, backgroundLayer));
@@ -233,6 +237,14 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         this.currentObject = currentObject;
     }
 
+    public LocalObjectViewLight getCurrentView() {
+        return currentView;
+    }
+
+    public void setCurrentView(LocalObjectViewLight currentView) {
+        this.currentView = currentView;
+    }
+
     public CustomMoveControlPointAction getMoveControlPointAction() {
         return moveControlPointAction;
     }
@@ -265,7 +277,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         synchronized (getSceneAnimator()) {
             double zoom = getSceneAnimator().isAnimatingZoomFactor () ? getSceneAnimator().getTargetZoomFactor () : getZoomFactor ();
             if(zoom < 4){
-                getSceneAnimator().animateZoomFactor (zoom+0.5);
+                getSceneAnimator().animateZoomFactor (zoom + 0.5);
                 validate();
             }
         }
@@ -275,7 +287,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         synchronized (getSceneAnimator()) {
             double zoom = getSceneAnimator().isAnimatingZoomFactor () ? getSceneAnimator().getTargetZoomFactor () : getZoomFactor ();
             if(zoom > 0)
-                getSceneAnimator().animateZoomFactor (zoom-0.5);
+                getSceneAnimator().animateZoomFactor (zoom - 0.5);
         }
     }
 
@@ -334,27 +346,30 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
     public void setBackgroundImage(Image im){
         if (im == null) //Do nothing
             return;
-        if (!backgroundLayer.getChildren().isEmpty())
-            backgroundLayer.removeChildren(); //Clean the layer
-
-        ImageWidget background = new ImageWidget(this,im);
-        background.bringToBack();
-        backgroundLayer.addChild(background);
+        backgroundLayer.removeChildren();
+        backgroundLayer.addChild(new ImageWidget(this, im));
+        validate();
+    }
+    
+    public void removeBackground() {
+        backgroundLayer.removeChildren();
+        fireChangeEvent(new ActionEvent(this, ViewScene.SCENE_CHANGE, "Remove Background"));
+        validate();
     }
 
     public byte[] getAsXML() {
         ByteArrayOutputStream bas = new ByteArrayOutputStream();
         WAX xmlWriter = new WAX(bas);
         StartTagWAX mainTag = xmlWriter.start("view");
-        mainTag.attr("version", FORMAT_VERSION); //NOI18N
+        mainTag.attr("version", SharedInformation.VIEW_FORMAT_VERSION); //NOI18N
         //TODO: Get the class name from some else
         mainTag.start("class").text("DefaultView").end();
         StartTagWAX nodesTag = mainTag.start("nodes");
         for (Widget nodeWidget : nodesLayer.getChildren())
-            nodesTag.start("node").attr("x", nodeWidget.getPreferredLocation().getX()).
-            attr("y", nodeWidget.getPreferredLocation().getY()).
+            nodesTag.start("node").attr("x", nodeWidget.getPreferredLocation().x).
+            attr("y", nodeWidget.getPreferredLocation().y).
             attr("class", ((ObjectNodeWidget)nodeWidget).getObject().getClassName()).
-            text(((ObjectNodeWidget)nodeWidget).getObject().getOid().toString()).end();
+            text(String.valueOf(((ObjectNodeWidget)nodeWidget).getObject().getOid()) ).end();
         nodesTag.end();
 
         StartTagWAX edgesTag = mainTag.start("edges");
@@ -365,7 +380,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
             edgeTag.attr("aside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
             edgeTag.attr("bside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
             for (Point point : ((ObjectConnectionWidget)edgeWidget).getControlPoints())
-                edgeTag.start("controlpoint").attr("x", point.getX()).attr("y", point.getY()).end();
+                edgeTag.start("controlpoint").attr("x", point.x).attr("y", point.y).end();
             edgeTag.end();
         }
         edgesTag.end();

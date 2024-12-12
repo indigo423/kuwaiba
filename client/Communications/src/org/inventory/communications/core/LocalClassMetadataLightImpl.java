@@ -17,10 +17,13 @@ package org.inventory.communications.core;
 
 import java.awt.Image;
 import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.utils.Utils;
 import org.kuwaiba.wsclient.ClassInfo;
@@ -35,25 +38,11 @@ import org.openide.util.lookup.ServiceProvider;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 @ServiceProvider(service=LocalClassMetadataLight.class)
-public class LocalClassMetadataLightImpl
-        implements LocalClassMetadataLight,Transferable{
-
+public class LocalClassMetadataLightImpl implements LocalClassMetadataLight{
     /**
      * Class id
      */
-    protected Long id;
-    /**
-     * Is this class abstract?
-     */
-    protected boolean abstractClass;
-    /**
-     * Is this class subclass of viewable? (this is, can have views attached)
-     */
-    protected boolean viewable;
-    /**
-     * Is this class subclass of GenericObject list? (this is, a list type)
-     */
-    protected boolean listType;
+    protected long id;
     /**
      * Class name
      */
@@ -63,6 +52,31 @@ public class LocalClassMetadataLightImpl
      */
     protected String displayName;
     /**
+     * Parent ClassMetada name
+     */
+    protected String parentName;
+    /**
+     * Is this class abstract?
+     */
+    protected boolean _abstract;
+    /**
+     * Is this class subclass of viewable? (this is, can have views attached)
+     */
+    protected boolean viewable;
+    /**
+     * Is this class subclass of GenericObject list? (this is, a list type)
+     */
+    protected boolean listType;
+    /**
+     * Shows if this is a core class (the ones provided in the official release) or a custom one
+     */
+    protected boolean custom;
+    /**
+     * Is the class "operational" or is it in design process?
+     */
+    protected boolean inDesign;
+
+    /**
      * Class icon for trees. This is the icon the instances of this class will show in trees
      */
     protected Image smallIcon;
@@ -70,21 +84,31 @@ public class LocalClassMetadataLightImpl
      * Misc validators. Validators tell you states of this class related to business rules
      */
     protected HashMap<String, Integer> validators;
-
-    public LocalClassMetadataLightImpl() {    }
-
+    /**
+     * The list of property change listeners
+     */
+    protected List<PropertyChangeListener> propertyChangeListeners;
+    /**
+     * This constructor is called to create dummy class metadata objects, such as that used to represent the Navigation Tree root
+     */
+    public LocalClassMetadataLightImpl() {  this.id = -1;  }
+    
     public LocalClassMetadataLightImpl(ClassInfo ci){
         this.id = ci.getId();
-        this.abstractClass = ci.isAbstractClass();
+        this._abstract = ci.isAbstract();
         this.viewable = ci.isViewable();
         this.listType = ci.isListType();
+        this.custom = ci.isCustom();
+        this.inDesign = ci.isInDesign();
         this.className = ci.getClassName();
         this.displayName = ci.getDisplayName();
+        this.parentName = ci.getParentClassName();
         this.smallIcon = ci.getSmallIcon()==null ? null : Utils.getImageFromByteArray(ci.getSmallIcon());
         this.validators = new HashMap<String, Integer>();
 
-        for (Validator validator : ci.getValidators())
+        for (Validator validator : ci.getValidators()){
             validators.put(validator.getLabel(), validator.getValue());
+        }
     }
 
     /**
@@ -93,66 +117,102 @@ public class LocalClassMetadataLightImpl
      */
     public LocalClassMetadataLightImpl(ClassInfoLight cil){
         this.id = cil.getId();
-        this.abstractClass = cil.isAbstractClass();
+        this._abstract = cil.isAbstract();
         this.viewable = cil.isViewable();
         this.listType = cil.isListType();
+        this.custom = cil.isCustom();
+        this.inDesign = cil.isInDesign();
         this.className = cil.getClassName();
         this.displayName = cil.getDisplayName();
+        this.parentName = cil.getParentClassName();
         this.smallIcon = cil.getSmallIcon()==null ? null : Utils.getImageFromByteArray(cil.getSmallIcon());
         this.validators = new HashMap<String, Integer>();
 
         for (Validator validator : cil.getValidators())
             validators.put(validator.getLabel(), validator.getValue());
-
     }
 
-    public LocalClassMetadataLightImpl(Long id, String className, String displayName,
-            byte[] smallIcon, boolean isAbstract, boolean isViewable, boolean isListType, HashMap<String, Integer> validators){
+    public LocalClassMetadataLightImpl(long id, String className, String displayName, String parentName,
+            byte[] smallIcon, boolean _abstract, boolean isViewable, boolean isListType, boolean isCustom, boolean isInDesign, HashMap<String, Integer> validators){
         this.id = id;
-        this.abstractClass = isAbstract;
+        this._abstract = _abstract;
         this.viewable = isViewable;
         this.listType = isListType;
+        this.custom = isCustom;
+        this.inDesign = isInDesign;
         this.className = className;
         this.displayName = displayName;
+        this.parentName = parentName;
         this.smallIcon = smallIcon==null ? null : Utils.getImageFromByteArray(smallIcon);
         this.validators = validators;
     }
 
-    public LocalClassMetadataLightImpl(Long id, String className, String displayName,
-            Image smallIcon, boolean isAbstract, boolean isViewable, boolean isListType, HashMap<String, Integer> validators){
+    public LocalClassMetadataLightImpl(long id, String className, String displayName, String parentName,
+            Image smallIcon, boolean _abstract, boolean isViewable, boolean isListType, HashMap<String, Integer> validators){
         this.id = id;
-        this.abstractClass = isAbstract;
+        this._abstract = _abstract;
         this.viewable = isViewable;
         this.listType = isListType;
         this.className = className;
         this.displayName = displayName;
+        this.parentName = parentName;
         this.smallIcon = smallIcon;
         this.validators = validators;
     }
 
+    @Override
     public String getClassName() {
         return className;
     }
+    
+    @Override
+    public void setClassName(String className) {
+        this.className = className;
+    }
 
-    public Long getOid() {
+    @Override
+    public long getOid() {
         return id;
     }
 
+    @Override
+    public void setOid(long id) {
+        this.id = id;
+    }
+    
     @Override
     public String toString(){
         return className;
     }
 
+    @Override
     public boolean isAbstract() {
-        return abstractClass;
+        return _abstract;
+    }
+    
+    @Override
+    public void setAbstract(boolean _abstract){
+        this._abstract = _abstract;
     }
 
+    @Override
     public boolean isViewable(){
         return this.viewable;
     }
+    
+    @Override 
+    public void setViewable(boolean viewable){
+        this.viewable = viewable;
+    }
 
+    @Override
     public boolean isListType(){
         return this.listType;
+    }
+    
+    @Override
+    public void setListType(boolean listType){
+        this.listType = listType;
     }
 
    /**
@@ -161,38 +221,52 @@ public class LocalClassMetadataLightImpl
     */
    @Override
    public boolean equals(Object obj){
-       if(obj == null)
+       if(obj == null) {
            return false;
-       if (!(obj instanceof LocalClassMetadataLight))
+       }
+       if (!(obj instanceof LocalClassMetadataLight)) {
            return false;
-       if (this.getOid() == null || ((LocalClassMetadataLight)obj).getOid() == null)
-           return false;
-       return (this.getOid().longValue() == ((LocalClassMetadataLight)obj).getOid().longValue());
+       }
+       return (this.getOid() == ((LocalClassMetadataLight)obj).getOid());
    }
 
     @Override
     public int hashCode() {
-        int hash = 9;
-        hash = 81 * hash + (this.id != null ? this.id.hashCode() : 0);
+        int hash = 7;
+        hash = 97 * hash + (int) (this.id ^ (this.id >>> 32));
+        hash = 97 * hash + (this.className != null ? this.className.hashCode() : 0);
         return hash;
     }
-    
+   
+    @Override
     public String getDisplayName(){
-        if (displayName == null)
+        if (displayName == null) {
             return className;
-        if (displayName.trim().equals(""))
+        }
+        if (displayName.trim().equals("")) {
             return className;
+        }
         return displayName;
     }
     
+    @Override 
+    public void setDisplayName(String displayName){
+        if(displayName != null){
+            this.displayName = displayName;
+        }
+    }
+    
+    @Override
     public Image getSmallIcon() {
         return smallIcon;
     }
 
+    @Override
     public void setSmallIcon(Image newIcon){
         this.smallIcon = newIcon;
     }
 
+    @Override
     public DataFlavor[] getTransferDataFlavors() {
         return new DataFlavor[]{LocalClassMetadataLight.DATA_FLAVOR};
     }
@@ -202,18 +276,73 @@ public class LocalClassMetadataLightImpl
      * @param validatorName validator's name
      * @return value for the given validator. false if the validator is not present
      */
+    @Override
     public int getValidator(String validatorName){
         return validators.get(validatorName) == null ? 0 : validators.get(validatorName);
     }
 
+    @Override
     public boolean isDataFlavorSupported(DataFlavor flavor) {
         return flavor.equals(LocalClassMetadataLight.DATA_FLAVOR);
     }
 
+    @Override
     public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-        if (isDataFlavorSupported(flavor))
+        if (isDataFlavorSupported(flavor)) {
             return this;
-        else
+        }
+        else {
             throw new UnsupportedFlavorException(flavor);
+        }
     }
-}
+
+    @Override
+    public String getParentName() {
+        return parentName;
+    }
+
+    @Override
+    public boolean isCustom() {
+        return custom;
+    }
+
+    @Override
+    public void setCustom(boolean custom){
+        this.custom = custom;
+    }
+    
+    @Override
+    public boolean isInDesign() {
+        return inDesign;
+    }
+    
+    @Override
+    public void setInDesign(boolean inDesign){
+        this.inDesign = inDesign;
+    }
+    
+    @Override
+    public void addPropertyChangeListener(PropertyChangeListener newListener){
+        if (propertyChangeListeners == null){
+            propertyChangeListeners = new ArrayList<PropertyChangeListener>();
+        }
+        if (propertyChangeListeners.contains(newListener)){
+            return;
+        }
+        propertyChangeListeners.add(newListener);
+    }
+
+    @Override
+    public void removePropertyChangeListener(PropertyChangeListener listener){
+        if (propertyChangeListeners == null){
+            return;
+        }
+        propertyChangeListeners.remove(listener);
+    }
+    @Override
+    public void firePropertyChangeEvent(String property, Object oldValue, Object newValue){
+        for (PropertyChangeListener listener : propertyChangeListeners){
+            listener.propertyChange(new PropertyChangeEvent(this, property, oldValue, newValue));
+        }
+    }
+ }

@@ -26,6 +26,7 @@ import org.inventory.core.services.factories.ObjectFactory;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.utils.Constants;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
@@ -40,7 +41,6 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
     private Object value;
     private List<LocalObjectListItem> list;
     private ObjectNode node;
-
 
     /**
      * This constructor is called when the type is anything but a list
@@ -89,7 +89,7 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
                     new String[]{this.getName()}, new Object[]{t});
             update.setOid(node.getObject().getOid());
             if(!CommunicationsStub.getInstance().saveObject(update))
-                throw new Exception("[saveObject]: Error "+ CommunicationsStub.getInstance().getError());
+                throw new Exception(CommunicationsStub.getInstance().getError());
             else
                 value = t;
             
@@ -118,15 +118,12 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
             if (this.getValue() == null) 
                 return;
 
-            if (this.getName().equals("name")){
+            if (this.getName().equals(Constants.PROPERTY_NAME)){
                 node.getObject().setName((String)getPropertyEditor().getValue());
                 node.setDisplayName((String)getPropertyEditor().getValue());
             }
             
-        } catch (Exception ex) {
-            return;
-        } 
-
+        } catch (Exception ex) {} 
     }
 
     @Override
@@ -134,6 +131,7 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
         //Dates are read only  by now until we integrate a date picker
         if (getValueType().equals(Date.class))
             return false;
+        
         return true;
     }
 }

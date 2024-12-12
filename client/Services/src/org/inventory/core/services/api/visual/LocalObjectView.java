@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,40 +17,70 @@
 package org.inventory.core.services.api.visual;
 
 import java.awt.Image;
-import java.util.List;
-import javax.xml.stream.XMLStreamException;
 
 /**
  * Interface representing an object view
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public interface LocalObjectView {
-        /**
-     * Id for a default view
-     */
-    public static final int TYPE_DEFAULT = 0;
+public abstract class LocalObjectView extends LocalObjectViewLight {
     /**
-     * Id for a view used for racks
+     * View structure
      */
-    public static final int TYPE_RACK = 1;
+    protected byte[] structure;
     /**
-     * Id for a view used in equipment with slots and boards
+     * View background
      */
-    public static final int TYPE_EQUIPMENT = 2;
+    protected Image background;
+    /**
+     * View current zoom
+     */
+    protected int zoom;
+    /**
+     * View current center position
+     */
+    protected double[] center;
+    /**
+     * Are all the elements is this view exist?
+     */
+    protected boolean dirty = false;
+
+    public byte[] getStructure(){
+        return structure;
+    }
+
+    public void setStructure(byte[] structure){
+        this.structure = structure;
+    }
     
-    public List<LocalEdge> getEdges();
+    public Image getBackground(){
+        return background;
+    }
 
-    public List<LocalLabel> getLabels();
+    public void setBackground (Image background){
+        this.background = background;
+    }
 
-    public List<LocalNode> getNodes();
+    public double[] getCenter() {
+        return center;
+    }
 
-    public Image getBackground();
+    public void setCenter(double[] center) {
+        this.center = center;
+    }
 
-    public int getViewType();
+    public int getZoom() {
+        return zoom;
+    }
 
-    public void parseXML(byte[] structure) throws XMLStreamException;
+    public void setZoom(int zoom) {
+        this.zoom = zoom;
+    }
 
-    public boolean isDirty();
+    public boolean isDirty() {
+        return dirty;
+    }
 
-    public void setDirty(boolean value);
+    public void setDirty(boolean isDirty) {
+        this.dirty = isDirty;
+    }
 }

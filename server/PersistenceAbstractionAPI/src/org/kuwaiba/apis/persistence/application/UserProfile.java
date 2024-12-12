@@ -25,16 +25,16 @@ import java.util.List;
  */
 public class UserProfile implements Serializable{
 
-    public static final String PROPERTY_ID = "id"; //NOI18N
-    public static final String PROPERTY_USERNAME = "username"; //NOI18N
-    public static final String PROPERTY_DESCRIPTION = "description"; //NOI18N
-    public static final String PROPERTY_PASSWORD = "password"; //NOI18N
-    public static final String PROPERTY_SALT = "salt"; //NOI18N
-    public static final String PROPERTY_FIRST_NAME = "firstName"; //NOI18N
-    public static final String PROPERTY_LAST_NAME = "lastName"; //NOI18N
-    public static final String PROPERTY_PRIVILEGES = "privileges"; //NOI18N
-    public static final String PROPERTY_CREATION_DATE = "creationDate"; //NOI18N
-    public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
+//    public static final String PROPERTY_ID = "id"; //NOI18N
+//    public static final String PROPERTY_USERNAME = "username"; //NOI18N
+//    public static final String PROPERTY_DESCRIPTION = "description"; //NOI18N
+//    public static final String PROPERTY_PASSWORD = "password"; //NOI18N
+//    public static final String PROPERTY_SALT = "salt"; //NOI18N
+//    public static final String PROPERTY_FIRST_NAME = "firstName"; //NOI18N
+//    public static final String PROPERTY_LAST_NAME = "lastName"; //NOI18N
+//    public static final String PROPERTY_PRIVILEGES = "privileges"; //NOI18N
+//    public static final String PROPERTY_CREATION_DATE = "creationDate"; //NOI18N
+//    public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
     /**
      * User's id (oid)
      */
@@ -66,13 +66,13 @@ public class UserProfile implements Serializable{
     /**
      * User's privileges. See class Privileges for the complete list of supported privileges
      */
-    private List<Integer> privileges;
+    private int[] privileges;
 
     public UserProfile() {
     }
 
     public UserProfile(Long id, String userName, String firstName, String lastName, Boolean enabled, Long creationDate,
-            List<Integer> privileges) {
+            int[] privileges) {
         this.id = id;
         this.userName = userName;
         this.firstName = firstName;
@@ -98,11 +98,11 @@ public class UserProfile implements Serializable{
         this.groups = groups;
     }
 
-    public List<Integer> getPrivileges() {
+    public int[] getPrivileges() {
         return privileges;
     }
 
-    public void setPrivileges(List<Integer> privileges) {
+    public void setPrivileges(int[] privileges) {
         this.privileges = privileges;
     }
 

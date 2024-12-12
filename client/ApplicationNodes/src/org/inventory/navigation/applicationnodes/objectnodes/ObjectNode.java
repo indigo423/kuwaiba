@@ -1,4 +1,4 @@
-/*
+/**
  *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
@@ -27,12 +27,12 @@ import java.util.Formatter;
 import java.util.List;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.core.services.api.LocalObjectListItem;
+import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.Constants;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
@@ -40,8 +40,7 @@ import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateBusin
 import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteBusinessObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.EditObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.RefreshObjectAction;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.RelateToServiceAction;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.ShowRelatedServicesAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.ShowObjectIdAction;
 import org.inventory.navigation.applicationnodes.objectnodes.properties.ObjectNodeProperty;
 import org.openide.actions.CopyAction;
 import org.openide.actions.CutAction;
@@ -76,12 +75,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
     protected DeleteBusinessObjectAction deleteAction;
     protected RefreshObjectAction refreshAction;
     protected EditObjectAction editAction;
-    private RelateToServiceAction relateToServiceAction;
-    private ShowRelatedServicesAction showRelatedServicesAction;
+    protected ShowObjectIdAction showObjectIdAction;
 
     protected Sheet sheet;
     protected Image icon;
-    private Image defaultIcon = ImageUtilities.loadImage(GENERIC_ICON_PATH);;
+    private final Image defaultIcon = ImageUtilities.loadImage(GENERIC_ICON_PATH);
     private NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
 
     public ObjectNode(LocalObjectLight _lol, boolean isLeaf){
@@ -97,26 +95,24 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         editAction = new EditObjectAction(this);
         deleteAction = new DeleteBusinessObjectAction(this);
         refreshAction = new RefreshObjectAction(this);
+        showObjectIdAction = new ShowObjectIdAction(object.getOid(), object.getClassName());
     }
     
-    public ObjectNode(LocalObjectLight _lol){
-        super(new ObjectChildren(), Lookups.singleton(_lol));
-        this.object = _lol;
+    public ObjectNode(LocalObjectLight lol){
+        super(new ObjectChildren(), Lookups.singleton(lol));
+        this.object = lol;
         this.object.addPropertyChangeListener(this);
         
         com = CommunicationsStub.getInstance();
 
-        icon = (com.getMetaForClass(_lol.getClassName(),false)).getSmallIcon();
+        icon = (com.getMetaForClass(lol.getClassName(),false)).getSmallIcon();
         explorerAction.putValue(OpenLocalExplorerAction.NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EXPLORE"));
 
         createAction = new CreateBusinessObjectAction(this);
         deleteAction = new DeleteBusinessObjectAction(this);
         editAction = new EditObjectAction(this);
         refreshAction = new RefreshObjectAction(this);
-        if (object.getValidator("isRelatableToService") == 1){
-            relateToServiceAction = new RelateToServiceAction(object);
-            showRelatedServicesAction = new ShowRelatedServicesAction(object);
-        }
+        showObjectIdAction = new ShowObjectIdAction(object.getOid(), object.getClassName());
     }
 
     /*
@@ -129,7 +125,12 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
     
     @Override
     public String getDisplayName(){
-        String className = CommunicationsStub.getInstance().getMetaForClass(object.getClassName(),false).getDisplayName();
+        String className;
+        LocalClassMetadata aClass = CommunicationsStub.getInstance().getMetaForClass(object.getClassName(),false);
+        if (aClass == null) //This is rare, but may happen. The cached object metadata is not synchronized with the server's due to a data model change
+            className = "";
+        else
+            className = aClass.getDisplayName();
         return getEditableText() + " ["+(className==null?object.getClassName():className)+"]";
     }
 
@@ -146,7 +147,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
             return sheet;
         }
 
-        LocalObject lo = null;
+        LocalObject lo;
         if (object instanceof LocalObject)
             lo = (LocalObject)object;
         else
@@ -159,7 +160,6 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
         for(LocalAttributeMetadata lam:meta.getAttributes()){
             if(lam.isVisible()){
-
                 ObjectNodeProperty property = null;
                 int mapping = lam.getMapping();
                 switch (mapping){
@@ -185,11 +185,16 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                         }
                         LocalObjectListItem val = null;
 
-                        for (LocalObjectListItem loli : list)
-                            if(loli.getOid().equals(lo.getAttribute(lam.getName()))){
-                                val = loli;
-                                break;
+                        if (lo.getAttribute(lam.getName()) == null)
+                            val = list.get(0); //None
+                        else{
+                            for (LocalObjectListItem loli : list){
+                                if(lo.getAttribute(lam.getName()).equals(loli.getOid())){
+                                    val = loli;
+                                    break;
+                                }
                             }
+                        }
                         property = new ObjectNodeProperty(
                                                lam.getName(),
                                                LocalObjectListItem.class,
@@ -220,6 +225,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         
         sheet.put(generalPropertySet);
         sheet.put(administrativePropertySet);
+        
+        
 
         return sheet;
     }
@@ -267,7 +274,6 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                     }
                 }
             }
-            children = toBeAdded;
 
             for (Node deadNode : toBeDeleted)
                 ((ObjectChildren)getChildren()).remove(new Node[]{deadNode});
@@ -293,10 +299,9 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                             SystemAction.get(CutAction.class),
                             SystemAction.get(PasteAction.class),
                             null, //Separator
-                            relateToServiceAction,
-                            showRelatedServicesAction,
-                            null, //Separator
-                            explorerAction};
+                            explorerAction,
+                            showObjectIdAction
+                            };
 
     }
 
@@ -311,6 +316,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         if( paste != null )
             s.add( paste );
 
+    }
+
+    @Override
+    public Transferable drag() throws IOException {
+        return object;
     }
 
     @Override
@@ -466,7 +476,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
     @Override
     public boolean equals(Object obj){
         if (obj instanceof ObjectNode){
-            return ((ObjectNode)obj).getObject().getOid().longValue() == this.getObject().getOid().longValue();
+            return ((ObjectNode)obj).getObject().getOid() == this.getObject().getOid();
         }else return false;
     }
 

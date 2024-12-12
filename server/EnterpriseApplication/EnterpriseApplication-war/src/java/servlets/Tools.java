@@ -62,7 +62,8 @@ public class Tools extends HttpServlet {
     throws ServletException, IOException {
         PrintWriter out = response.getWriter();
         out.println("<a href=\"/kuwaiba/\">&laquo;Back</a>");
-        if (!request.getRemoteAddr().equals("127.0.0.1")){ //This servlet can only be called/included from the local server
+        //System.out.println("Request from: "+request.getRemoteAddr());
+        if (!(request.getRemoteAddr().equals("127.0.0.1") || request.getRemoteAddr().equals("::1") || request.getRemoteAddr().equals("0:0:0:0:0:0:0:1"))){ //This servlet can only be called/included from the local server
             out.println("<h1>Error</h1>");
             out.println("You can't access this servlet directly");
             return;
@@ -90,6 +91,18 @@ public class Tools extends HttpServlet {
                 try {
                     out.println("<h1>Create/Reset Admin Account</h1>");
                     tbr.resetAdmin();
+                    out.println("<h2>Success</h2>");
+                    out.println("<div id=\"content\">Admin account reset successfully</div>");
+                } catch (Exception ex) {
+                    Logger.getLogger(Tools.class.getName()).log(Level.SEVERE, ex.getMessage());
+                    out.println("<h2 class=\"error\">Error</h2>");
+                    out.println("<div id=\"content\">"+ex.getMessage()+"</div>");
+                }
+                break;
+            case 3:
+                try {
+                    out.println("<h1>Create/Reset Admin Account</h1>");
+                    tbr.connect();
                     out.println("<h2>Success</h2>");
                     out.println("<div id=\"content\">Admin account reset successfully</div>");
                 } catch (Exception ex) {

@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010 - 2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,13 +25,17 @@ import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
  */
 public class GenericObjectList {
     /**
+     * Class id the items are instance of
+     */
+    private long id;
+    /**
      * Class name the items are instance of
      */
     private String className;
     /**
      * List type display name
      */
-    private String dislayName;
+    private String displayName;
     /**
      * Type of relationship:<br/>
      * 1 for Many To One
@@ -43,6 +47,22 @@ public class GenericObjectList {
      */
     private List<RemoteBusinessObjectLight> list;
 
+    public GenericObjectList() {
+    }
+    
+    public GenericObjectList(long id, String name) {
+        this.id = id;
+        this.className = name;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+  
     public String getClassName() {
         return className;
     }
@@ -51,12 +71,12 @@ public class GenericObjectList {
         this.className = className;
     }
 
-    public String getDislayName() {
-        return dislayName;
+    public String getDisplayName() {
+        return displayName;
     }
 
-    public void setDislayName(String dislayName) {
-        this.dislayName = dislayName;
+    public void setDisplayName(String dislayName) {
+        this.displayName = dislayName;
     }
 
     public List<RemoteBusinessObjectLight> getList() {
