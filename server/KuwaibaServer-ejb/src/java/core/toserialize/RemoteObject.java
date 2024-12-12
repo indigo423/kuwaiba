@@ -15,11 +15,12 @@
  */
 package core.toserialize;
 
-import entity.multiple.GenericObjectList;
+import core.annotations.Administrative;
+import core.annotations.NoSerialize;
+import entity.core.RootObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -41,8 +42,7 @@ public class RemoteObject extends RemoteObjectLight {
     public RemoteObject(){}
 
     public RemoteObject(Object object){
-        List<Field> allAttributes = MetadataUtils.getAllAttributes(object.getClass(),
-                                                                    new ArrayList<Field>());
+        List<Field> allAttributes = MetadataUtils.getAllFields(object.getClass());
         attributes = new String [allAttributes.size()];
         values = new String [allAttributes.size()];
         
@@ -50,24 +50,34 @@ public class RemoteObject extends RemoteObjectLight {
 
         int i = 0;
         for (Field f : allAttributes ){
+
+            //Administrative fields and those decorated as NoSerialize shouldn't be serialized
+            if(f.getAnnotation(Administrative.class) != null ||
+                    f.getAnnotation(NoSerialize.class) != null)
+                continue;
             attributes[i]=f.getName();
-            
+
             try{
                 //getDeclaredMethods takes private and protected methods, but NOT the inherited ones
                 //getMethods do the opposite. Now:
+                //IMPORTANT: if a given attribute doesn't have a getter using camel case, it wil be ignored
                 Method m = object.getClass().getMethod("get"+MetadataUtils.capitalize(f.getName()),
                                                         new Class[]{});
                 Object value = m.invoke(object, new Object[]{});
                 if (value == null)  values[i]=null;
                 else{
-                    //If this attribute is a list type, get the id
-                    if(value instanceof GenericObjectList) 
-                        values[i]=String.valueOf(((GenericObjectList)value).getId());
+                    //If this attribute is a reference to any other business object, we use a lazy approach
+                    //by setting as value the object id
+                    if(value instanceof RootObject)
+                        values[i]=String.valueOf(((RootObject)value).getId());
                     else
                         if (value instanceof Date)
                             values[i] = String.valueOf(((Date)value).getTime());
                         else
                             values[i]=value.toString();
+
+                    if (attributes[i].equals("id"))
+                        this.oid = (Long)value;
                 }
             } catch (NoSuchMethodException nsme){
                 System.out.println("NoSuchM:"+nsme.getMessage());
@@ -86,5 +96,21 @@ public class RemoteObject extends RemoteObjectLight {
             }
             i++;
         }
+    }
+
+    /**
+     * This method is useful to transform the returned value from queries (Entities)
+     * into serialize RemoteObject
+     * @param objs objects to be transformed
+     * @return an array with RO
+     */
+    public static RemoteObject[] toArray(List objs){
+        RemoteObject[] res = new RemoteObject[objs.size()];
+        int i=0;
+        for (Object obj : objs){
+            res[i] = new RemoteObject(obj);
+            i++;
+        }
+        return res;
     }
 }

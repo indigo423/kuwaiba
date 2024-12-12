@@ -15,6 +15,7 @@
  */
 package entity.core;
 
+import core.annotations.Administrative;
 import core.annotations.NoCopy;
 import java.io.Serializable;
 
@@ -26,7 +27,6 @@ import javax.persistence.Id;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.Table;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Temporal;
@@ -38,8 +38,8 @@ import javax.persistence.TemporalType;
  * @author Charles Bedon <charles.bedon@zoho.com>
  */
 @Entity
-@Inheritance(strategy=InheritanceType.TABLE_PER_CLASS) //Default is SINGLE_TABLE, so all data will be stored in a single table
-@Table(name="RootObject") //How to map the table name
+@Administrative
+@Inheritance(strategy=InheritanceType.JOINED) //Default is SINGLE_TABLE, so all data will be stored in a single table
 public abstract class RootObject implements Serializable, Cloneable {
 
     public static final Long PARENT_ROOT = new Long(0); // This is the id for the single instance of the root object
@@ -48,17 +48,24 @@ public abstract class RootObject implements Serializable, Cloneable {
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE) //How to generate the primary key (SEQUENCE makes it customizable)
     @NoCopy
+    @Column(updatable=false)
     protected Long id; //Primary key
     @Column(nullable=false)
     protected String name = ""; //Name
+    /**
+     * Is this object locked read-only?
+     */
     @Column(nullable=false)
     @NoCopy
-    protected Boolean isLocked= false; //Is this object locked read-only?
+    protected Boolean isLocked= false;
     @NoCopy
     protected Long parent = null;
+    /**
+     * When was the object created?
+     */
     @NoCopy
     @Temporal(value=TemporalType.TIMESTAMP)
-    protected Date creationDate = Calendar.getInstance().getTime();   //When was the object created?
+    protected Date creationDate = Calendar.getInstance().getTime();
 
     public RootObject(){}
 

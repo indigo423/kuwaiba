@@ -31,6 +31,8 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import javax.persistence.EntityManager;
 
@@ -40,20 +42,26 @@ import javax.persistence.EntityManager;
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 public class MetadataUtils {
+    
+    /**
+     * This is a singleton dictionary used to retrieve classes used later
+     * in queries
+     */
+    private static HashMap<String,Class> classIndex;
     /**
      * Retrieves recursively through the class hierarchy the <b>protected</b> attributes of a given class
      * @param aClass The class to be tested
-     * @param attributesSoFar initially an empty list which will be used by the recursive algorythm to put the attributes found
      * @return A list with the protected attributes
      */
-    public static List<Field> getAllAttributes(Class<?> aClass, List<Field> attributesSoFar){
+    public static List<Field> getAllFields(Class<?> aClass){
+        List<Field> myAtts = new ArrayList<Field>();
         for (Field f : aClass.getDeclaredFields())
             if (Modifier.isProtected(f.getModifiers()) && !Modifier.isTransient(f.getModifiers()))
-                attributesSoFar.add(f);
+                myAtts.add(f);
 
         if (aClass != RootObject.class && aClass.getSuperclass() != null) //At least for this application
-            getAllAttributes(aClass.getSuperclass(), attributesSoFar);
-        return attributesSoFar;
+            myAtts.addAll(getAllFields(aClass.getSuperclass()));
+        return myAtts;
     }
 
     /*
@@ -198,5 +206,4 @@ public class MetadataUtils {
             return null;
         }
     }
-
 }

@@ -43,7 +43,7 @@ public class ClassMetadataNode extends AbstractNode {
    
    public ClassMetadataNode(LocalClassMetadataLight _lcm, boolean isMain){
       super (new ClassMetadataChildren(),Lookups.singleton(_lcm));
-      if (_lcm.getClassName().equals(CommunicationsStub.getInstance().getRootClass()))
+      if (_lcm.getClassName().equals(CommunicationsStub.getInstance().getDummyRootClass().getClassName()))
           setIconBaseWithExtension(ROOT_PARENT_ICON_PATH);
       else
         setIconBaseWithExtension(PARENT_ICON_PATH);
@@ -65,7 +65,7 @@ public class ClassMetadataNode extends AbstractNode {
    @Override
    public String getDisplayName(){
        if (object!=null){
-            if (object.getClassName().equals(CommunicationsStub.getInstance().getRootClass()))
+            if (object.getClassName().equals(CommunicationsStub.getInstance().getDummyRootClass().getClassName()))
                 return java.util.ResourceBundle.getBundle("org/inventory/customization/hierarchycustomizer/Bundle").getString("LBL_ROOTNODE_TEXT");
             else
                 return object.getClassName();       
@@ -100,7 +100,7 @@ public class ClassMetadataNode extends AbstractNode {
                             LocalClassMetadataLight.DATA_FLAVOR);
 
                     ArrayList<Long> tokens = new ArrayList<Long>();
-                    tokens.add(data.getId());
+                    tokens.add(data.getOid());
 
                     //This is supposed to support multiple object drags,
                     //but as long as I can't make it work, It'll be commented out
@@ -108,7 +108,7 @@ public class ClassMetadataNode extends AbstractNode {
 //                                data)){
 //                            for (Object obj : data)
 //                                getChildren().add(new Node[]{new ClassMetadataNode((LocalClassMetadataLight)data)});
-                    if (CommunicationsStub.getInstance().addPossibleChildren(object.getId(),
+                    if (CommunicationsStub.getInstance().addPossibleChildren(object.getOid(),
                               tokens)){
 
                         ((ClassMetadataChildren)getChildren()).add(new ClassMetadataNode[]{new ClassMetadataNode(data)});

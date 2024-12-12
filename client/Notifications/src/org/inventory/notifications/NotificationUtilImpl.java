@@ -20,6 +20,10 @@ public class NotificationUtilImpl extends NotificationDisplayer
     static final String ERROR_ICON_PATH="/org/inventory/notifications/res/error.png";
     static final String WARNING_ICON_PATH="/org/inventory/notifications/res/warning.png";
     static final String INFO_ICON_PATH="/org/inventory/notifications/res/info.png";
+    /**
+     * Temporal workaround to clear the last notification from the tray
+     */
+    private Notification lastNotification;
 
     @Override
     public Notification notify(String string, Icon icon, String string1, ActionListener al, Priority prt) {
@@ -44,8 +48,11 @@ public class NotificationUtilImpl extends NotificationDisplayer
             default:
                 popupIcon = new ImageIcon(getClass().getResource(INFO_ICON_PATH));
         }
-        if (NotificationDisplayer.getDefault() != null)
-            NotificationDisplayer.getDefault().notify(title,popupIcon, details, null);
+        if (NotificationDisplayer.getDefault() != null){
+            if (lastNotification != null)
+                lastNotification.clear();
+            lastNotification = NotificationDisplayer.getDefault().notify(title,popupIcon, details, null);
+        }
     }
 
     public void showStatusMessage(String message, boolean important){

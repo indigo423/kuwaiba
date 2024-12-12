@@ -16,30 +16,28 @@
 
 package entity.core;
 
+import core.annotations.Administrative;
 import entity.multiple.companies.Vendor;
 import entity.multiple.misc.EnvironmentalCondition;
 import entity.multiple.states.OperationalState;
-import entity.multiple.views.ObjectView;
-import java.io.Serializable;
-import java.util.List;
 import javax.persistence.Entity;
-import javax.persistence.ManyToMany;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.ManyToOne;
 
 
 
 /**
  * Represents a configuration item according to ITIL. Descendants are every element
- * suceptible to be configured (equipment, ports, etc)
+ * that can be somehow to be configured (equipment, ports, etc)
  *
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 @Entity
-public abstract class ConfigurationItem extends RootObject implements Serializable  {
+@Administrative
+@Inheritance(strategy=InheritanceType.JOINED)
+public abstract class ConfigurationItem extends ViewableObject  {
 
-    @ManyToMany//(mappedBy = "elements")
-    protected List<ObjectView> views;
-   
     protected String serialNumber;
     @ManyToOne
     protected Vendor vendor;
@@ -78,14 +76,6 @@ public abstract class ConfigurationItem extends RootObject implements Serializab
 
     public void setState(OperationalState state) {
         this.state = state;
-    }
-
-    public List<ObjectView> getViews() {
-        return views;
-    }
-
-    public void setViews(List<ObjectView> views) {
-        this.views = views;
     }
 
     @Override

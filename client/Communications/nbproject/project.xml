@@ -31,6 +31,14 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.openide.awt</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>7.23.1</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.openide.util</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -50,6 +58,8 @@
             <public-packages>
                 <package>org.inventory.communications</package>
                 <package>org.inventory.communications.core</package>
+                <package>org.inventory.communications.core.connections</package>
+                <package>org.inventory.communications.core.views</package>
             </public-packages>
         </data>
     </configuration>

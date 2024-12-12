@@ -18,6 +18,7 @@ package org.inventory.communications.core;
 import java.util.HashMap;
 import org.inventory.core.services.interfaces.LocalClassMetadata;
 import org.inventory.core.services.interfaces.LocalObject;
+import org.inventory.core.services.interfaces.LocalObjectLight;
 import org.inventory.core.services.utils.Utils;
 import org.inventory.webservice.RemoteObject;
 
@@ -30,11 +31,7 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
     private HashMap<String, Object> attributes;
     //Reference to the metadata associated to this object's class
     private LocalClassMetadata myMetadata;
-    /**
-     * Object's oid. Since this is a reference to the object in the database, it won't
-     * be treated as a common attribute anymore
-     */
-    private Long oid;
+
 
     public LocalObjectImpl(){}
 
@@ -56,6 +53,7 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
     public LocalObjectImpl(RemoteObject ro, LocalClassMetadata lcmdt){
         this.className = ro.getClassName();
         this.myMetadata = lcmdt;
+        this.packageName = ro.getPackageName();
         this.oid = ro.getOid();
 
         attributes = new HashMap<String, Object>();
@@ -75,10 +73,6 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
     }
 
 
-    //ESTE MÉTODO ES UN WORKAROUND: Por otra razón que desconozco, no me dejó crear un constructor en LocalObjectImpl que recibiera los valores
-    //individuales, decía que cannot find class test.RemoteObject, pero ni idea, porque en ningún lado se
-    //estaba llamando el constructor que pedía un RemoteObject como parámetro.
-    //Creo que al final va a tocar crear una nueva aplicación RCP y adicionar los módulos manualmente uno por uno
     public void setLocalObject(String className, String[] attributes, Object[] values){
         HashMap<String,Object> dict = new HashMap<String, Object>();
         this.className = className;
@@ -87,8 +81,8 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
         this.attributes = dict;
     }
 
-    /*
-     * Función helper que proporciona el tipo de un atributo en particular
+    /**
+     * Helper method to get the type of a given attribute
      *
      */
     public Class getTypeOf(String name){

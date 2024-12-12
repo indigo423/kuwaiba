@@ -18,11 +18,12 @@ package org.inventory.core.usermanager;
 
 import java.awt.BorderLayout;
 import java.util.logging.Logger;
-import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.interfaces.RefreshableTopComponent;
 import org.inventory.core.usermanager.actions.AddGroup;
 import org.inventory.core.usermanager.actions.AddUser;
 import org.inventory.core.usermanager.actions.UpdateList;
@@ -45,7 +46,7 @@ import org.openide.util.Lookup;
     autostore=false
 )
 public final class UserManagerTopComponent extends TopComponent
-    implements Provider{
+    implements Provider, RefreshableTopComponent{
 
     private static UserManagerTopComponent instance;
     /** path to the icon used by the component and its open action */
@@ -90,8 +91,12 @@ public final class UserManagerTopComponent extends TopComponent
                        if (pnlGroups.getComponentCount() == 0){
                            if (tblGroups == null)
                                 ums.populateGroupsList();
-                            pnlGroups.add(tblGroups,BorderLayout.CENTER);
-                            pnlGroups.revalidate();
+                           
+                           //tblGroups may be null if there are no groups at all
+                           if (tblGroups != null){
+                                pnlGroups.add(tblGroups,BorderLayout.CENTER);
+                                pnlGroups.revalidate();
+                           }
                         }
                        ums.setRootToGroups();
                 }
@@ -145,6 +150,11 @@ public final class UserManagerTopComponent extends TopComponent
         btnRefresh.setFocusable(false);
         btnRefresh.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         btnRefresh.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        btnRefresh.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRefreshActionPerformed(evt);
+            }
+        });
         barMain.add(btnRefresh);
 
         add(barMain, java.awt.BorderLayout.PAGE_START);
@@ -193,6 +203,10 @@ public final class UserManagerTopComponent extends TopComponent
     private void pnlGroupsFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_pnlGroupsFocusGained
     
     }//GEN-LAST:event_pnlGroupsFocusGained
+
+    private void btnRefreshActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRefreshActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btnRefreshActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -310,9 +324,18 @@ public final class UserManagerTopComponent extends TopComponent
         return this.pnlTabbedMain;
     }
 
+    public JPanel getPnlGroups(){
+        return this.pnlGroups;
+    }
+
     public UserManagerService getUserManagerServiceInstance(){
         if (ums == null)
             ums = new UserManagerService(this);
         return ums;
+    }
+
+    @Override
+    public void refresh() {
+        btnRefreshActionPerformed(null);
     }
 }

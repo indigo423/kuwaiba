@@ -20,36 +20,38 @@ import core.toserialize.ObjectList;
 import core.toserialize.RemoteObject;
 import core.toserialize.RemoteObjectLight;
 import core.annotations.Metadata;
+import core.exceptions.EntityManagerNotAvailableException;
+import core.exceptions.NotAuthorizedException;
 import core.exceptions.ObjectNotFoundException;
 import core.todeserialize.ObjectUpdate;
 import core.toserialize.ClassInfoLight;
 import core.toserialize.RemoteObjectUpdate;
 import core.toserialize.UserGroupInfo;
 import core.toserialize.UserInfo;
-import core.toserialize.View;
+import core.toserialize.Validator;
+import core.toserialize.ViewInfo;
 import entity.config.User;
 import entity.config.UserGroup;
-import entity.core.ConfigurationItem;
-import entity.core.DummyRoot;
+import entity.connections.physical.GenericPhysicalConnection;
+import entity.connections.physical.containers.GenericPhysicalContainer;
 import entity.core.RootObject;
+import entity.core.ViewableObject;
 import entity.core.metamodel.AttributeMetadata;
 import entity.core.metamodel.ClassMetadata;
-import entity.location.Country;
-import entity.location.StateObject;
+import entity.equipment.physicallayer.parts.ports.GenericPort;
+import entity.location.GenericPhysicalNode;
 import entity.multiple.GenericObjectList;
-import entity.multiple.views.ObjectView;
+import entity.session.UserSession;
+import entity.views.GenericView;
+import entity.views.DefaultView;
 import java.util.ArrayList;
-import java.util.Dictionary;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.ejb.Stateful;
 import javax.persistence.PersistenceContext;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
@@ -67,51 +69,33 @@ import util.MetadataUtils;
 public class BackendBean implements BackendBeanRemote {
     //We use cointainer managed persistance, which means that we don't handle the
     //access to the database directly, but we use a persistemce unit set by the
-    //application server. If we'd like to do it manually, er show use a EntityManagerFactory
+    //application server. If we'd like to do it manually, we should use an EntityManagerFactory
     @PersistenceContext
     private EntityManager em;
-    private String error;
+    private HashMap<String,Class> classIndex;
 
     @Override
-    public void createInitialDataset() {
-        String[] countryNames = new String[]{"Colombia","Brazil","England","Germany","United States"};
-
-        List<StateObject> rl = new ArrayList<StateObject> ();
-        List<Country> sl = new ArrayList<Country> ();
-
-        //Let's create the root
-        DummyRoot root = new DummyRoot();
-        root.setId(RootObject.PARENT_ROOT);
-        em.persist(root);
-
-        for (int i=1;i<3;i++){
-            StateObject r = new StateObject();
-            r.setName("State #"+String.valueOf(i));
-            rl.add(r);
-        }
-        for(String name : countryNames){
-            Country country = new Country();
-            country.setName(name);
-            country.setParent(RootObject.PARENT_ROOT); //Means the parent is the root
-            sl.add(country);
-        }
-
-        for (Country s : sl){
-            em.persist(s);
-        }
-
-        for (StateObject r : rl){
-            r.setParent(sl.iterator().next().getId());
-            em.persist(r);
-        }
+    public Class getClassFor(String className) throws Exception{
+        if (em != null){
+            if (classIndex == null){
+                classIndex = new HashMap<String, Class>();
+                Set<EntityType<?>> allEntities = em.getMetamodel().getEntities();
+                for (EntityType ent : allEntities)
+                    classIndex.put(ent.getJavaType().getSimpleName(), ent.getJavaType());
+            }
+            Class myClass = classIndex.get(className);
+            if (myClass != null)
+                return classIndex.get(className);
+            else throw new ClassNotFoundException(className);
+        }else
+            throw new EntityManagerNotAvailableException();
     }
-
     /**
      * This method resets class metadata information
      *
      */
     @Override
-    public void buildMetaModel(){
+    public void buildMetaModel() throws Exception{
         
         if (em != null){
 
@@ -128,7 +112,7 @@ public class BackendBean implements BackendBeanRemote {
             query.executeUpdate();
 
             Set<EntityType<?>> ent = em.getMetamodel().getEntities();
-            Dictionary<String, EntityType> alreadyPersisted = new Hashtable<String, EntityType>();
+            HashMap<String, EntityType> alreadyPersisted = new HashMap<String, EntityType>();
 
             for (EntityType entity : ent){
                 if(entity.getJavaType().getAnnotation(Metadata.class)!=null)
@@ -138,11 +122,8 @@ public class BackendBean implements BackendBeanRemote {
                 HierarchyUtils.persistClass(entity,em);
             }
         }
-        else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-        }
-
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
@@ -161,58 +142,97 @@ public class BackendBean implements BackendBeanRemote {
      * @return a list of objects or null if an error ocurred
      */
     @Override
-    public List getObjectChildren(Long oid, Long objectClassId) {
+    public RemoteObjectLight[] getObjectChildren(Long oid, Long objectClassId) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETOBJECTCHILDREN"));
         if (em != null){
            
             ClassMetadata objectClass = em.find(ClassMetadata.class, objectClassId);
 
-            List result = new ArrayList();
+            List<Object> result = new ArrayList<Object>();
             CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
             Query subQuery=null;
 
             for (ClassMetadata possibleChildren : objectClass.getPossibleChildren()){
-                try {
-                    CriteriaQuery query = criteriaBuilder.createQuery();
-                    Root entity = query.from(Class.forName(possibleChildren.getPackageInfo().getName() + "." + possibleChildren.getName()));
-                    query.where(criteriaBuilder.equal(entity.get("parent"),oid));
-                    subQuery = em.createQuery(query);
-                    result.addAll(subQuery.getResultList());
-                } catch (ClassNotFoundException ex) {
-                    this.error = ex.getMessage();
-                    Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                CriteriaQuery query = criteriaBuilder.createQuery();
+                Root entity = query.from(Class.forName(possibleChildren.getPackageInfo().getName() + "." + possibleChildren.getName()));
+                query.where(criteriaBuilder.equal(entity.get("parent"),oid));
+                subQuery = em.createQuery(query);
+                result.addAll(subQuery.getResultList());
             }
 
-            return result;
+            RemoteObjectLight[] validatedResult = new RemoteObjectLight[result.size()];
+            int i = 0;
+            for (Object child : result) {
+                validatedResult[i] = new RemoteObjectLight(child);
+                if (child instanceof GenericPort)
+                    validatedResult[i].addValidator(new Validator("isConnected",((GenericPort)child).getConnectedConnection() != null)); //NOI18n
+                i++;
+            }
+            return validatedResult;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Retrieves the children of an object whose class would be the one provided
+     * @param parentOid
+     * @param myClass
+     * @return
+     */
     @Override
-    public RemoteObject getObjectInfo(String objectClass,Long oid){
+    public RemoteObject[] getChildrenOfClass(Long parentOid, Class myClass) throws Exception {
+        if (em !=null){
+            Query query = em.createQuery("SELECT x FROM "+myClass.getSimpleName()+" x WHERE x.parent="+parentOid);
+            List<Object> res = query.getResultList();
+            return RemoteObject.toArray(res);
+        }else
+            throw new EntityManagerNotAvailableException();
+
+    }
+
+    /**
+     * Implementation of the idem method exposed by the webservice
+     * @param objectClass
+     * @param oid
+     * @return
+     */
+    @Override
+    public RemoteObject getObjectInfo(Class objectClass,Long oid) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETOBJECTINFO"));
         if (em != null){
-            String sentence = "SELECT x from "+objectClass+" x WHERE x.id="+String.valueOf(oid);
-            Query query = em.createQuery(sentence);
-            Object result = query.getSingleResult();
-            if (result==null){
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+objectClass+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-                return null;
-            }else
+            Object result = em.find(objectClass, oid);           
+            if (result==null)
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+objectClass+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString());
+             else
                 return new RemoteObject(result);
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
+
+    /**
+     * Implementation of the idem method exposed by the webservice
+     * TODO: This implementation is inefficient and should be corrected
+     * @param objectClass
+     * @param oid
+     * @return
+     */
+    @Override
+    public RemoteObjectLight getObjectInfoLight(Class objectClass, Long oid) throws Exception{
+        System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETOBJECTINFO"));
+        if (em != null){
+            Object result = em.find(objectClass, oid);
+            if (result==null)
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+objectClass+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString());
+            else
+                return new RemoteObjectLight(result);
+            
+        }
+        else
+            throw new EntityManagerNotAvailableException();
+    }
+
 
     /**
      *
@@ -221,78 +241,59 @@ public class BackendBean implements BackendBeanRemote {
      * @throws ObjectNotFoundException if the oid provided doesn't exist
      */
     @Override
-    public boolean updateObject(ObjectUpdate _obj){
+    public boolean updateObject(ObjectUpdate _obj) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_UPDATEOBJECT"));
 
         if (em != null){
             RemoteObjectUpdate obj;
-            try {
-                obj = new RemoteObjectUpdate(_obj,em);
+            Class myClass = getClassFor(_obj.getClassname());
+            if (myClass == null)
+                throw new ClassNotFoundException(_obj.getClassname());
+            obj = new RemoteObjectUpdate(myClass,_obj,em);
 
-                Object myObject = em.find(obj.getObjectClass(), obj.getOid());
-                if(myObject == null)
-                    throw new ObjectNotFoundException();
-                for (int i = 0; i< obj.getNewValues().length; i++)
-                    myObject.getClass().getMethod("set"+MetadataUtils.capitalize(obj.getUpdatedAttributes()[i].getName()),
-                            obj.getUpdatedAttributes()[i].getType()).invoke(myObject, obj.getNewValues()[i]);
-                em.merge(myObject);
-                return true;
-            } catch (Exception ex) {
-                this.error = ex.getClass().toString()+": "+ex.getMessage();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-                return false;
-            }
+            Object myObject = em.find(obj.getObjectClass(), obj.getOid());
+            if(myObject == null)
+                throw new ObjectNotFoundException();
+            for (int i = 0; i< obj.getNewValues().length; i++)
+                myObject.getClass().getMethod("set"+MetadataUtils.capitalize(obj.getUpdatedAttributes()[i].getName()),
+                        obj.getUpdatedAttributes()[i].getType()).invoke(myObject, obj.getNewValues()[i]);
+            em.merge(myObject);
+            return true;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
-     *
+     * Locks an object
      * @param oid
      * @param objectClass
      * @param value
      * @return
      */
     @Override
-    public boolean setObjectLock(Long oid, String objectClass, Boolean value){
+    public boolean setObjectLock(Long oid, String objectClass, Boolean value) throws Exception{
         if (em != null){
             String myClassName = objectClass.substring(objectClass.lastIndexOf("."));
             String sentence = "UPDATE x "+myClassName+" x SET isLocked="+value.toString()+" WHERE x.id="+String.valueOf(oid);
             Query query = em.createQuery(sentence);
-            if (query.executeUpdate()==0){
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+objectClass+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
-            }else
+            if (query.executeUpdate()==0)
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+objectClass+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString());
+            else
                 return true;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
-     *
-     * @return
-     */
-    @Override
-     public String getError(){
-        return this.error;
-    }
-
-    /**
-     *
+     * Gets all classes whose instances can be contained into the given parent class. This method
+     * is recursive, so the result include the possible children in children classes
      * @param parentClass
-     * @return
+     * @return an array with the list of classes
      */
     @Override
-    public ClassInfoLight[] getPossibleChildren(Class parentClass) {
+    public ClassInfoLight[] getPossibleChildren(Class parentClass) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETPOSSIBLECHILDREN"));
         List<ClassInfoLight> res = new ArrayList();
         if (em != null){
@@ -329,20 +330,18 @@ public class BackendBean implements BackendBeanRemote {
             }
             return res.toArray(new ClassInfoLight[0]);
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
-     *
+     * Same as getPossibleChildren but this one only gets the possible children for the given class,
+     * this is, subclasses are not included
      * @param parentClass
-     * @return
+     * @return The list of possible children
      */
     @Override
-    public ClassInfoLight[] getPossibleChildrenNoRecursive(Class parentClass) {
+    public ClassInfoLight[] getPossibleChildrenNoRecursive(Class parentClass) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETPOSSIBLECHILDRENNORECURSIVE"));
         List<ClassInfoLight> res = new ArrayList();
          if (em != null){
@@ -362,111 +361,96 @@ public class BackendBean implements BackendBeanRemote {
              }
              return res.toArray(new ClassInfoLight[0]);
           }
-          else {
-              this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-              Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-              return null;
-          }
+          else throw new EntityManagerNotAvailableException();
     }
 
     /**
-     *
+     * Helper that gets the possible children for the root node
      * @return
      */
     @Override
-    public ClassInfoLight[] getRootPossibleChildren(){
+    public ClassInfoLight[] getRootPossibleChildren() throws Exception{
         return getPossibleChildren(RootObject.ROOT_CLASS);
     }
 
     /**
-     *
+     * Creates a new object
      * @param objectClass
      * @param parentOid
      * @param template
-     * @return
+     * @return the newly created element
      */
     @Override
-    public RemoteObjectLight createObject(String objectClass, Long parentOid, String template){
+    public RemoteObjectLight createObject(Class objectClass, Long parentOid, String template) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_CREATEOBJECT"));
         Object newObject = null;
         if (em != null){
-            try{
-                newObject = Class.forName(objectClass).newInstance();
-                if (parentOid != null)
-                    newObject.getClass().getMethod("setParent", Long.class).
-                            invoke(newObject, parentOid);
-                em.persist(newObject);
-            }catch(Exception e){
-                this.error = e.toString();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return null;
-            }
+            newObject = objectClass.newInstance();
+            if (parentOid != null)
+                newObject.getClass().getMethod("setParent", Long.class).
+                        invoke(newObject, parentOid);
+            em.persist(newObject);
             return new RemoteObjectLight(newObject);
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Retrieves all the class metadata
+     * @return An array of classes
+     */
     @Override
-    public ClassInfo[] getMetadata(){
+    public List<ClassInfo> getMetadata() throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETMETADATA"));
         if (em != null){
             String sentence = "SELECT x FROM ClassMetadata x WHERE x.isAdministrative=false ORDER BY x.name ";
             Query q = em.createQuery(sentence);
             List<ClassMetadata> cr = q.getResultList();
-            ClassInfo[] cm = new ClassInfo[cr.size()];
+            List<ClassInfo> cm = new ArrayList<ClassInfo>();
             int i=0;
             for (ClassMetadata myClass : cr){
-                cm[i] = new ClassInfo(myClass);
-                i++;
+                if (myClass.getIsHidden() || myClass.getIsDummy())
+                    continue;
+                cm.add(new ClassInfo(myClass));
             }
             return cm;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
-    }
-
-    @Override
-    public ClassInfo getMetadataForClass(String className){
-        System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETMETADATAFORCLASS"));
-        if (em != null){
-            try{
-                CriteriaBuilder cb = em.getCriteriaBuilder();
-                CriteriaQuery myQuery = cb.createQuery();
-                Root entity = myQuery.from(ClassMetadata.class);
-                myQuery.where(cb.equal(entity.get("name"),className));
-
-                Query q = em.createQuery(myQuery);
-                ClassMetadata res;
-            
-                res = (ClassMetadata)q.getSingleResult();
-                return new ClassInfo(res);
-            }catch (Exception e){
-                this.error = e.toString();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-                return null;
-            }
-        }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
-     *
+     * Gets the metadata of a single class
      * @param className
-     * @return
+     * @return the class
      */
     @Override
-    public ObjectList getMultipleChoice(String className){
+    public ClassInfo getMetadataForClass(Class className) throws Exception{
+        System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETMETADATAFORCLASS"));
+        if (em != null){
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery myQuery = cb.createQuery();
+            Root entity = myQuery.from(ClassMetadata.class);
+            myQuery.where(cb.equal(entity.get("name"),className.getSimpleName()));
+
+            Query q = em.createQuery(myQuery);
+            ClassMetadata res;
+
+            res = (ClassMetadata)q.getSingleResult();
+            return new ClassInfo(res);
+        }
+        else
+            throw new EntityManagerNotAvailableException();
+    }
+
+    /**
+     * Gets the items within a multiple choice element (a list)
+     * @param className
+     * @return the list of items belonging to the given class
+     */
+    @Override
+    public ObjectList getMultipleChoice(Class className) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETMULTIPLECHOICE"));
         if (em != null){
             /*Maybe later, I can fix the method to avoid the cast
@@ -477,34 +461,32 @@ public class BackendBean implements BackendBeanRemote {
             this.error= e.toString();
             return null;
             }*/
-            String sentence = "SELECT x FROM "+className+" x ORDER BY x.name";
-            Query q = em.createQuery(sentence,GenericObjectList.class);
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery query = cb.createQuery();
+            Root entity = query.from(className);
+            Query q =em.createQuery(query.select(entity).orderBy(cb.desc(entity.get("name"))));
             List<GenericObjectList> list = q.getResultList();
-            return new ObjectList(className,list);
+            return new ObjectList(className.getSimpleName(),list);
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
      * Adds to a given class a list of possible children classes whose instances can be contained
      *
-     * @param parentClassId Id of the class whos instances can contain the instances of the next param
+     * @param parentClassId Id of the class whose instances can contain the instances of the next param
      * @param _possibleChildren ids of the candidates to be contained
      * @return success or failure
      */
     @Override
-    public Boolean addPossibleChildren(Long parentClassId, Long[] _possibleChildren) {
+    public Boolean addPossibleChildren(Long parentClassId, Long[] _possibleChildren) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_ADDPOSSIBLECHILDREN"));
 
         if (em != null){
             ClassMetadata parentClass;
             
             List<ClassMetadata> currenPossibleChildren;
-            Query q;
 
             parentClass = em.find(ClassMetadata.class, parentClassId);
             currenPossibleChildren = parentClass.getPossibleChildren();
@@ -517,11 +499,8 @@ public class BackendBean implements BackendBeanRemote {
             }
             em.merge(parentClass);
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
         return true;
     }
 
@@ -534,7 +513,7 @@ public class BackendBean implements BackendBeanRemote {
      * @return success or failure
      */
     @Override
-    public Boolean removePossibleChildren(Long parentClassId, Long[] childrenToBeRemoved) {
+    public Boolean removePossibleChildren(Long parentClassId, Long[] childrenToBeRemoved) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_REMOVEPOSSIBLECHILDREN"));
 
         if (em != null){
@@ -548,92 +527,91 @@ public class BackendBean implements BackendBeanRemote {
 
            em.merge(parent);
            return true;
-        }else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
         
     }
 
     /**
-     *
+     * Removes a given object
      * @param className
      * @param oid
      * @return
      */
     @Override
-    public boolean removeObject(Class className, Long oid){
+    public boolean removeObject(Class className, Long oid) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_REMOVEOBJECT"));
 
         if (em != null){
-            //TODO ¿Será que se deja una relación del objeto a su metadata para
-            //hacer más rápida la búsqueda en estos casos?
+
+            //em.getTransaction().begin();
+
             RootObject obj = (RootObject)em.find(className, oid);
-            if(obj.getIsLocked()){
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_OBJECTLOCKED");
-                return false;
-            }
-            try{
-                String sentence = "SELECT x FROM ClassMetadata x WHERE x.name ='"+
-                        className.getSimpleName()+"'";
+            if (obj == null)
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOSUCHOBJECT")+className+java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid.toString());
+
+            if(obj.getIsLocked())
+                throw  new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_OBJECTLOCKED"));
+                       
+            String sentence = "SELECT x FROM ClassMetadata x WHERE x.name ='"+
+                    className.getSimpleName()+"'";
+            System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_EXECUTINGSQL")+sentence);
+            Query query = em.createQuery(sentence);
+            ClassMetadata myClass = (ClassMetadata)query.getSingleResult();
+            for (ClassMetadata possibleChild : myClass.getPossibleChildren()){
+                sentence = "SELECT x FROM "+possibleChild.getName()+" x WHERE x.parent="+obj.getId();
                 System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_EXECUTINGSQL")+sentence);
-                Query query = em.createQuery(sentence);
-                ClassMetadata myClass = (ClassMetadata)query.getSingleResult();
-                for (ClassMetadata possibleChild : myClass.getPossibleChildren()){
-                    sentence = "SELECT x FROM "+possibleChild.getName()+" x WHERE x.parent="+obj.getId();
-                    System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_EXECUTINGSQL")+sentence);
-                    query = em.createQuery(sentence);
-                    for (Object removable : query.getResultList()){
-                        //TODO Código de verificación de integridad
-                        if (!((RootObject)removable).getIsLocked())
-                            em.remove(removable);
-                    }
+                query = em.createQuery(sentence);
+                for (Object removable : query.getResultList()){
+                    RootObject myRemovable = (RootObject)removable;
+                    //If any of the children is locked, throw an exception
+                    if (!myRemovable.getIsLocked())
+                        em.remove(myRemovable);
+                    else
+                        throw new Exception("An object within the hierarchy is locked: "+
+                                myRemovable.getId()+" ("+myRemovable.getClass()+")");
                 }
-                em.remove(obj);
-            }catch (Exception e){
-                this.error = e.toString();
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
             }
+            em.remove(obj);
+            
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        else //*************em.getTransaction().commit();**************
+            throw new EntityManagerNotAvailableException();
+        
         return true;
     }
 
     @Override
-    public ClassInfoLight[] getLightMetadata() {
+    public List<ClassInfoLight> getLightMetadata() throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_GETLIGHTMETADATA"));
         if (em != null){
             String sentence = "SELECT x FROM ClassMetadata x ORDER BY x.name";
             Query q = em.createQuery(sentence);
             List<ClassMetadata> cr = q.getResultList();
-            ClassInfoLight[] cml = new ClassInfoLight[cr.size()];
-            int i=0;
+            List<ClassInfoLight> cml = new ArrayList<ClassInfoLight>();
+
             for (ClassMetadata myClass : cr){
-                cml[i] = new ClassInfoLight(myClass);
-                i++;
+                if (myClass.getIsHidden() || myClass.getIsDummy())
+                    continue;
+                cml.add(new ClassInfoLight(myClass));
             }
             return cml;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
-    /*
+    /**
      * To ask for the object classes may seem a bit forced, but keeps the method simple (native types)
-     * and efficiente. maybe requesting for a RemoteObjectLight[] would be better.
+     * and efficient. maybe requesting for a RemoteObjectLight[] would be better.
      * We'll try that when we do some code cleanup
+     * @param targetOid
+     * @param objectOids
+     * @param objectClasses
+     * @return
      */
     @Override
-    public boolean moveObjects(Long targetOid, Long[] objectOids, String[] objectClasses){
+    public boolean moveObjects(Long targetOid, Long[] objectOids, String[] objectClasses) throws Exception{
         if (em != null){
             if (objectOids.length == objectClasses.length){
                 for (int i = 0; i<objectClasses.length;i++){
@@ -642,17 +620,11 @@ public class BackendBean implements BackendBeanRemote {
                     q.executeUpdate();
                 }
                 return true;
-            }else{
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOTMATCHINGARRAYSIZES")+"(objectOids, objectClasses)";
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
-            }
+            }else
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOTMATCHINGARRAYSIZES")+"(objectOids, objectClasses)");
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
@@ -662,7 +634,8 @@ public class BackendBean implements BackendBeanRemote {
      * @param targetOid the new parent
      */
     @Override
-    public RemoteObjectLight[] copyObjects(Long targetOid, Long[] templateOids, String[] objectClasses){
+    public RemoteObjectLight[] copyObjects(Long targetOid, Long[] templateOids,
+            String[] objectClasses) throws Exception{
         if (em != null){
             if (templateOids.length == objectClasses.length){
                 RemoteObjectLight[] res = new RemoteObjectLight[objectClasses.length];
@@ -683,22 +656,24 @@ public class BackendBean implements BackendBeanRemote {
                     res[i] = new RemoteObjectLight(clone);
                 }
                 return res;
-            }else{
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOTMATCHINGARRAYSIZES")+" (objectOids, objectClasses)";
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return null;
-            }
+            }else
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NOTMATCHINGARRAYSIZES")+" (objectOids, objectClasses)");
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Search for objects given some criteria
+     * @param searchedClass
+     * @param paramNames
+     * @param paramTypes
+     * @param paramValues
+     * @return
+     */
     @Override
     public RemoteObjectLight[] searchForObjects(Class searchedClass, String[] paramNames,
-            String[] paramTypes, String[] paramValues) {
+            String[] paramTypes, String[] paramValues) throws Exception{
         if (em != null){
 
             Object[] mappedValues = new Object[paramNames.length];
@@ -730,24 +705,19 @@ public class BackendBean implements BackendBeanRemote {
             }
             return res;
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
     @Override
-    public Boolean setAttributePropertyValue(Long classId, String attributeName, String propertyName, String propertyValue) {
+    public Boolean setAttributePropertyValue(Long classId, String attributeName, 
+            String propertyName, String propertyValue) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_SETATTRIBUTEPROPERTYVALUE"));
         if (em != null){
             ClassMetadata myClass = em.find(ClassMetadata.class, classId);
-            if (myClass == null){
-                this.error = "Class with Id "+classId+" not found";
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
-            }
-
+            if (myClass == null)
+                throw new Exception("Class with id "+classId+" not found");
+                
             for (AttributeMetadata att : myClass.getAttributes())
                 if(att.getName().equals(attributeName)){
                     if (propertyName.equals("displayName"))
@@ -762,86 +732,83 @@ public class BackendBean implements BackendBeanRemote {
                                 if (propertyName.equals("isAdministrative"))
                                     att.setIsAdministrative(Boolean.valueOf(propertyValue));
                                 else{
-                                    this.error = "Property "+propertyName+" not supported";
-                                    Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                                    return false;
+                                    throw new Exception("Property "+propertyName+" not supported");
                                 }
                     em.merge(att);
                     return true;
                 }
-            this.error = "Attribute "+attributeName+" in class with id "+classId+" not found";
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
+            throw new Exception("Attribute "+attributeName+" in class with id "+classId+" not found");
         }
-        else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Sets a given attribute for a class metadata
+     * @param classId
+     * @param attributeName
+     * @param attributeValue
+     * @return
+     * @throws Exception
+     */
     @Override
-    public Boolean setClassPlainAttribute(Long classId, String attributeName, String attributeValue) {
+    public Boolean setClassPlainAttribute(Long classId, String attributeName, 
+            String attributeValue) throws Exception{
         if(em !=null){
             ClassMetadata myClass = em.find(ClassMetadata.class, classId);
-            if (em ==null){
-                this.error = "Class with id "+classId+" not found";
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
-            }
+            if (myClass ==null)
+                throw new Exception("Class with id "+classId+" not found");
+
             if (attributeName.equals("displayName"))
                 myClass.setDisplayName(attributeValue);
             else
                 if (attributeName.equals("description"))
                     myClass.setDescription(attributeValue);
-                else{
-                    error = "Attribute "+attributeName+" in class with id "+classId+" not found";
-                    Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                    return false;
-                }
+                else
+                    throw new Exception("Attribute "+attributeName+" in class with id "+classId+" not found");
 
             em.merge(myClass);
             return true;
-        }else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Set a class' icon (big or small)
+     * @param classId
+     * @param attributeName
+     * @param iconImage
+     * @return
+     */
     @Override
-    public Boolean setClassIcon(Long classId, String attributeName, byte[] iconImage) {
+    public Boolean setClassIcon(Long classId, String attributeName, byte[] iconImage) throws Exception{
         if(em !=null){
             ClassMetadata myClass = em.find(ClassMetadata.class, classId);
-            if (em ==null){
-                this.error = "Class with id "+classId+" not found";
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                return false;
-            }
+            if (em ==null)
+                throw new Exception("Class with id "+classId+" not found");
+
             if (attributeName.equals("smallIcon"))
                 myClass.setSmallIcon(iconImage);
-            else
+            else{
                 if (attributeName.equals("icon"))
                     myClass.setIcon(iconImage);
-                else{
-                    this.error = "Attribute "+attributeName+" in class with id "+classId+" not found";
-                    Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-                    return false;
-                }
-
+                else
+                    throw new Exception("Attribute "+attributeName+" in class with id "+classId+" not found");
+            }
             em.merge(myClass);
             return true;
-        }else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return false;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Gets the possible list types (Classes that represent a list o something)
+     * @return List of possible types
+     */
     @Override
-    public ClassInfoLight[] getInstanceableListTypes() {
+    public ClassInfoLight[] getInstanceableListTypes() throws Exception{
         if (em != null){
-            Long id = (Long) em.createQuery("SELECT x.id FROM ClassMetadata x WHERE x.name ='GenericObjectList' ORDER BY x.name").getSingleResult();
+            Long id = (Long) em.createQuery("SELECT x.id FROM ClassMetadata x WHERE x.name ='GenericObjectList'").getSingleResult();
             List<ClassMetadata> listTypes =HierarchyUtils.getInstanceableSubclasses(id, em);
             ClassInfoLight[] res = new ClassInfoLight[listTypes.size()];
 
@@ -852,15 +819,18 @@ public class BackendBean implements BackendBeanRemote {
             }
             return res;
 
-        }else {
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, null, this.error);
-            return null;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Authenticate the user and creates a session if the login was successful
+     * @param username
+     * @param password
+     * @return
+     */
     @Override
-    public boolean createSession(String username, String password) {
+    public UserSession createSession(String username, String password, String remoteAddress) throws Exception{
         System.out.println(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CALL_CREATESESSION"));
         if (em != null){
             CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -870,66 +840,192 @@ public class BackendBean implements BackendBeanRemote {
             predicate = cb.and(cb.equal(entity.get("password"), MetadataUtils.
                     getMD5Hash(password)),predicate);
             cQuery.where(predicate);
-            if (!em.createQuery(cQuery).getResultList().isEmpty())
-                return true;
-            else{
-                this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_BADLOGIN");
-                Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-                return false;
+            List result = em.createQuery(cQuery).getResultList();
+            if (!result.isEmpty()){
+                UserSession mySession = new UserSession((User)result.get(0));
+                mySession.setIpAddress(remoteAddress);
+                em.persist(mySession);
+                return mySession;
             }
-        }else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+            else
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_BADLOGIN"));
+                
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
     /**
+     * Methods associated to Views
+     */
+
+    /**
+     * Built-in views
+     */
+    /**
      * The default view is composed of only the direct children of a
-     * @param oid View owner oid
+     * @param oid ViewInfo owner oid
      * @param className object's class
      * @return A view object representing the default view (the direct children)
      */
     @Override
-    public View getDefaultView(Long oid, Class className) {
+    public ViewInfo getDefaultView(Long oid, Class myClass) throws Exception{
         if(em != null){
-            ConfigurationItem object = (ConfigurationItem)em.find(className, oid);
-            List<ObjectView> views = object.getViews();
-            if (views == null){
-                try{
-                    Long classOid = (Long)em.createQuery("SELECT oid FROM ClassMetadata x WHERE x.name='"+
-                            className.getSimpleName()+"'").getSingleResult();
-                     List elements = getObjectChildren(oid, classOid);
-                     ObjectView view = new ObjectView(elements);
-                     em.persist(view);
-                     return new View(view);
-                }catch(NoResultException nre){
-                    this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_CLASSNOTFOUND");
-                    Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-                    return null;
-                }
+            Object obj = em.find(myClass, oid);
+            if (obj == null)
+                throw new Exception(java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER"));
+
+            List<GenericView> views = ((ViewableObject)obj).getViews();
+            if (views.isEmpty())
+                return null;
+
+            for (GenericView myView : views){
+                if (myView instanceof DefaultView)
+                    return new ViewInfo(myView);
             }
-            else
-                return new View(object.getViews().get(0));
-        }else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
+        return null;
     }
 
     @Override
-    public View getRoomView(Long oid) {
+    public ViewInfo getRoomView(Long oid) throws Exception{
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public View getRackView(Long oid) {
+    public ViewInfo getRackView(Long oid)  throws Exception{
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public UserInfo[] getUsers() {
+    public Boolean saveObjectView(Long oid, Class myClass, ViewInfo view) throws Exception{
+        if (em != null){
+            Class viewClass = getClassFor(view.getViewClass());
+            if (viewClass == null)
+                throw new Exception("View class not valid: "+ view.getViewClass());
+
+            Object obj = em.find(myClass, oid);
+            if (obj == null)
+                throw new Exception (java.util.ResourceBundle.
+                    getBundle("internationalization/Bundle").
+                    getString("LBL_NOSUCHOBJECT")+" "+myClass.getSimpleName()+" "+java.util.ResourceBundle.
+                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+oid);
+                
+            List<GenericView> views = ((ViewableObject)obj).getViews();
+            GenericView myView = null;
+            for (GenericView eachView : views){
+                if (eachView.getClass().equals(viewClass))
+                    myView = eachView;
+            }
+            GenericView newView;
+            if (myView == null){
+                newView = (GenericView)viewClass.newInstance();
+                newView.setViewStructure(view.getStructure());
+                newView.setBackground(view.getBackground());
+                newView.setDescription(view.getDescription());
+                em.persist(newView);
+                ((ViewableObject)obj).addView(newView);
+            }
+            else{
+                myView.setViewStructure(view.getStructure());
+                myView.setBackground(view.getBackground());
+                myView.setDescription(view.getDescription());
+                em.merge(myView);
+            }
+            em.merge(obj);
+            return true;
+
+        }else
+            throw new EntityManagerNotAvailableException();
+    }
+
+    /**
+     * Methods associated to Physical Connections
+     */
+
+    /**
+     * Creates a new connection (WirelessLink, ElectricalLink, OpticalLink)
+     * @param connectionClass
+     * @param nodeA
+     * @param nodeB
+     * @return and RemoteObject with the newly created connection
+     */
+    @Override
+    public RemoteObject createPhysicalConnection(Long endpointA, Long endpointB,
+            Class connectionClass, Long parent) throws Exception{
+        if (em != null){
+
+            GenericPort portA = em.find(GenericPort.class, endpointA);
+            if (portA == null)
+                throw new Exception("Port A does not exist");
+
+            if (portA.getConnectedConnection() != null)
+                throw new Exception("Port A is already connnected");
+
+            GenericPort portB = em.find(GenericPort.class, endpointB);
+            if (portB == null)
+                throw new Exception("Port B is already connnected");
+
+
+            if (portB.getConnectedConnection() != null)
+                throw new Exception("Port B is already connnected");
+
+            GenericPhysicalConnection conn = (GenericPhysicalConnection) connectionClass.newInstance();
+            conn.setEndpointA(portA);
+            conn.setEndpointB(portB);
+            conn.setParent(parent);
+
+            portA.setConnectedConnection(conn);
+            portB.setConnectedConnection(conn);
+
+            em.persist(portA);
+            em.persist(portB);
+            em.persist(conn);
+            return new RemoteObject(conn);
+
+        }else
+            throw new EntityManagerNotAvailableException();
+    }
+
+    /**
+     * Creates a new container (Conduit, cable ditch)
+     * @param containerClass
+     * @param nodeA
+     * @param nodeB
+     * @return
+     */
+    @Override
+    public RemoteObject createPhysicalContainerConnection(Long sourceNode, Long targetNode, 
+            Class containerClass, Long parentNode) throws Exception{
+        if (em != null){
+
+            GenericPhysicalNode nodeA = (GenericPhysicalNode)em.find(GenericPhysicalNode.class, sourceNode);
+            if (nodeA ==null)
+                throw new Exception("Node A does not exist");
+
+            GenericPhysicalNode nodeB = (GenericPhysicalNode)em.find(GenericPhysicalNode.class, targetNode);
+            if (nodeB ==null)
+                throw new Exception("Node B does not exist");
+
+            GenericPhysicalContainer conn = (GenericPhysicalContainer) containerClass.newInstance();
+            conn.setNodeA(nodeA);
+            conn.setNodeB(nodeB);
+            conn.setParent(parentNode);
+            nodeA.getContainers().add(conn);
+            nodeB.getContainers().add(conn);
+            em.persist(conn);
+            return new RemoteObject(conn);
+
+        }else
+            throw new EntityManagerNotAvailableException();
+    }
+
+    /**
+     * User/group management
+     */
+
+    @Override
+    public UserInfo[] getUsers() throws Exception{
         if (em != null){
             UserInfo[] res;
             List<Object> users = em.createQuery("SELECT x FROM User x").getResultList();
@@ -941,15 +1037,12 @@ public class BackendBean implements BackendBeanRemote {
                 i++;
             }
             return res;
-        }else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
     @Override
-    public UserGroupInfo[] getGroups() {
+    public UserGroupInfo[] getGroups() throws Exception{
         if (em != null){
             List<UserGroup> groups = em.createQuery("SELECT x FROM UserGroup x").getResultList();
             UserGroupInfo[] res = new UserGroupInfo[groups.size()];
@@ -960,16 +1053,14 @@ public class BackendBean implements BackendBeanRemote {
             }
                 
             return res;
-        }else{
-            this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_NO_ENTITY_MANAGER");
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        }else
+            throw new EntityManagerNotAvailableException();
     }
 
     //Use updateObject instead
     @Override
-    public Boolean setUserProperties(Long oid, String[] propertiesNames, String[] propertiesValues) {
+    public Boolean setUserProperties(Long oid, String[] propertiesNames, 
+            String[] propertiesValues) throws Exception{
         /*User user = em.find(User.class, oid);
         if (user == null){
             this.error = java.util.ResourceBundle.getBundle("internationalization/Bundle").getString("LBL_USERNOTFOUND")+oid.toString();
@@ -985,26 +1076,16 @@ public class BackendBean implements BackendBeanRemote {
     }
 
     @Override
-    public Boolean setGroupProperties(Long oid, String[] propertiesNames, String[] propertiesValues) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Boolean removeUsersFromGroup(Long[] usersOids, Long groupOid) {
+    public Boolean removeUsersFromGroup(Long[] usersOids, Long groupOid) throws Exception{
         UserGroup group = em.find(UserGroup.class, groupOid);
-        if (group == null){
-            this.error = this.error = java.util.ResourceBundle.
+        if (group == null)
+            throw new Exception(java.util.ResourceBundle.
                     getBundle("internationalization/Bundle").
                     getString("LBL_NOSUCHOBJECT")+" UserGroup "+java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+groupOid;
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
-
-        User user=null;
+                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+groupOid);
 
         for (Long oid : usersOids){
-            user = em.find(User.class,oid);
+            User user = em.find(User.class,oid);
             group.getUsers().remove(user);
             //TODO: This is redundant if a bidirectional relationship is defined
             user.getGroups().remove(group);
@@ -1017,21 +1098,16 @@ public class BackendBean implements BackendBeanRemote {
     }
 
     @Override
-    public Boolean addUsersToGroup(Long[] usersOids, Long groupOid) {
+    public Boolean addUsersToGroup(Long[] usersOids, Long groupOid) throws Exception{
         UserGroup group = em.find(UserGroup.class, groupOid);
-        if (group == null){
-            this.error = this.error = java.util.ResourceBundle.
+        if (group == null)
+            throw new Exception(java.util.ResourceBundle.
                     getBundle("internationalization/Bundle").
                     getString("LBL_NOSUCHOBJECT")+" UserGroup "+java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+groupOid;
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
-
-        User user=null;
-
+                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+groupOid);
+            
         for (Long oid : usersOids){
-            user = em.find(User.class,oid);
+            User user = em.find(User.class,oid);
             if (!group.getUsers().contains(user))
                 group.getUsers().add(user);
             if (!user.getGroups().contains(group))
@@ -1044,18 +1120,16 @@ public class BackendBean implements BackendBeanRemote {
         return true;
     }
 
+    /**
+     * Creates a user. Uses a random name as default
+     * @return
+     */
     @Override
-    public UserInfo createUser() {
+    public UserInfo createUser() throws Exception{
         User newUser = new User();
-        try{
-            Random random = new Random();
-            newUser.setUsername("user"+random.nextInt(10000));
-            em.persist(newUser);
-        }catch(Exception e){
-            this.error = e.toString();
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        Random random = new Random();
+        newUser.setUsername("user"+random.nextInt(10000));
+        em.persist(newUser);
         return new UserInfo(newUser);
     }
 
@@ -1066,8 +1140,8 @@ public class BackendBean implements BackendBeanRemote {
      * @return Success or failure
      */
     @Override
-    public Boolean deleteUsers(Long[] oids) {
-        try{
+    public Boolean deleteUsers(Long[] oids) throws Exception{
+        if (em !=null){
             for (Long oid :oids){
                 User anUser = em.find(User.class, oid);
                 List<UserGroup> groups = anUser.getGroups();
@@ -1079,26 +1153,22 @@ public class BackendBean implements BackendBeanRemote {
                 }
                 em.remove(anUser);
             }
-        }catch(Exception e){
-            this.error = e.toString();
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+        }else throw new EntityManagerNotAvailableException();
         return true;
     }
 
+    /**
+     * Creates a group
+     * @return
+     */
     @Override
-    public UserGroupInfo createGroup() {
+    public UserGroupInfo createGroup() throws Exception{
         UserGroup newGroup = new UserGroup();
-        try{
+        if (em != null){
             Random random = new Random();
             newGroup.setName("group"+random.nextInt(10000));
             em.persist(newGroup);
-        }catch(Exception e){
-            this.error = e.toString();
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return null;
-        }
+        }else throw new EntityManagerNotAvailableException();
         return new UserGroupInfo(newGroup);
     }
 
@@ -1109,8 +1179,8 @@ public class BackendBean implements BackendBeanRemote {
      * @return Success or failure
      */
     @Override
-    public Boolean deleteGroups(Long[] oids) {
-        try{
+    public Boolean deleteGroups(Long[] oids) throws Exception{
+        if (em != null){
             for (Long oid :oids){
                 UserGroup aGroup = em.find(UserGroup.class, oid);
                 List<User> users = aGroup.getUsers();
@@ -1122,75 +1192,104 @@ public class BackendBean implements BackendBeanRemote {
                 }
                 em.remove(aGroup);
             }
-        }catch(Exception e){
-            this.error = e.toString();
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+        }else throw new EntityManagerNotAvailableException();
         return true;
     }
 
+    /**
+     * Associates a user to an user
+     * @param groupsOids
+     * @param userOid
+     * @return
+     */
     @Override
-    public Boolean addGroupsToUser(Long[] groupsOids, Long userOid) {
-        User user = em.find(User.class, userOid);
-        if (user == null){
-            this.error = this.error = java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").
-                    getString("LBL_NOSUCHOBJECT")+" User "+java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+userOid;
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+    public Boolean addGroupsToUser(Long[] groupsOids, Long userOid) throws Exception{
+        if (em != null){
+            User user = em.find(User.class, userOid);
+            if (user == null)
+                throw new Exception (java.util.ResourceBundle.
+                        getBundle("internationalization/Bundle").
+                        getString("LBL_NOSUCHOBJECT")+" User "+java.util.ResourceBundle.
+                        getBundle("internationalization/Bundle").getString("LBL_WHICHID")+userOid);
 
-        UserGroup group = null;
+            for (Long oid : groupsOids){
+                UserGroup group = em.find(UserGroup.class,oid);
+                if (group.getUsers() != null)
+                    if (!group.getUsers().contains(user)) //Ignores the addition if the user already belongs to the group
+                        group.getUsers().add(user);
 
-        for (Long oid : groupsOids){
-            group = em.find(UserGroup.class,oid);
-            if (group.getUsers() != null)
-                if (!group.getUsers().contains(user)) //Ignores the addition if the user already belongs to the group
-                    group.getUsers().add(user);
+                if(user.getGroups() != null)
+                    if(!user.getGroups().contains(group))
+                        //TODO: This is redundant if a bidirectional relationship is defined
+                        user.getGroups().add(group);
 
-            if(user.getGroups() != null)
-                if(!user.getGroups().contains(group))
+                em.merge(group);
+            }
+
+            em.merge(user);
+
+            return true;
+        }else throw new EntityManagerNotAvailableException();
+
+    }
+
+    @Override
+    public Boolean removeGroupsFromUser(Long[] groupsOids, Long userOid) throws Exception{
+        if (em != null){
+            User user = em.find(User.class, userOid);
+            if (user == null)
+                throw new Exception(java.util.ResourceBundle.
+                        getBundle("internationalization/Bundle").
+                        getString("LBL_NOSUCHOBJECT")+" User "+java.util.ResourceBundle.
+                        getBundle("internationalization/Bundle").getString("LBL_WHICHID")+userOid);
+
+            UserGroup group = null;
+
+            for (Long oid : groupsOids){
+                group = em.find(UserGroup.class,oid);
+                if (group.getUsers() != null)
+                    group.getUsers().remove(user); //No matter if the user is not included, since the method call will not throw any exception
+                if (user.getGroups() != null)
                     //TODO: This is redundant if a bidirectional relationship is defined
-                    user.getGroups().add(group);
+                    user.getGroups().remove(group);
 
-            em.merge(group);
-        }
+                em.merge(group);
+            }
 
-        em.merge(user);
+            em.merge(user);
 
-        return true;
-
+            return true;
+        }else throw new EntityManagerNotAvailableException();
     }
 
+    /**
+     * Session management
+     */
+
+     /**
+      * @param method the method to be validated
+      * @param username the user that tries to invoke the method
+      * @param ipAddress the ip address to avoid [somehow] a session hijack
+      * @param token the session ID
+      * @return success or failure
+      * @throws NotAuthorizedException if the user tries to call a method which he/she's not supposed to, and a generic Exception if something happens with the database
+      */
     @Override
-    public Boolean removeGroupsFromUser(Long[] groupsOids, Long userOid) {
-        User user = em.find(User.class, userOid);
-        if (user == null){
-            this.error = this.error = java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").
-                    getString("LBL_NOSUCHOBJECT")+" User "+java.util.ResourceBundle.
-                    getBundle("internationalization/Bundle").getString("LBL_WHICHID")+userOid;
-            Logger.getLogger(BackendBean.class.getName()).log(Level.SEVERE, this.error);
-            return false;
-        }
+    public boolean validateCall(String method, String ipAddress,
+            String token) throws Exception{
+        if (em != null){
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery myQuery = cb.createQuery();
+            Root entity = myQuery.from(UserSession.class);
+            myQuery.where(cb.and(cb.equal(entity.get("token"), token), //NOI18N
+                    cb.equal(entity.get("ipAddress"), ipAddress)     //NOI18N
+                    ));        //NOI18N
 
-        UserGroup group = null;
-
-        for (Long oid : groupsOids){
-            group = em.find(UserGroup.class,oid);
-            if (group.getUsers() != null)
-                group.getUsers().remove(user); //No matter if the user is not included, since the method call will not throw any exception
-            if (user.getGroups() != null)
-                //TODO: This is redundant if a bidirectional relationship is defined
-                user.getGroups().remove(group);
-
-            em.merge(group);
-        }
-
-        em.merge(user);
-
-        return true;
+            List result = em.createQuery(myQuery).getResultList();
+            if (result.isEmpty())
+                throw new NotAuthorizedException("No session active for this user");
+            //TODO: Check for the allowed methods
+            return true;
+        }else throw new EntityManagerNotAvailableException();
     }
 }

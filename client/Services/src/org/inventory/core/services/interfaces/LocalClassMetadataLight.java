@@ -31,6 +31,8 @@ public interface LocalClassMetadataLight extends Transferable{
     public String getDescription();
     public Boolean getIsAbstract();
     public String getPackageName();
-    public Long getId();
+    public Long getOid();
     public Image getSmallIcon();
+    public Boolean isPhysicalNode();
+    public Boolean isPhysicalEndpoint();
 }

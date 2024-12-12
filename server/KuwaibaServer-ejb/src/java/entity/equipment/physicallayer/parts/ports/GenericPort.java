@@ -16,29 +16,36 @@
  */
 package entity.equipment.physicallayer.parts.ports;
 
+import core.annotations.NoSerialize;
+import core.interfaces.PhysicalEndpoint;
+import entity.connections.physical.GenericPhysicalConnection;
 import entity.equipment.physicallayer.parts.GenericPart;
-import entity.multiple.types.parts.PortType;
-import java.io.Serializable;
 import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.OneToOne;
 
 /**
  * Represents a generic Port
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 @Entity
-public abstract class GenericPort extends GenericPart implements Serializable {
+@Inheritance(strategy=InheritanceType.JOINED)
+public abstract class GenericPort extends GenericPart implements PhysicalEndpoint {
+    /**
+     *The connected cable/fiber/radio channel. Can't use mappedBy here since the
+     * connection has two endpoints (A or B) and it's not possible to know which
+     * of them will be connected at design time
+     */
+    @OneToOne
+    @NoSerialize
+    protected GenericPhysicalConnection connectedConnection;
 
-    //private boolean vendor; //Reuse the field as private to hide it. Uses a boolean to save diskspace
-    //private boolean conditions; //same here
-    @ManyToOne
-    protected PortType connector; //RJ-45, RJ-11, FC/PC, etc
-
-    public PortType getConnector() {
-        return connector;
+    public GenericPhysicalConnection getConnectedConnection() {
+        return connectedConnection;
     }
 
-    public void setConnector(PortType connector) {
-        this.connector = connector;
+    public void setConnectedConnection(GenericPhysicalConnection connectedConnection) {
+        this.connectedConnection = connectedConnection;
     }
 }

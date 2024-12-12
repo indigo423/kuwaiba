@@ -16,8 +16,7 @@
  */
 package entity.location;
 
-import entity.core.RootObject;
-import java.io.Serializable;
+import entity.core.ViewableObject;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 
@@ -26,7 +25,7 @@ import javax.persistence.Entity;
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 @Entity
-public class Country extends RootObject implements Serializable {
+public class Country extends ViewableObject {
     @Column(length=3)
     protected String acronym;
 

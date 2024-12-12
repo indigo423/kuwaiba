@@ -17,6 +17,11 @@ package util;
 
 import core.annotations.Administrative;
 import core.annotations.Dummy;
+import core.annotations.Hidden;
+import core.annotations.NoSerialize;
+import core.interfaces.PhysicalConnection;
+import core.interfaces.PhysicalEndpoint;
+import core.interfaces.PhysicalNode;
 import entity.core.metamodel.AttributeMetadata;
 import entity.core.metamodel.ClassMetadata;
 import entity.core.metamodel.PackageMetadata;
@@ -24,15 +29,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
-import javax.persistence.metamodel.Attribute;
 import javax.persistence.metamodel.EntityType;
 
 /**
- * Provide mesicelaneous methods to manipulate the class hierarchy
+ * Provide misc methods to manipulate the class hierarchy
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 public class HierarchyUtils {
@@ -40,14 +43,40 @@ public class HierarchyUtils {
     /**
      * This method returns is a given class is sub class of another
      * @param child Class to be tested
-     * @param allegedParent Class suppossed to be the parent class
+     * @param allegedParent Class supposed to be the parent class
      * @return true if the given class is
      */
     public static boolean isSubclass (Class child, Class allegedParent){
+        if (child == null)
+            return false;
+
         Class myClass=child;
         while (!myClass.equals(Object.class)){
             if (myClass.equals(allegedParent))
                 return true;
+            
+            myClass = myClass.getSuperclass();
+            //This usually happens when after a recursive operation when the child is an interface
+            if (myClass == null)
+                return false;
+        }
+        return false;
+    }
+    
+    /**
+     * Says if given class implements an interface
+     * @param toBeTested 
+     * @param implementedInterface the interface that toBeTested may be implementing
+     * @return toBeTested (or any of its superclasses) implements implementedInterface
+     */
+    public static boolean implementsInterface(Class toBeTested, Class implementedInterface){
+        Class myClass=toBeTested;
+        while (!myClass.equals(Object.class)){
+            Class[] interfaces = myClass.getInterfaces();
+            for (Class myInterface : interfaces){
+                if (myInterface.equals(implementedInterface))
+                    return true;
+            }
             myClass = myClass.getSuperclass();
         }
         return false;
@@ -87,7 +116,7 @@ public class HierarchyUtils {
         }
 
         List<AttributeMetadata> atts = new ArrayList<AttributeMetadata>();
-        Set<Attribute> metaAtts = entity.getAttributes();
+        List<Field> metaAtts = MetadataUtils.getAllFields(entity.getJavaType());
         PackageMetadata pm;
         sentence = "SELECT x FROM PackageMetadata x WHERE x.name = '"+entity.getJavaType().getPackage().getName()+"'";
         query = em.createQuery(sentence);
@@ -110,8 +139,14 @@ public class HierarchyUtils {
             else
                 parentId = persistClass((EntityType)entity.getSupertype(), em);
         }
-        for(Attribute att : metaAtts)
+        for(Field att : metaAtts){
+            //Ignore the fields marked as non serializables
+            if (att.getAnnotation(NoSerialize.class) != null)
+                continue;
+            if (Modifier.isPrivate(att.getModifiers()) || Modifier.isStatic(att.getModifiers()))
+                continue;
             atts.add(new AttributeMetadata(att));
+        }
 
         ClassMetadata cm = new ClassMetadata(entity.getJavaType().getSimpleName(),
                                              pm,
@@ -119,6 +154,10 @@ public class HierarchyUtils {
                                              false,Modifier.isAbstract(entity.getJavaType().getModifiers()),
                                              entity.getJavaType().getAnnotation(Dummy.class)!=null,
                                              entity.getJavaType().getAnnotation(Administrative.class)!=null,
+                                             entity.getJavaType().getAnnotation(Hidden.class)!=null,
+                                             implementsInterface(entity.getJavaType(),PhysicalNode.class),
+                                             implementsInterface(entity.getJavaType(),PhysicalConnection.class),
+                                             implementsInterface(entity.getJavaType(),PhysicalEndpoint.class),
                                              null,atts,parentId
                                              );
 

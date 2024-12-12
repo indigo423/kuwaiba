@@ -16,17 +16,21 @@
 package entity.multiple;
 
 import core.annotations.Administrative;
+import core.annotations.Hidden;
 import entity.core.AdministrativeItem;
-import java.io.Serializable;
 import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 
 /**
  * Represents a generic list type attribute
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
 @Administrative
+@Hidden
 @Entity
-public abstract class GenericObjectList extends AdministrativeItem implements Serializable {
+@Inheritance(strategy=InheritanceType.JOINED)
+public abstract class GenericObjectList extends AdministrativeItem{
     protected String displayName;
 
     public String getDisplayName() {

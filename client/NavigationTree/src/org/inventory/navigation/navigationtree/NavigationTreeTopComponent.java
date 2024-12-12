@@ -22,8 +22,10 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.text.DefaultEditorKit;
 import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.navigation.navigationtree.nodes.ObjectChildren;
-import org.inventory.navigation.navigationtree.nodes.RootObjectNode;
+import org.inventory.core.services.interfaces.RefreshableTopComponent;
+import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
+import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
+import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.util.ImageUtilities;
@@ -40,14 +42,14 @@ import org.openide.windows.WindowManager;
 @ConvertAsProperties(dtd = "-//org.inventory.navigation.navigationtree//NavigationTree//EN",
 autostore = false)
 public final class NavigationTreeTopComponent extends TopComponent
-        implements ExplorerManager.Provider{
+        implements ExplorerManager.Provider, RefreshableTopComponent{
 
     /** path to the icon used by the component and its open action */
     static final String ICON_PATH = "org/inventory/navigation/navigationtree/res/icon.png";
-    static final String ROOT_ICON_PATH = "org/inventory/navigation/navigationtree/res/root.png";
 
     private final ExplorerManager em = new ExplorerManager();
     private NavigationTreeService nts;
+    private BeanTreeView treeView;
 
     public NavigationTreeTopComponent() {
         initComponents();
@@ -86,27 +88,19 @@ public final class NavigationTreeTopComponent extends TopComponent
         map.put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
         
 
-        //Now the keystrokes (doesn't seem to be working)
+        //Now the keystrokes
         InputMap keys = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-        keys.put(KeyStroke.getKeyStroke("control C"), DefaultEditorKit.copyAction);
-        keys.put(KeyStroke.getKeyStroke("control X"), DefaultEditorKit.cutAction);
-        keys.put(KeyStroke.getKeyStroke("control V"), DefaultEditorKit.pasteAction);
+//        keys.put(KeyStroke.getKeyStroke("control C"), DefaultEditorKit.copyAction);
+//        keys.put(KeyStroke.getKeyStroke("control X"), DefaultEditorKit.cutAction);
+//        keys.put(KeyStroke.getKeyStroke("control V"), DefaultEditorKit.pasteAction);
         
         nts = new NavigationTreeService(this);
         associateLookup(ExplorerUtils.createLookup(em, map));
         setLayout(new BorderLayout());
-        BeanTreeView treeView = new BeanTreeView();
+        treeView = new BeanTreeView();
         treeView.setWheelScrollingEnabled(true);
 
-        
-        LocalObjectLight[] rootChildren = nts.getRootChildren();
-        if (rootChildren != null){
-            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren));
-            root.setIconBaseWithExtension(ROOT_ICON_PATH);
-            em.setRootContext(root);
-            em.getRootContext().setDisplayName(java.util.ResourceBundle.getBundle("org/inventory/navigation/navigationtree/Bundle").getString("LBL_ROOT"));
-            add(treeView,BorderLayout.CENTER);
-        }
+        setRoot();
         
         /* This makes programatically the Window Manager to use an "explorer" (window docked at left side)
            this should be done because since this component is not singleton anymore, all XML configuration files
@@ -180,7 +174,7 @@ public final class NavigationTreeTopComponent extends TopComponent
      * a properties file as if it was a hash
      */
     void writeProperties(java.util.Properties p) {
-        p.setProperty("version", "1.0");
+        //p.setProperty("version", "1.0");
     }
 
     Object readProperties(java.util.Properties p) {
@@ -188,10 +182,31 @@ public final class NavigationTreeTopComponent extends TopComponent
     }
 
     private void readPropertiesImpl(java.util.Properties p) {
-        String version = p.getProperty("version");
+        //String version = p.getProperty("version");
     }
 
+    @Override
     public ExplorerManager getExplorerManager() {
         return em;
+    }
+
+    public void setRoot(){
+        LocalObjectLight[] rootChildren = nts.getRootChildren();
+        if (rootChildren != null){
+            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren));
+            em.setRootContext(root);
+            add(treeView,BorderLayout.CENTER);
+        }
+    }
+
+    @Override
+    public void refresh() {
+        if (em.getRootContext() instanceof RootObjectNode){
+            for (Object child : em.getRootContext().getChildren().getNodes())
+                ((ObjectNode)child).refresh();
+        }else{
+            setRoot();
+            revalidate();
+        }
     }
 }
