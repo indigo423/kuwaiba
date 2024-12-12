@@ -19,8 +19,7 @@ package org.inventory.views.objectview.scene;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
-import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.SharedInformation;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.wizards.physicalconnections.ConnectionWizard;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.views.objectview.ObjectViewTopComponent;
@@ -36,7 +35,7 @@ import org.openide.util.Lookup;
  * This class controls the physical connections behavior
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class PhysicalConnectionProvider implements ConnectProvider{
+public class PhysicalConnectionProvider implements ConnectProvider {
 
     /**
      * The color use to draw the connections
@@ -47,16 +46,11 @@ public class PhysicalConnectionProvider implements ConnectProvider{
      */
     private int currentConnectionSelection;
     /**
-     * Reference to the common CommunicationsStub
-     */
-    private CommunicationsStub com;
-    /**
      * Reference to the common notifier
      */
     private NotificationUtil nu;
 
     public PhysicalConnectionProvider(){
-        this.com = CommunicationsStub.getInstance();
         this.nu = Lookup.getDefault().lookup(NotificationUtil.class);
     }
 
@@ -107,23 +101,23 @@ public class PhysicalConnectionProvider implements ConnectProvider{
         int wizardType;
         switch (currentConnectionSelection){
             case ObjectViewTopComponent.CONNECTION_WIRECONTAINER:
-                connectionClass = SharedInformation.CLASS_WIRECONTAINER;
+                connectionClass = Constants.CLASS_WIRECONTAINER;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONTAINERS;
                 break;
             case ObjectViewTopComponent.CONNECTION_WIRELESSCONTAINER:
-                connectionClass = SharedInformation.CLASS_WIRELESSCONTAINER;
+                connectionClass = Constants.CLASS_WIRELESSCONTAINER;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONTAINERS;
                 break;
             case ObjectViewTopComponent.CONNECTION_ELECTRICALLINK:
-                connectionClass = SharedInformation.CLASS_ELECTRICALLINK;
+                connectionClass = Constants.CLASS_ELECTRICALLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 break;
             case ObjectViewTopComponent.CONNECTION_OPTICALLINK:
-                connectionClass = SharedInformation.CLASS_OPTICALLINK;
+                connectionClass = Constants.CLASS_OPTICALLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 break;
             case ObjectViewTopComponent.CONNECTION_WIRELESSLINK:
-                connectionClass = SharedInformation.CLASS_WIRELESSLINK;
+                connectionClass = Constants.CLASS_WIRELESSLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 break;
             default:
@@ -139,14 +133,12 @@ public class PhysicalConnectionProvider implements ConnectProvider{
         if (myWizard.getNewConnection() != null){
 
             ViewScene scene =(ViewScene)sourceWidget.getScene();
-            ObjectConnectionWidget line = new ObjectConnectionWidget(scene,
-                    myWizard.getNewConnection(), scene.getFreeRouter(), getCurrentLineColor());
+            ObjectConnectionWidget line = (ObjectConnectionWidget)scene.addEdge(myWizard.getNewConnection());
 
-            line.setTargetAnchor(AnchorFactory.createRectangularAnchor(targetWidget,true));
-            line.setSourceAnchor(AnchorFactory.createRectangularAnchor(sourceWidget,true));
-
-            scene.getEdgesLayer().addChild(line);
-            scene.addObject(line.getObject(), line);
+            line.setTargetAnchor(AnchorFactory.createCenterAnchor(targetWidget));
+            line.setSourceAnchor(AnchorFactory.createCenterAnchor(sourceWidget));
+            
+            scene.validate();
             scene.fireChangeEvent(new ActionEvent(this, ViewScene.SCENE_CHANGE, "New Connection"));
         }
     }

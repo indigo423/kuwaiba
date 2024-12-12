@@ -17,7 +17,7 @@ package org.inventory.navigation.applicationnodes.classmetadatanodes;
 
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.nodes.Children.Array;
 import org.openide.nodes.Node;
@@ -26,7 +26,7 @@ import org.openide.util.Lookup;
 
 /**
  * Represents the children for the navigation tree
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadataChildren extends Array{
     
@@ -57,7 +57,7 @@ public class ClassMetadataChildren extends Array{
         
         CommunicationsStub com = CommunicationsStub.getInstance();
         ClassMetadataNode node = ((ClassMetadataNode)this.getNode());
-        List <LocalClassMetadataLight> subClasses = com.getLightSubclassesNoRecursive(node.getClassMetadata().getClassName(), true, false);
+        LocalClassMetadataLight[] subClasses = com.getLightSubclassesNoRecursive(node.getClassMetadata().getClassName(), true, false);
         if (subClasses == null){
             NotificationUtil  nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("Error", NotificationUtil.ERROR, "An error has occurred retrieving this Metadata Sub Class: "+com.getError());

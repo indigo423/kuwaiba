@@ -34,12 +34,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
+import org.kuwaiba.apis.persistence.application.Privilege;
 import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
+import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
+import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
@@ -50,21 +51,13 @@ import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
 import org.kuwaiba.persistenceservice.impl.RelTypes;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ReturnableEvaluator;
-import org.neo4j.graphdb.StopEvaluator;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.Traverser;
-import org.neo4j.graphdb.Traverser.Order;
-import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
-import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.kernel.impl.traversal.TraversalDescriptionImpl;
 
 /**
  * Utility class containing misc methods to perform common tasks
@@ -134,7 +127,7 @@ public class Util {
      * @param propertyName Relationship's property to be used as filter
      * @param propertyValue Relationship's property value to be used as filter
      */
-    public static void releaseRelationships(Node instance, RelTypes relationshipType,
+    public static void releaseRelationshipss(Node instance, RelTypes relationshipType,
             Direction relationshipDirection, String propertyName, String propertyValue) {
         Iterable<Relationship> relatedItems = instance.getRelationships(relationshipType, relationshipDirection);
         for (Relationship relatedItemRelationship : relatedItems){
@@ -152,11 +145,11 @@ public class Util {
             if (instance.getRelationships(RelTypes.RELATED_TO, Direction.INCOMING).iterator().hasNext())
                 throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
 
-            if (instance.getRelationships(RelTypes.RELATED_TO_SPECIAL, Direction.OUTGOING).iterator().hasNext())
+            if (instance.getRelationships(RelTypes.RELATED_TO_SPECIAL, Direction.INCOMING).iterator().hasNext())
                 throw new OperationNotPermittedException("deleteObject",String.format("The object with id %s can not be deleted since it has relationships", instance.getId()));
         }
 
-        for (Relationship rel : instance.getRelationships(RelTypes.CHILD_OF,Direction.INCOMING))
+        for (Relationship rel : instance.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF, RelTypes.CHILD_OF_SPECIAL))
             deleteObject(rel.getStartNode(), releaseAll);
 
         for (Relationship rel : instance.getRelationships())
@@ -232,38 +225,11 @@ public class Util {
     }
 
     /**
-     * Converts a String value to an object value based on a give mapping. This method
-     * does not convert binary or relationship-like attributes
-     * @param value Value as String
-     * @param type Mapping. The allowed values are the AttributeMetadata.MAPPING_XXX
-     * @return the converted value
-     * @throws InvalidArgumentException If the type can't be converted
-     */
-    /*public Integer setRealValue(String value, int mapping, String type) throws InvalidArgumentException{
-
-        try{
-            if(type.equals("Float") || type.equals("Long")
-                    || type.equals("Integer") || type.equals("Boolean"))
-                return AttributeMetadata.MAPPING_PRIMITIVE;
-            else if(type.equals("Date"))
-                return AttributeMetadata.MAPPING_DATE;
-            else if (type.equals("byte[]"))
-                return AttributeMetadata.MAPPING_BINARY;
-            else
-                return AttributeMetadata.MAPPING_MANYTOONE;
-//            throw new InvalidArgumentException("Can not retrieve the correct value for ("+
-//                value+" "+type+"). Please check your mappings", Level.WARNING);
-        }catch (Exception e){
-            throw new InvalidArgumentException(String.format("Can not retrieve the correct value for %s (%s). Please check your mappings", value, type), Level.WARNING);
-        }
-    }*/
-
-    /**
      * Creates a ClassMetadata with default values
      * @param classMetadata
      * @return
      */
-    public static ClassMetadata setDefaultsForClassMetadata(ClassMetadata classDefinition) throws MetadataObjectNotFoundException{
+    public static ClassMetadata setDefaultsForClassMetadatas(ClassMetadata classDefinition) throws MetadataObjectNotFoundException{
         if(classDefinition.getName() == null){
             throw new MetadataObjectNotFoundException("Can not create a class metadata entry without a name");
         }
@@ -363,21 +329,6 @@ public class Util {
         else
             myClass.setParentClassName(null);
         
-        //Attributes
-//        String cypherQuery = "START metadataclass = node({classid}) ".concat(
-//                             "MATCH metadataclass -[:").concat(RelTypes.HAS_ATTRIBUTE.toString()).concat("]->attribute ").concat(
-//                             "RETURN attribute ").concat(
-//                             "ORDER BY attribute.name ASC");
-//
-//        Map<String, Object> params = new HashMap<String, Object>();
-//        params.put("classid", classNode.getId());//NOI18N
-//
-//        ExecutionEngine engine = new ExecutionEngine(classNode.getGraphDatabase());
-//        ExecutionResult result = engine.execute(cypherQuery, params);
-//        Iterator<Node> n_column = result.columnAs("attribute");
-//        for (Node attributeNode : IteratorUtil.asIterable(n_column))
-//             listAttributes.add(createAttributeMetadataFromNode(attributeNode));
-        
         for (Relationship rel : classNode.getRelationships(RelTypes.HAS_ATTRIBUTE))
             listAttributes.add(createAttributeMetadataFromNode(rel.getEndNode()));
         
@@ -396,8 +347,8 @@ public class Util {
         for (Relationship rel : classNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_CHILD))
         {
             if((Boolean)rel.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)){
-                Traverser traverserMetadata = Util.getAllSubclasses(rel.getEndNode());
-                for (Node childNode : traverserMetadata) {
+                Iterable<Node> allSubclasses = Util.getAllSubclasses(rel.getEndNode());
+                for (Node childNode : allSubclasses) {
                     if(!(Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)){
                         myClass.getPossibleChildren().add((String)childNode.getProperty(Constants.PROPERTY_NAME));
                     }
@@ -419,22 +370,25 @@ public class Util {
     public static AttributeMetadata createAttributeMetadataFromNode(Node attributeNode)
     {
         AttributeMetadata attribute =  new AttributeMetadata();
-        try{
-            attribute.setName((String)attributeNode.getProperty(Constants.PROPERTY_NAME));
-            attribute.setDescription((String)attributeNode.getProperty(Constants.PROPERTY_DESCRIPTION));
-            attribute.setDisplayName((String)attributeNode.getProperty(Constants.PROPERTY_DISPLAY_NAME));
-            attribute.setReadOnly((Boolean)attributeNode.getProperty(Constants.PROPERTY_READ_ONLY));
-            attribute.setType((String)attributeNode.getProperty(Constants.PROPERTY_TYPE));
-            attribute.setVisible((Boolean)attributeNode.getProperty(Constants.PROPERTY_VISIBLE));
-            attribute.setAdministrative((Boolean)attributeNode.getProperty(Constants.PROPERTY_ADMINISTRATIVE));
-            attribute.setNoCopy((Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY));
-            attribute.setUnique((Boolean)attributeNode.getProperty(Constants.PROPERTY_UNIQUE));
-            attribute.setId(attributeNode.getId());
-        }catch(Exception e){
-            return null;
-        }
+
+        attribute.setName((String)attributeNode.getProperty(Constants.PROPERTY_NAME));
+        attribute.setDescription((String)attributeNode.getProperty(Constants.PROPERTY_DESCRIPTION));
+        attribute.setDisplayName((String)attributeNode.getProperty(Constants.PROPERTY_DISPLAY_NAME));
+        attribute.setReadOnly((Boolean)attributeNode.getProperty(Constants.PROPERTY_READ_ONLY));
+        attribute.setType((String)attributeNode.getProperty(Constants.PROPERTY_TYPE));
+        attribute.setVisible((Boolean)attributeNode.getProperty(Constants.PROPERTY_VISIBLE));
+        attribute.setAdministrative((Boolean)attributeNode.getProperty(Constants.PROPERTY_ADMINISTRATIVE));
+        attribute.setNoCopy((Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY));
+        attribute.setUnique((Boolean)attributeNode.getProperty(Constants.PROPERTY_UNIQUE));
+        attribute.setId(attributeNode.getId());
 
         return attribute;
+    }
+    
+    public static RemoteBusinessObjectLight createRemoteObjectLightFromNode (Node instance) {
+        Node classNode = instance.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).getEndNode();
+        return new RemoteBusinessObjectLight(instance.getId(), 
+                (String)instance.getProperty(Constants.PROPERTY_NAME), (String)classNode.getProperty(Constants.PROPERTY_NAME));
     }
     
     /**
@@ -461,7 +415,7 @@ public class Util {
                 }
             }
         }
-
+        
         //Iterates through relationships and transform the into "plain" attributes
         Iterable<Relationship> relationships = instance.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING);
         while(relationships.iterator().hasNext()){
@@ -488,32 +442,36 @@ public class Util {
      * @return UserProfile
      */
 
-    public static UserProfile createUserProfileFromNode(Node userNode)
-    {
-       Iterable<Relationship> relationships = userNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING);
+    public static UserProfile createUserProfileFromNode(Node userNode){
        List<GroupProfile> groups = new ArrayList<GroupProfile>();
-
-       for (Relationship relationship : relationships) {
-            Node groupNode = relationship.getEndNode();
-            groups.add(new GroupProfile(groupNode.getId(),
+       List<Privilege> privileges = new ArrayList<Privilege>();
+       Iterable<Relationship> groupRelationships = userNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING);
+       //groups
+       for (Relationship relationship : groupRelationships) {
+           //group Privileges         
+           Node groupNode = relationship.getEndNode();
+           List<Privilege> groupPrivileges = new ArrayList<Privilege>();
+           for(Relationship rel: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
+                groupPrivileges.add(createPrivilegeFromNode(rel.getStartNode()));
+           //TODO get users
+           groups.add(new GroupProfile(groupNode.getId(),
                         (String)groupNode.getProperty(Constants.PROPERTY_NAME),
                         (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION),
-                        (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE))
-                     );
-        }
-
-       UserProfile user =  new UserProfile(
-                userNode.getId(),
+                        (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
+                        null,groupPrivileges));
+            
+       }//end for
+       for(Relationship relationship: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
+           privileges.add(createPrivilegeFromNode(relationship.getStartNode()));
+       
+       UserProfile user =  new UserProfile(userNode.getId(),
                 (String)userNode.getProperty(Constants.PROPERTY_NAME),
                 (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
                 (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
-                (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
                 (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                null);
-
-       user.setGroups(groups);
-
-        return user;
+                (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
+                groups, privileges);
+         return user;
     }
 
     /**
@@ -522,29 +480,49 @@ public class Util {
      * @return
      */
     public static GroupProfile createGroupProfileFromNode(Node groupNode){
-        Iterable<Relationship> relationships = groupNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.INCOMING);
+        
         List<UserProfile> users = new ArrayList<UserProfile>();
-
-        for (Relationship relationship : relationships) {
+        Iterable<Relationship> usersRelationships = groupNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.INCOMING);
+        //Users
+        for (Relationship relationship : usersRelationships) {
             Node userNode = relationship.getStartNode();
+            //user Privileges
+            List<Privilege> userPrivileges = new ArrayList<Privilege>();
+            for(Relationship rel: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
+                userPrivileges.add(createPrivilegeFromNode(rel.getStartNode()));
+            //TODO User Groups
             users.add(new UserProfile(userNode.getId(),
                         (String)userNode.getProperty(Constants.PROPERTY_NAME),
                         (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
                         (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
                         (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
                         (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                        null)
+                        userPrivileges)
                      );
         }
+        List<Privilege> privileges = new ArrayList<Privilege>();
+        for(Relationship relationship: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING)){
+           Node node = relationship.getStartNode();
+           privileges.add(createPrivilegeFromNode(node));
+        }
+        
         GroupProfile group =  new GroupProfile(
                 groupNode.getId(),
                 (String)groupNode.getProperty(Constants.PROPERTY_NAME),
-                (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION),
+                groupNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? 
+                        (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION) : "",
                 (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                null,
-                null);
-        group.setUsers(users);
+                users,privileges);
         return group;
+    }
+    
+    
+    public static Privilege createPrivilegeFromNode(Node privilegeNode){
+        return new Privilege((Long)privilegeNode.getProperty(Constants.PROPERTY_CODE), 
+                (String)privilegeNode.getProperty(Constants.PROPERTY_METHOD_GROUP),
+                (String)privilegeNode.getProperty(Constants.PROPERTY_NAME), 
+                (String)privilegeNode.getProperty(Constants.PROPERTY_METHOD_MANAGER), 
+                (long[])privilegeNode.getProperty(Constants.PROPERTY_DEPENDS_OF));
     }
     
     /**
@@ -620,12 +598,12 @@ public class Util {
      * @return
      */
 
-    public static Traverser getAllSubclasses(final Node classMetadata)
-    {
-        return classMetadata.traverse(Order.BREADTH_FIRST,
-                StopEvaluator.END_OF_GRAPH,
-                ReturnableEvaluator.ALL_BUT_START_NODE, RelTypes.EXTENDS,
-                Direction.INCOMING);
+    public static Iterable<Node> getAllSubclasses(final Node classMetadata){
+        TraversalDescription td = new TraversalDescriptionImpl();
+        td = td.depthFirst();
+        td = td.relationships(RelTypes.EXTENDS, Direction.INCOMING);
+        org.neo4j.graphdb.traversal.Traverser traverse = td.traverse(classMetadata);
+        return traverse.nodes();
     }
 
     /**
@@ -846,36 +824,6 @@ public class Util {
         }//end for
     }
     
-    public static void show(Node node){
-        String output = "";
-        Transaction tx = node.getGraphDatabase().beginTx();
-        try{
-        final TraversalDescription TRAVERSAL = Traversal.description().
-                    breadthFirst().
-                    relationships(RelTypes.EXTENDS, Direction.INCOMING).
-                    relationships(RelTypes.INSTANCE_OF, Direction.INCOMING).
-                    evaluator(Evaluators.all());
-            for(Path p : TRAVERSAL.traverse(node)){
-                if(p.endNode().hasRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING)){
-                    output += "Instance: " ;
-                }
-                output += p.endNode().getProperty("name") +" id: "+ p.endNode().getId() +"\n";
-                for (Relationship attrRel: p.endNode().getRelationships(RelTypes.HAS_ATTRIBUTE, Direction.OUTGOING)){
-                    output += "-" + attrRel.getEndNode().getProperty("name") + "\n";
-                }
-            }
-        System.out.println("stop");
-        }catch(Exception ex){
-            Logger.getLogger("Delete attribute: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
-            throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null)
-                tx.finish();
-        }
-    }
-    
     public static void deleteAttributeIfPrimitive(Node classNode, String attributeName){
         final TraversalDescription TRAVERSAL = Traversal.description().
                     breadthFirst().relationships(RelTypes.EXTENDS, Direction.INCOMING);
@@ -914,8 +862,43 @@ public class Util {
                     if(relatedElement.getProperty(Constants.PROPERTY_NAME).equals(attributeName))
                         relatedElement.delete();
                 }
-            }           
+            }
         }//end for
+    }
+    
+    /**
+     * Creates a new log entry upon an action performed by an user. Transactions are not managed here
+     * @param object The object that was affected by the action. Provide the db's root node if it's a general activity log entry (that is, it's not related to any specific object)
+     * @param user User that performed the action
+     * @param logEntry The information to be logged
+     * @throws ApplicationObjectNotFoundException If the user or the root of all log entries can't be found
+     */
+    public static Node createActivityLogEntry(Node object, Node logRoot, String userName, 
+            int type, long timestamp, String affectedProperty, String oldValue, String newValue, String notes) throws ApplicationObjectNotFoundException {
+        
+        Node userNode = logRoot.getGraphDatabase().index().forNodes(Constants.INDEX_USERS).get(Constants.PROPERTY_NAME, userName).getSingle();
+        
+        if (userNode == null)
+            throw new ApplicationObjectNotFoundException(String.format("User %s can not be found", userName));
+        
+        Node newEntry = logRoot.getGraphDatabase().createNode();
+        
+        newEntry.setProperty(Constants.PROPERTY_TYPE, type);
+        newEntry.setProperty(Constants.PROPERTY_CREATION_DATE, timestamp);
+        if (affectedProperty != null)
+            newEntry.setProperty(Constants.PROPERTY_AFFECTED_PROPERTY, affectedProperty);
+        if (oldValue != null)
+            newEntry.setProperty(Constants.PROPERTY_OLD_VALUE, oldValue);
+        if (newValue != null)
+            newEntry.setProperty(Constants.PROPERTY_NEW_VALUE, newValue);
+        if (notes != null)
+            newEntry.setProperty(Constants.PROPERTY_NOTES, notes);
+        
+        newEntry.createRelationshipTo(logRoot, RelTypes.CHILD_OF_SPECIAL);
+        newEntry.createRelationshipTo(userNode, RelTypes.PERFORMED_BY);
+        if (object != null)
+            object.createRelationshipTo(newEntry, RelTypes.HAS_HISTORY_ENTRY);
+        return newEntry;
     }
     
     /**
@@ -944,7 +927,5 @@ public class Util {
         }catch (NumberFormatException ex){} //Does nothing
         
         return null;
-        
-        //throw  new InvalidArgumentException(String.format("Can not convert %s into %s", oldValue, convertTo), Level.WARNING);
     }
 }

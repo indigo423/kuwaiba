@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.openide.nodes.Children.Array;
 import org.openide.nodes.Node;
 /**
  * Represents a class node.
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadataChildren extends Array{
 

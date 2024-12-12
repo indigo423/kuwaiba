@@ -26,7 +26,7 @@ import java.awt.dnd.DragSourceListener;
 import javax.swing.JComponent;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 
 /**
  * This class implements DragGestureListener and extends from TransferHandler in order to manage

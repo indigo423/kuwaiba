@@ -19,6 +19,7 @@ package org.inventory.views.objectview.scene;
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -26,10 +27,9 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.visual.LocalObjectView;
+import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.views.LocalObjectView;
 import org.netbeans.api.visual.anchor.AnchorFactory;
 import org.netbeans.api.visual.widget.Widget;
 
@@ -106,10 +106,8 @@ public class ViewBuilder {
                         LocalObjectLight lol = CommunicationsStub.getInstance().
                                 getObjectInfoLight(objectClass, objectId);
                         if (lol != null){
-                            ObjectNodeWidget widget = new ObjectNodeWidget(scene, lol);
+                            ObjectNodeWidget widget = (ObjectNodeWidget)scene.addNode(lol);
                             widget.setPreferredLocation(new Point(xCoordinate, yCoordinate));
-                            scene.getNodesLayer().addChild(widget);
-                            scene.addObject(lol, widget);
                         }
                         else
                             currentView.setDirty(true);
@@ -122,23 +120,18 @@ public class ViewBuilder {
                             String className = reader.getAttributeValue(null,"class");
                             LocalObjectLight container = CommunicationsStub.getInstance().getObjectInfoLight(className, objectId);
                             if (container != null){
-                                LocalObjectLight aSideObject = LocalStuffFactory.createLocalObjectLight();
-                                aSideObject.setOid(aSide);
+                                LocalObjectLight aSideObject = new LocalObjectLight(aSide, null, null);
                                 Widget aSideWidget = scene.findWidget(aSideObject);
 
-                                LocalObjectLight bSideObject = LocalStuffFactory.createLocalObjectLight();
-                                bSideObject.setOid(bSide);
+                                LocalObjectLight bSideObject = new LocalObjectLight(bSide, null, null);
                                 Widget bSideWidget = scene.findWidget(bSideObject);
 
                                 if (aSideWidget == null || bSideWidget == null)
                                     currentView.setDirty(true);
                                 else{
-                                    ObjectConnectionWidget newEdge = new ObjectConnectionWidget(scene,
-                                           container,scene.getFreeRouter(), ObjectConnectionWidget.getConnectionColor(container.getClassName()));
-                                    scene.getEdgesLayer().addChild(newEdge);
-                                    scene.addObject(container, newEdge);
-                                    newEdge.setSourceAnchor(AnchorFactory.createCircularAnchor(aSideWidget, 3));
-                                    newEdge.setTargetAnchor(AnchorFactory.createCircularAnchor(bSideWidget, 3));
+                                    ObjectConnectionWidget newEdge = (ObjectConnectionWidget)scene.addEdge(container);
+                                    newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
+                                    newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
                                     List<Point> localControlPoints = new ArrayList<Point>();
                                     while(true){
                                         reader.nextTag();
@@ -193,10 +186,8 @@ public class ViewBuilder {
 
         for (LocalObjectLight node : myNodes){ //Add the nodes
             //Puts an element after another
-            ObjectNodeWidget widget = new ObjectNodeWidget(scene, node);
+            ObjectNodeWidget widget = (ObjectNodeWidget)scene.addNode(node);
             widget.setPreferredLocation(new Point(lastX, 0));
-            scene.getNodesLayer().addChild(widget);
-            scene.addObject(node, widget);
 
             lastX +=100;
         }
@@ -204,38 +195,21 @@ public class ViewBuilder {
         //TODO: This algorithm to find the endpoints for a connection could be improved in many ways
         for (LocalObject container : myPhysicalConnections){
 
-            String aSideString, bSideString;
-
-            //Hardcoded for now
-            if (container.getClassName().equals("WireContainer") || container.getClassName().equals("WirelessContainer")){ //NOI18N
-                aSideString = "nodeA";
-                bSideString = "nodeB";
-            }else{
-                aSideString = "endpointA";
-                bSideString = "endpointB";
-            }
-
-            long[] aSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),aSideString);
+            LocalObjectLight[] aSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointA");
             if (aSide == null)
                 return;
 
-            LocalObjectLight aSideObject = LocalStuffFactory.createLocalObjectLight();
-            aSideObject.setOid(aSide[0]);
-            Widget aSideWidget = scene.findWidget(aSideObject);
+            Widget aSideWidget = scene.findWidget(aSide[0]);
 
-            long[] bSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),bSideString);
+            LocalObjectLight[] bSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointB");
             if (bSide == null)
                 return;
 
-            LocalObjectLight bSideObject = LocalStuffFactory.createLocalObjectLight();
-            bSideObject.setOid(bSide[0]);
-            Widget bSideWidget = scene.findWidget(bSideObject);
+            Widget bSideWidget = scene.findWidget(bSide[0]);
 
-            ObjectConnectionWidget newEdge = new ObjectConnectionWidget(scene,
-                                           container,scene.getFreeRouter(), ObjectConnectionWidget.getConnectionColor(container.getClassName()));
-            newEdge.setSourceAnchor(AnchorFactory.createCircularAnchor(aSideWidget, 3));
-            newEdge.setTargetAnchor(AnchorFactory.createCircularAnchor(bSideWidget, 3));
-            
+            ObjectConnectionWidget newEdge = (ObjectConnectionWidget)scene.addEdge(container);
+            newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
+            newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
         }
         currentView = null;
     }
@@ -246,62 +220,46 @@ public class ViewBuilder {
      * @param myNodes
      * @param myPhysicalConnections
      */
-    public void refreshView(List<LocalObjectLight> newNodes, List<LocalObjectLight> newPhysicalConnections,
-            List<LocalObjectLight> nodesToDelete, List<LocalObjectLight> physicalConnectionsToDelete){
+    public void refreshView(Collection<LocalObjectLight> newNodes, Collection<LocalObjectLight> newPhysicalConnections,
+            Collection<LocalObjectLight> nodesToDelete, Collection<LocalObjectLight> physicalConnectionsToDelete){
 
         for (LocalObjectLight node : nodesToDelete){
             Widget toDelete = scene.findWidget(node);
             scene.getNodesLayer().removeChild(toDelete);
-            scene.removeObject(node);
+            scene.removeNode(node);
         }
 
         for (LocalObjectLight connection : physicalConnectionsToDelete){
             Widget toDelete = scene.findWidget(connection);
             scene.getEdgesLayer().removeChild(toDelete);
-            scene.removeObject(connection);
+            scene.removeEdge(connection);
         }
 
         int lastX = 0;
         for (LocalObjectLight node : newNodes){ //Add the nodes
             //Puts an element after another
-            ObjectNodeWidget widget = new ObjectNodeWidget(scene, node);
+            ObjectNodeWidget widget = (ObjectNodeWidget)scene.addNode(node);
             widget.setPreferredLocation(new Point(lastX, 20));
-            scene.getNodesLayer().addChild(widget);
-            scene.addObject(node, widget);
-
             lastX +=100;
         }
 
         for (LocalObjectLight toAdd : newPhysicalConnections){
-            String aSideString, bSideString;
-            //Hardcoded for now
-            if (toAdd.getClassName().equals("WireContainer") || toAdd.getClassName().equals("WirelessContainer")){ //NOI18N
-                aSideString = "nodeA";
-                bSideString = "nodeB";
-            }else{
-                aSideString = "endpointA";
-                bSideString = "endpointB";
-            }
-            long[] aSide = com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(),aSideString);
+            
+            LocalObjectLight[] aSide = com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(), "endpointA");
             if (aSide == null)
                 return;
 
-            LocalObjectLight aSideObject = LocalStuffFactory.createLocalObjectLight();
-            aSideObject.setOid(aSide[0]);
-            Widget aSideWidget = scene.findWidget(aSideObject);
+            Widget aSideWidget = scene.findWidget(aSide[0]);
 
-            long[] bSide = com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(),bSideString);
+            LocalObjectLight[] bSide = com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(),"endpointB");
             if (bSide == null)
                 return;
 
-            LocalObjectLight bSideObject = LocalStuffFactory.createLocalObjectLight();
-            bSideObject.setOid(bSide[0]);
-            Widget bSideWidget = scene.findWidget(bSideObject);
+            Widget bSideWidget = scene.findWidget(bSide[0]);
 
-            ObjectConnectionWidget newEdge = new ObjectConnectionWidget(scene,
-                                           toAdd,scene.getFreeRouter(), ObjectConnectionWidget.getConnectionColor(toAdd.getClassName()));
-            newEdge.setSourceAnchor(AnchorFactory.createCircularAnchor(aSideWidget, 3));
-            newEdge.setTargetAnchor(AnchorFactory.createCircularAnchor(bSideWidget, 3));
+            ObjectConnectionWidget newEdge = (ObjectConnectionWidget)scene.addEdge(toAdd);
+            newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
+            newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
         }
     }
 

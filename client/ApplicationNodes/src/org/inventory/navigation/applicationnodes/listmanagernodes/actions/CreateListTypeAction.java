@@ -18,7 +18,7 @@ package org.inventory.navigation.applicationnodes.listmanagernodes.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemChildren;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
@@ -29,18 +29,14 @@ import org.openide.util.Lookup;
  * Action to create a new list type item
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public final class CreateListTypeAction extends AbstractAction{
+public final class CreateListTypeAction extends AbstractAction {
     private ListTypeNode node;
     private CommunicationsStub com;
 
-    public CreateListTypeAction(){
+    public CreateListTypeAction(ListTypeNode node) {
         putValue(NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW"));
         com = CommunicationsStub.getInstance();
-    }
-
-    public CreateListTypeAction(ListTypeNode _node) {
-        this();
-        this.node = _node;
+        this.node = node;
     }
 
     @Override
@@ -48,15 +44,12 @@ public final class CreateListTypeAction extends AbstractAction{
         NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
         LocalObjectLight myLol = com.createListTypeItem(node.getObject().getClassName());
             if (myLol == null)
-                nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.ERROR,
-                    CommunicationsStub.getInstance().getError());
+                nu.showSimplePopup("Error", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
         else{
-            ((ListTypeItemChildren)node.getChildren()).add(new ListTypeItemNode[]{new ListTypeItemNode(myLol)});
-            //Refreshes the cache
-            /**
-             * TODO: Provide a method only for this instead of calling the standard
-             */
-            CommunicationsStub.getInstance().getList(node.getObject().getClassName(), false, true);
+            if (!((ListTypeItemChildren)node.getChildren()).isCollapsed())
+                ((ListTypeItemChildren)node.getChildren()).add(new ListTypeItemNode[]{new ListTypeItemNode(myLol)});
+            //Refresh cache
+            com.getList(node.getObject().getClassName(), false, true);
         }
     }
 }

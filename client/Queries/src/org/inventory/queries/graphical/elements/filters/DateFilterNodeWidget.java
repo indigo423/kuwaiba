@@ -16,30 +16,23 @@
 
 package org.inventory.queries.graphical.elements.filters;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Random;
-import javax.swing.Action;
 import javax.swing.JComboBox;
 import javax.swing.JTextField;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
+import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.queries.graphical.QueryEditorScene;
 import org.netbeans.api.visual.vmd.VMDPinWidget;
 import org.netbeans.api.visual.widget.ComponentWidget;
 
 /**
  * Represents a filter for numeric values (integers, floats and longs)
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class DateFilterNodeWidget extends SimpleCriteriaNodeWidget{
 
     protected JTextField insideText;
-    protected JTextField insideText2;
-    private VMDPinWidget dummyPin;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     public DateFilterNodeWidget(QueryEditorScene scene) {
@@ -67,5 +60,4 @@ public class DateFilterNodeWidget extends SimpleCriteriaNodeWidget{
     public String getValue() {
         return insideText.getText();
     }
-    
 }

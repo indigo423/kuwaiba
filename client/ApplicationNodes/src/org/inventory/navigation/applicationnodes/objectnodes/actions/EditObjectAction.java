@@ -21,44 +21,31 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.KeyStroke;
-import org.inventory.core.services.actions.ObjectAction;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.windows.ObjectEditorTopComponent;
-import org.openide.nodes.Node;
-import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Provides the necessary functionality to show a dedicated editor (using PropertySheetView)
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-@ServiceProvider(service=ObjectAction.class)
-public final class EditObjectAction extends AbstractAction implements ObjectAction{
-    private Node node;
+public final class EditObjectAction extends AbstractAction {
+    private ObjectNode node;
 
-    //Default constructor used by the default lookup
-    public EditObjectAction() {
+    public EditObjectAction(ObjectNode node) {
         putValue(NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EDIT"));
         putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E,InputEvent.CTRL_MASK));
         putValue(MNEMONIC_KEY,KeyEvent.VK_E);
+        this.node = node;
     }
 
-
-    public EditObjectAction(Node _node) {
-        this();
-        this.node = _node;
+    public EditObjectAction(LocalObjectLight object) {
+        putValue(NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EDIT"));
+        putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_E,InputEvent.CTRL_MASK));
+        putValue(MNEMONIC_KEY,KeyEvent.VK_E);
+        this.node = new ObjectNode(object);
     }
-
-    @Override
-    public void setObject(LocalObjectLight lol) {
-        this.node = new ObjectNode(lol);
-    }
-
-    @Override
-    public int getType() {
-        return ObjectAction.EDIT;
-    }
-
+    
     @Override
     public void actionPerformed(ActionEvent ev) {
         ObjectEditorTopComponent component = new ObjectEditorTopComponent(node);

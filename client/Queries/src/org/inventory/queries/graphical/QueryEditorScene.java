@@ -56,13 +56,11 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JCheckBox;
 import javax.swing.JPopupMenu;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObjectListItem;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
-import org.inventory.core.services.factories.ObjectFactory;
+import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectListItem;
+import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.core.visual.decorators.ColorSchemeFactory;
 import org.inventory.queries.actions.SwitchClassNodeWidgetFilterAction;
 import org.inventory.queries.graphical.elements.AttributePinWidget;
@@ -99,7 +97,7 @@ import org.netbeans.api.visual.widget.Widget;
  * keys as Strings, it's not suitable for our purposes, so we rather inherit from GraphPinScene and use
  * the same base code
  * @author David Kaspar
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @contributor Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class QueryEditorScene extends GraphPinScene<Object, String, Object>
         implements ItemListener{
@@ -231,7 +229,7 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
      */
     protected Widget attachPinWidget (Object node, Object pin) {
         VMDPinWidget widget;
-        if (pin instanceof LocalAttributeMetadata){
+            if (pin instanceof LocalAttributeMetadata){
             widget = new AttributePinWidget(this, (LocalAttributeMetadata)pin,
                     ((LocalClassMetadata)node).getTypeForAttribute(((LocalAttributeMetadata)pin).getName()),
                     scheme);
@@ -312,7 +310,7 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
 
     public LocalTransientQuery getTransientQuery(LocalClassMetadata mainClass,
             int logicalConnector, int limit, int page, boolean isJoin) {
-        LocalTransientQuery myQuery = LocalStuffFactory.createLocalTransientQuery(mainClass.getClassName(),
+        LocalTransientQuery myQuery = new LocalTransientQuery(mainClass.getClassName(),
                 logicalConnector, isJoin, limit, page);
         Widget[] attributePins = ((ClassNodeWidget)findWidget(mainClass)).getChildren().toArray(new Widget[0]);
         for (Widget myPin : attributePins){
@@ -331,10 +329,10 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
                         if (nextHop instanceof ListTypeFilter){
                             myQuery.getConditions().add(null); //padding
                             myQuery.getAttributeValues().add(null); //padding
-                            if (((LocalObjectListItem)((ListTypeFilter)nextHop).getValue()).equals(ObjectFactory.createNullItem())){
+                            if (((LocalObjectListItem)((ListTypeFilter)nextHop).getValue()).equals(new LocalObjectListItem())){
                                 myQuery.getJoins().add(null);
                             }else{
-                                LocalTransientQuery simplifiedQuery = LocalStuffFactory.createLocalTransientQuery(((ListTypeFilter)nextHop).getNodeName(),logicalConnector,false,0,0);
+                                LocalTransientQuery simplifiedQuery = new LocalTransientQuery(((ListTypeFilter)nextHop).getNodeName(),logicalConnector,false,0,0);
                                 simplifiedQuery.getAttributeNames().add("id"); //NOI18N
                                 simplifiedQuery.getAttributeValues().add(String.valueOf(((LocalObjectListItem)((ListTypeFilter)nextHop).getValue()).getOid()));
                                 simplifiedQuery.getJoins().add(null); //padding

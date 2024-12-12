@@ -23,12 +23,11 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
-                    <code-name-base>org.netbeans.modules.settings</code-name-base>
+                    <code-name-base>org.netbeans.swing.outline</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <release-version>1</release-version>
-                        <specification-version>1.26.1</specification-version>
+                        <specification-version>1.20.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -68,7 +67,7 @@
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>8.3.1</specification-version>
+                        <specification-version>8.15.2</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -84,7 +83,9 @@
                 <package>org.inventory.navigation.applicationnodes.attributemetadatanodes</package>
                 <package>org.inventory.navigation.applicationnodes.classmetadatanodes</package>
                 <package>org.inventory.navigation.applicationnodes.listmanagernodes</package>
+                <package>org.inventory.navigation.applicationnodes.listmanagernodes.actions</package>
                 <package>org.inventory.navigation.applicationnodes.objectnodes</package>
+                <package>org.inventory.navigation.applicationnodes.objectnodes.actions</package>
                 <package>org.inventory.navigation.applicationnodes.pools</package>
                 <package>org.inventory.navigation.applicationnodes.querynodes</package>
             </public-packages>

@@ -16,8 +16,8 @@
 
 package org.inventory.customization.datamodelmanager;
 
-import org.inventory.core.services.api.behaviors.RefreshableTopComponent;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataChildren;
 import org.netbeans.api.settings.ConvertAsProperties;
@@ -31,10 +31,12 @@ import org.openide.nodes.AbstractNode;
 import org.openide.util.Lookup;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
+import org.openide.windows.Mode;
+import org.openide.windows.WindowManager;
 
 /**
  * Data model manager Top component.
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 @ConvertAsProperties(
     dtd = "-//org.inventory.customization.datamodelmanager//DataModelManager//EN",
@@ -45,7 +47,8 @@ iconBase = "org/inventory/customization/datamodelmanager/res/icon.png",
 persistenceType = TopComponent.PERSISTENCE_NEVER)
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Tools", id = "org.inventory.customization.datamodelmanager.DataModelManagerTopComponent")
-@ActionReferences(value = {@ActionReference(path = "Menu/Tools/Administrative/Class Management"),@ActionReference(path = "Toolbars/Tools")} /*, position = 333 */)
+@ActionReferences(value = {@ActionReference(path = "Menu/Tools/Administrative/Class Management"),
+    @ActionReference(path = "Toolbars/Tools")} /*, position = 333 */)
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_DataModelManagerAction",
 preferredID = "DataModelManagerTopComponent")
@@ -55,7 +58,7 @@ preferredID = "DataModelManagerTopComponent")
     "HINT_DataModelManagerTopComponent=Update the data model"
 })
 public final class DataModelManagerTopComponent extends TopComponent 
-        implements ExplorerManager.Provider, RefreshableTopComponent{
+        implements ExplorerManager.Provider, Refreshable {
 
     private final ExplorerManager em = new ExplorerManager();
     private DataModelManagerService dmms;
@@ -101,6 +104,10 @@ public final class DataModelManagerTopComponent extends TopComponent
     public void componentClosed() {
         ExplorerUtils.activateActions(em, false);
         em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
+        //Workaround, because when you close a TC whose mode is "explorer" and open it again,
+        //it docks as "explorer". This forces the TC to be always docked "explorer"
+        Mode myMode = WindowManager.getDefault().findMode("explorer"); //NOI18N
+        myMode.dockInto(this);
     }
 
     void writeProperties(java.util.Properties p) {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.awt.datatransfer.Transferable;
 import java.io.IOException;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.customization.hierarchycustomizer.actions.Remove;
 import org.openide.nodes.AbstractNode;
@@ -31,7 +31,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * A node wrapping a ClassMetadataLight
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadataNode extends AbstractNode {
    static final String PARENT_ICON_PATH = "org/inventory/customization/hierarchycustomizer/res/flag-green.png";
@@ -40,19 +40,19 @@ public class ClassMetadataNode extends AbstractNode {
    private LocalClassMetadataLight object;
    
    
-   public ClassMetadataNode(LocalClassMetadataLight _lcm, boolean isMain){
-      super (new ClassMetadataChildren(),Lookups.singleton(_lcm));
-      if (_lcm.getClassName() == null)
+   public ClassMetadataNode(LocalClassMetadataLight lcm, boolean isMain){
+      super (new ClassMetadataChildren(),Lookups.singleton(lcm));
+      if (lcm.getClassName() == null)
           setIconBaseWithExtension(ROOT_PARENT_ICON_PATH);
       else
         setIconBaseWithExtension(PARENT_ICON_PATH);
-      this.object = _lcm;
+      this.object = lcm;
    }
 
-   public ClassMetadataNode(LocalClassMetadataLight _lcm){
-      super (Children.LEAF,Lookups.singleton(_lcm));
+   public ClassMetadataNode(LocalClassMetadataLight lcm){
+      super (Children.LEAF,Lookups.singleton(lcm));
       setIconBaseWithExtension(CHILDREN_ICON_PATH);
-      this.object = _lcm;
+      this.object = lcm;
    }
 
     public LocalClassMetadataLight getObject() {

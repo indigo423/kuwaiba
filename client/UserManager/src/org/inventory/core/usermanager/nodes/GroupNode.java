@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package org.inventory.core.usermanager.nodes;
 
 import javax.swing.Action;
-import org.inventory.core.services.api.session.LocalUserGroupObject;
+import org.inventory.communications.core.LocalUserGroupObject;
 import org.inventory.core.usermanager.UserManagerTopComponent;
 import org.inventory.core.usermanager.actions.Delete;
 import org.inventory.core.usermanager.nodes.properties.UserGroupProperty;
@@ -29,7 +29,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Node representing a group of users
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class GroupNode extends AbstractNode{
 

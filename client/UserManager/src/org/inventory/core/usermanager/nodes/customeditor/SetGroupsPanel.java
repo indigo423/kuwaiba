@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
-import org.inventory.core.services.api.session.LocalUserGroupObjectLight;
+import org.inventory.communications.core.LocalUserGroupObjectLight;
 import org.openide.explorer.propertysheet.PropertyEnv;
 
 /**
  * This panel shows the list of groups available and
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public final class SetGroupsPanel extends JPanel{
 

@@ -19,7 +19,7 @@ package org.inventory.core.usermanager.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.session.LocalUserGroupObject;
+import org.inventory.communications.core.LocalUserGroupObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.usermanager.UserManagerService;
 import org.inventory.core.usermanager.nodes.GroupChildren;
@@ -30,7 +30,7 @@ import org.openide.util.Lookup;
 
 /**
  * This action adds a group
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class AddGroup extends AbstractAction{
 

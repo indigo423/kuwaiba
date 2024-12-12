@@ -18,7 +18,7 @@ package org.inventory.navigation.applicationnodes.listmanagernodes;
 
 import java.awt.Image;
 import javax.swing.Action;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.applicationnodes.listmanagernodes.actions.DeleteListTypeAction;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.util.ImageUtilities;
@@ -29,17 +29,24 @@ import org.openide.util.ImageUtilities;
  */
 public class ListTypeItemNode extends ObjectNode {
 
-    public static final String ICON_PATH="org/inventory/navigation/applicationnodes/res/list-type-item.png";
-    private static Image defaultIcon = ImageUtilities.loadImage(ICON_PATH);
+    private static Image icon = ImageUtilities.loadImage("org/inventory/navigation/applicationnodes/res/list-type-item.png");
 
     public ListTypeItemNode(LocalObjectLight lol) {
         super(lol,true);
-        this.icon = defaultIcon;
-
     }
 
     @Override
     public Action[] getActions(boolean context){
         return new Action[]{editAction,new DeleteListTypeAction(this)};
+    }
+    
+    @Override
+    public Image getIcon(int i){
+        return icon;
+    }
+    
+    @Override
+    public Image getOpenedIcon(int i){
+        return getIcon(i);
     }
 }

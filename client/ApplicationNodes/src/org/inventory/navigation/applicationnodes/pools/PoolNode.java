@@ -17,7 +17,7 @@ package org.inventory.navigation.applicationnodes.pools;
 
 import java.awt.Image;
 import javax.swing.Action;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.ShowObjectIdAction;
 import org.inventory.navigation.applicationnodes.pools.actions.DeletePoolAction;
 import org.inventory.navigation.applicationnodes.pools.actions.NewPoolItemAction;
@@ -25,7 +25,7 @@ import org.openide.nodes.AbstractNode;
 import org.openide.util.ImageUtilities;
 /**
  * Represents a pool (a set of objects of a certain kind)
- * @author Charles edward Bedon Cortazar <charles.bedon@neotropic.co>
+ * @author Charles edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class PoolNode extends AbstractNode {
     

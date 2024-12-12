@@ -21,8 +21,13 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Calendar;
+import java.util.Properties;
 import org.inventory.communications.CommunicationsStub;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
@@ -41,7 +46,10 @@ public class Installer extends ModuleInstall {
 
     @Override
     public void restored() {
-      pnlAuthentication = new AuthenticationPanel();
+      pnlAuthentication = new AuthenticationPanel(readProperties());
+      String javaVersion = System.getProperties().get("java.version").toString();
+      if (!javaVersion.contains("1.6"))
+          showExceptions(String.format("Your current Java version (%s) is not supported. Try version 1.6.x", javaVersion));
       dd = new DialogDescriptor(pnlAuthentication, "Login Window", true, new ActionListener() {
 
             @Override
@@ -77,7 +85,7 @@ public class Installer extends ModuleInstall {
         ConnectionSettingsPanel containedPanel = pnlAuthentication.getContainedPanel();
         try {
             CommunicationsStub.setServerURL(
-                    new URL("http", containedPanel.getServerAddress() , containedPanel.getServerPort(),
+                    new URL("http", containedPanel.getServerAddress(), containedPanel.getServerPort(),
                     containedPanel.getWSDLPath()));
 
         } catch (MalformedURLException ex) {
@@ -88,36 +96,37 @@ public class Installer extends ModuleInstall {
             if (!CommunicationsStub.getInstance().createSession(pnlAuthentication.getTxtUser().getText(), new String(pnlAuthentication.getTxtPassword().getPassword()))){
                showExceptions(CommunicationsStub.getInstance().getError());
                return false;
-            }else
+            }else{
+                writeProperties(pnlAuthentication.getTxtUser().getText(), containedPanel.getServerAddress(), containedPanel.getServerPort(),
+                        containedPanel.getWSDLPath());
                 //The title can't be set directly since it's overwritten right after the startup. We have to wait till the window is open
                 WindowManager.getDefault().getMainWindow().addWindowListener(new WindowListener() {
 
-                @Override
-                public void windowOpened(WindowEvent e) {
-                        WindowManager.getDefault().getMainWindow().setTitle(String.format("%1s - [%2s]",
-                        WindowManager.getDefault().getMainWindow().getTitle(), CommunicationsStub.getInstance().getSession().getUsername()));
-                }
+                    @Override
+                    public void windowOpened(WindowEvent e) {
+                            WindowManager.getDefault().getMainWindow().setTitle(String.format("%s - [%s]",
+                            WindowManager.getDefault().getMainWindow().getTitle(), CommunicationsStub.getInstance().getSession().getUsername()));
+                    }
 
-                @Override
-                public void windowClosing(WindowEvent e) {  }
+                    @Override
+                    public void windowClosing(WindowEvent e) {  }
 
-                @Override
-                public void windowClosed(WindowEvent e) { }
+                    @Override
+                    public void windowClosed(WindowEvent e) { }
 
-                @Override
-                public void windowIconified(WindowEvent e) {  }
+                    @Override
+                    public void windowIconified(WindowEvent e) {  }
 
-                @Override
-                public void windowDeiconified(WindowEvent e) {  }
+                    @Override
+                    public void windowDeiconified(WindowEvent e) {  }
 
-                @Override
-                public void windowActivated(WindowEvent e) { }
+                    @Override
+                    public void windowActivated(WindowEvent e) { }
 
-                @Override
-                public void windowDeactivated(WindowEvent e) { }
-            });
-
-
+                    @Override
+                    public void windowDeactivated(WindowEvent e) { }
+                });
+            }
         }catch(Exception exp){
             CommunicationsStub.resetInstance();
             showExceptions(exp.getMessage());
@@ -131,7 +140,7 @@ public class Installer extends ModuleInstall {
             errorText = "Unknown Error";
         //If the message is too long we better display it on a JOPtionPane
         if (errorText.length() > 50)
-            pnlAuthentication.getLblError().setText("Error connecting to the server. Click here for further details");
+            pnlAuthentication.getLblError().setText("An error has ocurred. Click here for further details");
         else
             pnlAuthentication.getLblError().setText(errorText);
 
@@ -143,6 +152,34 @@ public class Installer extends ModuleInstall {
     public boolean closing() {
         CommunicationsStub.getInstance().closeSession();
         return true;
+    }
+
+    private void writeProperties(String userName, String serverAddress, int serverPort, String wsdlPath) {
+        FileOutputStream output = null;
+        try{
+            output = new FileOutputStream(System.getProperty("user.dir") + "/.properties"); //NOI18N
+            Properties loginProperties = new Properties();
+            loginProperties.put("user", userName); //NOI18N
+            loginProperties.put("address", serverAddress); //NOI18N
+            loginProperties.put("port", String.valueOf(serverPort)); //NOI18N
+            loginProperties.put("path", wsdlPath); //NOI18N
+            loginProperties.store(output, "Last login: " + Calendar.getInstance().getTimeInMillis());
+        }catch(IOException e){
+            if (output != null)
+                try{ output.close();} catch(IOException ex){} //Do nothing if it fails
+        }
+    }
+    
+    private Properties readProperties(){
+        FileInputStream input;
+        try{
+            input = new FileInputStream(System.getProperty("user.dir") + "/.properties"); //NOI18N
+            Properties loginProperties = new Properties();
+            loginProperties.load(input);
+            return loginProperties;
+        }catch (IOException e) {
+            return null;
+        }
     }
 
 }

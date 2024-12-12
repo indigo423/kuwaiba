@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 package org.inventory.navigation.applicationnodes.objectnodes.properties;
 
 import java.beans.PropertyEditorSupport;
-import org.inventory.core.services.api.LocalObjectListItem;
-
+import org.inventory.communications.core.LocalObjectListItem;
 
 /**
  * Provides a custom property editor for list-type values where you can choose more than one item
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class MultipleChoiceItemListPropertyEditor extends PropertyEditorSupport{
 
     private LocalObjectListItem[] list;
 
-    public MultipleChoiceItemListPropertyEditor(LocalObjectListItem[] _list){
-        this.list = _list;
+    public MultipleChoiceItemListPropertyEditor(LocalObjectListItem[] list){
+        this.list = list;
     }
 
     @Override
@@ -55,15 +54,6 @@ public class MultipleChoiceItemListPropertyEditor extends PropertyEditorSupport{
             res[i] = list[i].getName().trim().equals("")?list[i].getName():list[i].getName();
         return res;
     }
-
-/**
- * Implement this (returning true in supportsCustomEditor) when there's need of an advance, custom editor
- *
- * @Override
-    public Component getCustomEditor(){
-        return new JLabel("sfdfdgfdfgdsf");
-    }
- */
 
     @Override
     public boolean supportsCustomEditor(){

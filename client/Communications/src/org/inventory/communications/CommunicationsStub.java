@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,55 +15,46 @@
  */
 package org.inventory.communications;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Logger;
 import javax.xml.ws.soap.SOAPFaultException;
-import org.inventory.communications.core.LocalClassMetadataImpl;
-import org.inventory.communications.core.LocalClassMetadataLightImpl;
-import org.inventory.communications.core.LocalObjectImpl;
-import org.inventory.communications.core.LocalObjectLightImpl;
-import org.inventory.communications.core.LocalObjectListItemImpl;
-import org.inventory.communications.core.LocalUserGroupObjectImpl;
-import org.inventory.communications.core.LocalUserObjectImpl;
-import org.inventory.communications.core.queries.LocalQueryImpl;
-import org.inventory.communications.core.queries.LocalQueryLightImpl;
-import org.inventory.communications.core.queries.LocalResultRecordImpl;
-import org.inventory.communications.core.queries.LocalTransientQueryImpl;
-import org.inventory.communications.core.views.LocalObjectViewImpl;
-import org.inventory.communications.core.views.LocalObjectViewLightImpl;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.LocalObjectListItem;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
-import org.inventory.core.services.api.queries.LocalQuery;
-import org.inventory.core.services.api.queries.LocalQueryLight;
-import org.inventory.core.services.api.queries.LocalResultRecord;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
-import org.inventory.core.services.api.session.LocalUserGroupObject;
-import org.inventory.core.services.api.session.LocalUserObject;
-import org.inventory.core.services.api.visual.LocalObjectView;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
-import org.inventory.core.services.caching.Cache;
-import org.inventory.core.services.factories.ObjectFactory;
+import org.inventory.communications.core.LocalApplicationLogEntry;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectListItem;
+import org.inventory.communications.core.LocalUserGroupObject;
+import org.inventory.communications.core.LocalUserObject;
+import org.inventory.communications.core.caching.Cache;
+import org.inventory.communications.core.queries.LocalQuery;
+import org.inventory.communications.core.queries.LocalQueryLight;
+import org.inventory.communications.core.queries.LocalResultRecord;
+import org.inventory.communications.core.queries.LocalTransientQuery;
+import org.inventory.communications.core.views.LocalObjectView;
+import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.kuwaiba.wsclient.ApplicationLogEntry;
 import org.kuwaiba.wsclient.ClassInfo;
 import org.kuwaiba.wsclient.ClassInfoLight;
+import org.kuwaiba.wsclient.GroupInfo;
 import org.kuwaiba.wsclient.Kuwaiba;
 import org.kuwaiba.wsclient.KuwaibaService;
 import org.kuwaiba.wsclient.RemoteObject;
 import org.kuwaiba.wsclient.RemoteObjectLight;
+import org.kuwaiba.wsclient.RemoteObjectLightArray;
+import org.kuwaiba.wsclient.RemoteObjectSpecialRelationships;
 import org.kuwaiba.wsclient.RemoteQueryLight;
 import org.kuwaiba.wsclient.ResultRecord;
 import org.kuwaiba.wsclient.StringArray;
 import org.kuwaiba.wsclient.TransientQuery;
-import org.kuwaiba.wsclient.UserGroupInfo;
 import org.kuwaiba.wsclient.UserInfo;
+import org.kuwaiba.wsclient.Validator;
 import org.kuwaiba.wsclient.ViewInfo;
 import org.kuwaiba.wsclient.ViewInfoLight;
 
@@ -82,22 +73,13 @@ public class CommunicationsStub {
     private LocalSession session;
     
     private CommunicationsStub(){
-        if (serverURL == null){
-            try{
-                //Default values
-                serverURL = new URL("http", "localhost", 8080,"/kuwaiba/KuwaibaService?wsdl"); //NOI18n
-            }catch (MalformedURLException mue){
-                Logger.getAnonymousLogger("Malformed URL: "+mue.getMessage());
-            }
-        }
-        this.service = new KuwaibaService(serverURL);
-        this.port = service.getKuwaibaPort();
         cache = Cache.getInstace();
     }
 
     //Implements the singleton pattern
     public static CommunicationsStub getInstance(){
-            if(instance==null) instance = new CommunicationsStub();
+            if(instance==null)
+                instance = new CommunicationsStub();
             return instance;
     }
 
@@ -111,10 +93,10 @@ public class CommunicationsStub {
 
     /**
      * Sets the webservice URL
-     * @param _URL A valid URL
+     * @param URL A valid URL
      */
-    public static void setServerURL(URL _URL){
-        serverURL = _URL;
+    public static void setServerURL(URL URL){
+        serverURL = URL;
     }
     
     // <editor-fold defaultstate="collapsed" desc="Session methods. Click on the + sign on the left to edit the code.">
@@ -135,13 +117,18 @@ public class CommunicationsStub {
     }
 
     /**
-     *
+     * Creates a session
      * @param user The user for this session
      * @param password The password for the user
      * @return Success or failure
      */
     public boolean createSession(String user, String password){
         try{
+            if (serverURL == null)
+                serverURL = new URL("http", "localhost", 8080,"/kuwaiba/KuwaibaService?wsdl"); //NOI18n
+
+            this.service = new KuwaibaService(serverURL);
+            this.port = service.getKuwaibaPort();
             this.session = new LocalSession(port.createSession(user, password));
             return true;
         }catch(Exception ex){ 
@@ -160,7 +147,32 @@ public class CommunicationsStub {
             List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
 
             for (RemoteObjectLight rol : children){
-                res.add(new LocalObjectLightImpl(rol));
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : rol.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                
+                res.add(new LocalObjectLight(rol.getClassName(), rol.getName(), rol.getOid(), validators));
+            }
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight[] getSiblings(String objectClass, long objectId) {
+        try{
+            List <RemoteObjectLight> siblings = port.getSiblings(objectClass, objectId, 0,this.session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[siblings.size()];
+            
+            int i = 0;
+            for (RemoteObjectLight rol : siblings){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : rol.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                
+                res[i] = new LocalObjectLight(rol.getClassName(), rol.getName(), rol.getOid(), validators);
+                i++;
             }
             return res;
         }catch(Exception ex){
@@ -177,14 +189,13 @@ public class CommunicationsStub {
      */
     public List<LocalObjectLight> getObjectChildren(long oid, String className) {
         try{
-//            List <RemoteObjectLight> children = port.getObjectChildren(oid, className, 0,this.session.getSessionId());
-//            List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
-//
-//            for (RemoteObjectLight rol : children)
-//                res.add(new LocalObjectLightImpl(rol));
-//
-//            return res;
-            return null;
+            List <RemoteObjectLight> children = port.getObjectChildren(className, oid, 0,this.session.getSessionId());
+            List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
+
+            for (RemoteObjectLight rol : children)
+                res.add(new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName()));
+
+            return res;
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -197,14 +208,39 @@ public class CommunicationsStub {
             List <LocalObject> res = new ArrayList<LocalObject>();
 
             for (RemoteObject rol : children){
-                res.add(new LocalObjectImpl(rol, getMetaForClass(rol.getClassName(), false)));
+                List<List<String>> values = new ArrayList<List<String>>();
+                for (StringArray value : rol.getValues())
+                    values.add(value.getItem());
+
+                res.add(new LocalObject(rol.getClassName(), rol.getOid(), rol.getAttributes(),
+                        values, getMetaForClass(rol.getClassName(), false)));
             }
             return res;
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
         }
-    }// </editor-fold>
+    }
+    
+    public LocalObjectLight[] getObjectsOfClassLight(String className){
+        try{
+            List <RemoteObjectLight> instances = port.getObjectsOfClassLight(className, 0, this.session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[instances.size()];
+
+            int i = 0;
+            for (RemoteObjectLight rol : instances){
+                res[i] = new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName());
+                i++;
+            }
+
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    // </editor-fold>
 
     /**
      * Updates the attributes of a given object
@@ -257,20 +293,63 @@ public class CommunicationsStub {
         try{
             LocalClassMetadata lcmd = getMetaForClass(objectClass, false);
             RemoteObject myObject = port.getObject(objectClass, oid,this.session.getSessionId());
-            return new LocalObjectImpl(myObject,lcmd);
+            List<List<String>> values = new ArrayList<List<String>>();
+            for (StringArray value : myObject.getValues())
+                values.add(value.getItem());
+            return new LocalObject(myObject.getClassName(), myObject.getOid(), 
+                    myObject.getAttributes(), values,lcmd);
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight[] getParents(String objectClass, long objectId) {
+        try{
+            List<RemoteObjectLight> values = port.getParents(objectClass, objectId, session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[values.size()];
+            for (int i = 0; i < values.size(); i++)
+                res[i]= new LocalObjectLight(values.get(i).getOid(), values.get(i).getName(), values.get(i).getClassName());
+
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public HashMap<String, LocalObjectLight[]> getSpecialAttributes (String objectClass, long objectId) {
+        try{
+            RemoteObjectSpecialRelationships remoteRelationships = port.getSpecialAttributes(objectClass, objectId, session.getSessionId());
+            HashMap<String, LocalObjectLight[]> res = new HashMap<String, LocalObjectLight[]>();
+            
+            for (int i = 0; i < remoteRelationships.getRelationships().size(); i++){
+                
+                RemoteObjectLightArray relatedRemoteObjects = remoteRelationships.getRelatedObjects().get(i);
+                LocalObjectLight[] relatedLocalObjects = new LocalObjectLight[relatedRemoteObjects.getItem().size()];
+                int j = 0;
+                for (RemoteObjectLight relatedRemoteObject : relatedRemoteObjects.getItem()) {
+                    relatedLocalObjects[j] = new LocalObjectLight(relatedRemoteObject.getOid(), 
+                                                    relatedRemoteObject.getName(), 
+                                                    relatedRemoteObject.getClassName());
+                    j++;
+                }
+                res.put(remoteRelationships.getRelationships().get(i), relatedLocalObjects);
+            }
+            return res;
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
         }
     }
 
-    public long[] getSpecialAttribute(String objectClass, long objectId, String attributeName){
+    public LocalObjectLight[] getSpecialAttribute(String objectClass, long objectId, String attributeName){
         try{
 
-            List<String> values = port.getSpecialAttribute(objectClass, objectId,attributeName, session.getSessionId());
-            long[] res = new long[values.size()];
+            List<RemoteObjectLight> values = port.getSpecialAttribute(objectClass, objectId,attributeName, session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[values.size()];
             for (int i = 0; i < values.size(); i++)
-                res[i]= Long.valueOf(values.get(i));
+                res[i]= new LocalObjectLight(values.get(i).getOid(), values.get(i).getName(), values.get(i).getClassName());
 
             return res;
         }catch(Exception ex){
@@ -288,13 +367,88 @@ public class CommunicationsStub {
     public LocalObjectLight getObjectInfoLight(String objectClass, long oid){
         try{
             RemoteObjectLight myLocalObject = port.getObjectLight(objectClass, oid,this.session.getSessionId());
-            return new LocalObjectLightImpl(myLocalObject);
+            HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : myLocalObject.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+            
+                return new LocalObjectLight(myLocalObject.getClassName(), myLocalObject.getName(), 
+                        myLocalObject.getOid(), validators);
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalApplicationLogEntry[] getBusinessObjectAuditTrail(String objectClass, long oid){
+        try{
+            List<ApplicationLogEntry> myEntries = port.getBusinessObjectAuditTrail(objectClass, oid, 0, this.session.getSessionId());
+            
+            LocalApplicationLogEntry[] res = new LocalApplicationLogEntry[myEntries.size()];
+            
+            //We sort the array here, since it's not from the source
+            Collections.sort(myEntries, new Comparator<ApplicationLogEntry>(){
+
+                @Override
+                public int compare(ApplicationLogEntry o1, ApplicationLogEntry o2) {
+                    if (o1.getTimestamp() < o2.getTimestamp())
+                        return -1;
+                    return 1;
+                }
+            });
+            
+            for (int i = 0; i < myEntries.size(); i++)
+                res[i] = new LocalApplicationLogEntry(myEntries.get(i).getId(),
+                                                        myEntries.get(i).getObjectId(),
+                                                        myEntries.get(i).getType(),
+                                                        myEntries.get(i).getUserName(),
+                                                        myEntries.get(i).getTimestamp(),
+                                                        myEntries.get(i).getAffectedProperty(),
+                                                        myEntries.get(i).getOldValue(),
+                                                        myEntries.get(i).getNewValue(),
+                                                        myEntries.get(i).getNotes());
+            
+            return res;
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
         }
     }
 
+    public LocalApplicationLogEntry[] getGeneralActivityAuditTrail(int page, int limit){
+        try{
+            List<ApplicationLogEntry> myEntries = port.getGeneralActivityAuditTrail(page, limit, this.session.getSessionId());
+            
+            LocalApplicationLogEntry[] res = new LocalApplicationLogEntry[myEntries.size()];
+            
+            //We sort the array here, since it's not from the source
+            Collections.sort(myEntries, new Comparator<ApplicationLogEntry>(){
+
+                @Override
+                public int compare(ApplicationLogEntry o1, ApplicationLogEntry o2) {
+                    if (o1.getTimestamp() < o2.getTimestamp())
+                        return -1;
+                    return 1;
+                }
+            });
+            
+            for (int i = 0; i < myEntries.size(); i++)
+                res[i] = new LocalApplicationLogEntry(myEntries.get(i).getId(),
+                                                        myEntries.get(i).getObjectId(),
+                                                        myEntries.get(i).getType(),
+                                                        myEntries.get(i).getUserName(),
+                                                        myEntries.get(i).getTimestamp(),
+                                                        myEntries.get(i).getAffectedProperty(),
+                                                        myEntries.get(i).getOldValue(),
+                                                        myEntries.get(i).getNewValue(),
+                                                        myEntries.get(i).getNotes());
+            
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
     /**
      * Returns the last error
      * @return The error string
@@ -327,7 +481,17 @@ public class CommunicationsStub {
                 List<ClassInfoLight> resAsRemote = port.getPossibleChildren(className,this.session.getSessionId());
 
                 for (ClassInfoLight cil : resAsRemote){
-                    resAsLocal.add(new LocalClassMetadataLightImpl(cil));
+                    HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                    resAsLocal.add(new LocalClassMetadataLight(cil.getId(),
+                                                cil.getClassName(),
+                                                cil.getDisplayName(),
+                                                cil.getParentClassName(),
+                                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                                cil.isCustom(), cil.isInDesign(),
+                                                cil.getSmallIcon(), validators));
                 }
                 cache.addPossibleChildrenCached(className, resAsLocal);
             }
@@ -350,7 +514,17 @@ public class CommunicationsStub {
             List<LocalClassMetadataLight> resAsLocal = new ArrayList<LocalClassMetadataLight>();
 
             for (ClassInfoLight cil : resAsRemote){
-                resAsLocal.add(new LocalClassMetadataLightImpl(cil));
+               HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                    resAsLocal.add(new LocalClassMetadataLight(cil.getId(),
+                                                cil.getClassName(),
+                                                cil.getDisplayName(),
+                                                cil.getParentClassName(),
+                                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                                cil.isCustom(), cil.isInDesign(),
+                                                cil.getSmallIcon(), validators));
             }
             return resAsLocal;
         }catch(Exception ex){
@@ -358,12 +532,47 @@ public class CommunicationsStub {
             return null;
         }
     }
-      
-   public List<LocalClassMetadataLight> getUpstreamContainmentHierarchy(String className, boolean recursive){
+   
+    public List<LocalClassMetadataLight> getSpecialPossibleChildren(String className) {
+        try{
+            List<ClassInfoLight> resAsRemote = port.getSpecialPossibleChildren(className,this.session.getSessionId());
+            List<LocalClassMetadataLight> resAsLocal = new ArrayList<LocalClassMetadataLight>();
+
+            for (ClassInfoLight cil : resAsRemote){
+               HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                    resAsLocal.add(new LocalClassMetadataLight(cil.getId(),
+                                                cil.getClassName(),
+                                                cil.getDisplayName(),
+                                                cil.getParentClassName(),
+                                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                                cil.isCustom(), cil.isInDesign(),
+                                                cil.getSmallIcon(), validators));
+            }
+            return resAsLocal;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public List<LocalClassMetadataLight> getUpstreamContainmentHierarchy(String className, boolean recursive){
         try{
             List<LocalClassMetadataLight> res = new ArrayList<LocalClassMetadataLight>();
             for (ClassInfoLight cil : port.getUpstreamContainmentHierarchy(className, recursive, this.session.getSessionId())){
-                res.add(new LocalClassMetadataLightImpl(cil));
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                    res.add(new LocalClassMetadataLight(cil.getId(),
+                                                cil.getClassName(),
+                                                cil.getDisplayName(),
+                                                cil.getParentClassName(),
+                                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                                cil.isCustom(), cil.isInDesign(),
+                                                cil.getSmallIcon(), validators));
             }
             return res;
         }catch(Exception ex){
@@ -385,9 +594,19 @@ public class CommunicationsStub {
             List<ClassInfoLight> metas = port.getAllClassesLight(includeListTypes, this.session.getSessionId());
 
             LocalClassMetadataLight[] lm = new LocalClassMetadataLight[metas.size()];
-            int i=0;
-            for (ClassInfoLight cm : metas){
-                lm[i] = (LocalClassMetadataLight)new LocalClassMetadataLightImpl(cm);
+            int i = 0;
+            for (ClassInfoLight cil : metas){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                lm[i] = new LocalClassMetadataLight(cil.getId(),
+                                                cil.getClassName(),
+                                                cil.getDisplayName(),
+                                                cil.getParentClassName(),
+                                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                                cil.isCustom(), cil.isInDesign(),
+                                                cil.getSmallIcon(), validators);
                 i++;
             }
 
@@ -414,9 +633,24 @@ public class CommunicationsStub {
             List<ClassInfo> metas;
             metas= port.getAllClasses(includeListTypes, this.session.getSessionId());
             LocalClassMetadata[] lm = new LocalClassMetadata[metas.size()];
-            int i=0;
-            for (ClassInfo cm : metas){
-                lm[i] = new LocalClassMetadataImpl(cm);
+            int i = 0;
+            for (ClassInfo ci : metas){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : ci.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                
+                lm[i] = new LocalClassMetadata(ci.getId(),
+                                                ci.getClassName(),
+                                                ci.getDisplayName(),
+                                                ci.getParentClassName(),
+                                                ci.isAbstract(),ci.isViewable(), ci.isListType(),
+                                                ci.isCustom(), ci.isInDesign(),
+                                                ci.getSmallIcon(), validators, ci.getIcon(),
+                                                ci.getDescription(), ci.getAttributeIds(), 
+                                                ci.getAttributeNames().toArray(new String[0]),
+                                                ci.getAttributeTypes().toArray(new String[0]),
+                                                ci.getAttributeDisplayNames().toArray(new String[0]),
+                                                ci.getAttributesIsVisible(), ci.getAttributesDescription().toArray(new String[0]));
                 i++;
             }
             cache.addMeta(lm); //Refresh the cache
@@ -442,8 +676,22 @@ public class CommunicationsStub {
             }
 
             ClassInfo cm = port.getClass(className,this.session.getSessionId());
+            HashMap<String, Integer> validators = new HashMap<String, Integer>();
+            for (Validator validator : cm.getValidators())
+                validators.put(validator.getLabel(), validator.getValue());
 
-            res = new LocalClassMetadataImpl(cm);
+            res = new LocalClassMetadata(cm.getId(),
+                                            cm.getClassName(),
+                                            cm.getDisplayName(),
+                                            cm.getParentClassName(),
+                                            cm.isAbstract(),cm.isViewable(), cm.isListType(),
+                                            cm.isCustom(), cm.isInDesign(),
+                                            cm.getSmallIcon(), validators, cm.getIcon(),
+                                            cm.getDescription(), cm.getAttributeIds(), 
+                                            cm.getAttributeNames().toArray(new String[0]),
+                                            cm.getAttributeTypes().toArray(new String[0]),
+                                            cm.getAttributeDisplayNames().toArray(new String[0]),
+                                            cm.getAttributesIsVisible(), cm.getAttributesDescription().toArray(new String[0]));
             cache.addMeta(new LocalClassMetadata[]{res});
             return res;
         }catch(Exception ex){
@@ -468,8 +716,22 @@ public class CommunicationsStub {
 //                }
 //            }
             ClassInfo cm = port.getClassWithId(classId,this.session.getSessionId());
-
-            res = new LocalClassMetadataImpl(cm);
+            HashMap<String, Integer> validators = new HashMap<String, Integer>();
+            for (Validator validator : cm.getValidators())
+                validators.put(validator.getLabel(), validator.getValue());
+            
+            res = new LocalClassMetadata(cm.getId(),
+                        cm.getClassName(),
+                        cm.getDisplayName(),
+                        cm.getParentClassName(),
+                        cm.isAbstract(),cm.isViewable(), cm.isListType(),
+                        cm.isCustom(), cm.isInDesign(),
+                        cm.getSmallIcon(), validators, cm.getIcon(),
+                        cm.getDescription(), cm.getAttributeIds(), 
+                        cm.getAttributeNames().toArray(new String[0]),
+                        cm.getAttributeTypes().toArray(new String[0]),
+                        cm.getAttributeDisplayNames().toArray(new String[0]),
+                        cm.getAttributesIsVisible(), cm.getAttributesDescription().toArray(new String[0]));
             cache.addMeta(new LocalClassMetadata[]{res});
             return res;
         }catch(Exception ex){
@@ -483,7 +745,7 @@ public class CommunicationsStub {
      * @param className the object class
      * @return the metadata information
      */
-    public LocalClassMetadataLight getLightMetaForClass(String className, boolean ignoreCache){
+    /*public LocalClassMetadataLight getLightMetaForClass(String className, boolean ignoreCache){
         try{
             LocalClassMetadataLight res;
             if (!ignoreCache){
@@ -494,39 +756,39 @@ public class CommunicationsStub {
 
             ClassInfo cm = port.getClass(className,this.session.getSessionId());
 
-            res = new LocalClassMetadataLightImpl(cm);
+            res = new LocalClassMetadataLight(cm);
             cache.addLightMeta(new LocalClassMetadataLight[]{res});
             return res;
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
         }
-    }
+    }*/
     
     /**
      * Retrieves the metadata for a given class providing its ide
      * @param className the object class
      * @return the metadata information
      */
-    public LocalClassMetadataLight getLightMetaForClass(long classId, boolean ignoreCache){
+    /*public LocalClassMetadataLight getLightMetaForClass(long classId, boolean ignoreCache){
         try{
             LocalClassMetadataLight res;
-            /*if (!ignoreCache){
-                res = cache.getLightMetaForClass(className);
-                if (res != null)
-                    return res;
-            }*/
+//            if (!ignoreCache){
+//                res = cache.getLightMetaForClass(className);
+//                if (res != null)
+//                    return res;
+//            }
 
             ClassInfo cm = port.getClassWithId(classId,this.session.getSessionId());
 
-            res = new LocalClassMetadataLightImpl(cm);
+            res = new LocalClassMetadataLight(cm);
             cache.addLightMeta(new LocalClassMetadataLight[]{res});
             return res;
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
         }
-    }
+    }*/
 
     public byte[] getClassHierarchy(boolean showAll) {
         try{
@@ -537,13 +799,25 @@ public class CommunicationsStub {
         }
     }
 
-    public List<LocalClassMetadataLight> getLightSubclasses(String className, boolean includeAbstractSubClasses, boolean includeSelf) {
+    public LocalClassMetadataLight[] getLightSubclasses(String className, boolean includeAbstractSubClasses, boolean includeSelf) {
         try{
             List<ClassInfoLight> subClasses = port.getSubClassesLight(className, includeAbstractSubClasses, includeSelf, session.getSessionId());
-            List <LocalClassMetadataLight> res = new ArrayList<LocalClassMetadataLight>();
+            LocalClassMetadataLight[] res = new LocalClassMetadataLight[subClasses.size()];
 
-            for (ClassInfoLight rol : subClasses){
-                res.add(new LocalClassMetadataLightImpl(rol));
+            int i = 0;
+            for (ClassInfoLight cil : subClasses){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                res[i] = new LocalClassMetadataLight(cil.getId(),
+                                cil.getClassName(),
+                                cil.getDisplayName(),
+                                cil.getParentClassName(),
+                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                cil.isCustom(), cil.isInDesign(),
+                                cil.getSmallIcon(), validators);
+                i++;
             }
             return res;
         }catch(Exception ex){
@@ -552,13 +826,25 @@ public class CommunicationsStub {
         }
     }
     
-     public List<LocalClassMetadataLight> getLightSubclassesNoRecursive(String className, boolean includeAbstractSubClasses, boolean includeSelf) {
+     public LocalClassMetadataLight[] getLightSubclassesNoRecursive(String className, boolean includeAbstractSubClasses, boolean includeSelf) {
         try{
             List<ClassInfoLight> subClasses = port.getSubClassesLightNoRecursive(className, includeAbstractSubClasses, includeSelf, session.getSessionId());
-            List <LocalClassMetadataLight> res = new ArrayList<LocalClassMetadataLight>();
+            LocalClassMetadataLight[] res = new LocalClassMetadataLight[subClasses.size()];
 
-            for (ClassInfoLight rol : subClasses){
-                res.add(new LocalClassMetadataLightImpl(rol));
+            int i = 0;
+            for (ClassInfoLight cil : subClasses){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                res[i] = new LocalClassMetadataLight(cil.getId(),
+                                cil.getClassName(),
+                                cil.getDisplayName(),
+                                cil.getParentClassName(),
+                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                cil.isCustom(), cil.isInDesign(),
+                                cil.getSmallIcon(), validators);
+                i++;
             }
             return res;
         }catch(Exception ex){
@@ -576,7 +862,7 @@ public class CommunicationsStub {
     public LocalObjectLight createListTypeItem(String className) {
         try {
             long myObjectId = port.createListTypeItem(className, "", "", this.session.getSessionId());
-            return new LocalObjectLightImpl(myObjectId, null, className);
+            return new LocalObjectLight(myObjectId, null, className);
         } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
@@ -590,7 +876,7 @@ public class CommunicationsStub {
      * @param ignoreCache Use cached values or not
      * @return 
      */
-    public List<LocalObjectListItem> getList(String className, boolean includeNullValue,boolean ignoreCache){
+    public List<LocalObjectListItem> getList(String className, boolean includeNullValue, boolean ignoreCache){
         try{
             List<LocalObjectListItem> res = null;
             if (!ignoreCache){
@@ -598,13 +884,13 @@ public class CommunicationsStub {
             }
             if (res == null){
                res = new ArrayList<LocalObjectListItem>();
-               res.add(ObjectFactory.createNullItem());
+               res.add(new LocalObjectListItem());
 
                 List<RemoteObjectLight> remoteList = port.getListTypeItems(className,this.session.getSessionId());
 
-                for(RemoteObjectLight entry : remoteList){
-                    res.add(new LocalObjectListItemImpl(entry.getOid(),entry.getClassName(),entry.getName()));
-                }
+                for(RemoteObjectLight entry : remoteList)
+                    res.add(new LocalObjectListItem(entry.getOid(),entry.getClassName(),entry.getName()));
+                
                 //Warning, the null value is always cached
                 cache.addListCached(className, res);
             }
@@ -632,7 +918,19 @@ public class CommunicationsStub {
     public LocalObjectLight createObject(String objectClass, String parentClass, long parentOid, long template){
         try{
             long objectId  = port.createObject(objectClass,parentClass, parentOid, new ArrayList<String>(),new ArrayList<StringArray>(),template,this.session.getSessionId());
-            return new LocalObjectLightImpl(objectId, null, objectClass);
+            return new LocalObjectLight(objectId, null, objectClass);
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight createSpecialObject(String className, String parentClassName, 
+            long parentOid, long templateId) {
+        try{
+            long objectId  = port.createSpecialObject(className,parentClassName, parentOid, 
+                    new ArrayList<String>(),new ArrayList<StringArray>(),templateId,this.session.getSessionId());
+            return new LocalObjectLight(objectId, null, className);
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
@@ -732,7 +1030,7 @@ public class CommunicationsStub {
 
             LocalObjectLight[] res = new LocalObjectLight[objs.size()];
             for (int i = 0; i < res.length ; i++){
-                res[i] = new LocalObjectLightImpl(objs.get(i), objects[i].getName(), objects[i].getClassName());
+                res[i] = new LocalObjectLight(objs.get(i), objects[i].getName(), objects[i].getClassName());
                 i++;
             }
             return res;
@@ -742,7 +1040,29 @@ public class CommunicationsStub {
             return null;
         }
     }
-        /**
+    
+    
+    public boolean connectMirrorPort (String aObjectClass, long aObjectId, String bObjectClass, long bObjectId) {
+        try{
+            port.connectMirrorPort(aObjectClass, aObjectId, bObjectClass, bObjectId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean releaseMirrorPort (String objectClass, long objectId) {
+        try{
+            port.releaseMirrorPort (objectClass, objectId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
      * Creates a physical link (cable, fiber optics, mw link) or container (pipe, conduit, ditch)
      * @param endpointAClass source object class name
      * @param endpointAId source object oid
@@ -768,12 +1088,176 @@ public class CommunicationsStub {
 
             long myObjectId = port.createPhysicalConnection(endpointAClass, endpointAId,
                     endpointBClass, endpointBId, parentClass, parentId, Arrays.asList(new String[]{"name","type"}), values, connectionClass, this.session.getSessionId());
-            return new LocalObjectLightImpl(myObjectId, "", connectionClass);
+            return new LocalObjectLight(myObjectId, "", connectionClass);
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
         }
     }
+    
+    public List<Long> createBulkPhysicalConnections(String connectionClass, int integer, String parentClass, long parentId) {
+        try{
+            return port.createBulkPhysicalConnections(connectionClass, 
+                        integer, parentClass, parentId, session.getSessionId());
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight[] getConnectionEndpoints(String connectionClass, long connectionId) {
+        try{
+            List<RemoteObjectLight> endpoints = port.getConnectionEndpoints(connectionClass, connectionId, session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[]{endpoints.get(0) == null ? 
+                    null : new LocalObjectLight(endpoints.get(0).getOid(), endpoints.get(0).getName(), endpoints.get(0).getClassName()),
+                    endpoints.get(1) == null ? 
+                    null : new LocalObjectLight(endpoints.get(1).getOid(), endpoints.get(1).getName(), endpoints.get(1).getClassName())};
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight[] getPhysicalPath(String objectClass, long objectId) {
+        try{
+            List<RemoteObjectLight> trace = port.getPhysicalPath(objectClass, objectId, session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[trace.size()];
+            int i = 0;
+            for (RemoteObjectLight element : trace){
+                res[i] = new LocalObjectLight(element.getOid(), element.getName(), element.getClassName());
+                i++;
+            }
+            
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    public boolean connectPhysicalLinks(String[] sideAClassNames, Long[] sideAIds, 
+                String[] linksClassNames, Long[] linksIds, String[] sideBClassNames, 
+                Long[] sideBIds) {
+        try{
+            List<String> sideAClassNamesList = new ArrayList<String>();
+            List<String> linksClassNamesList = new ArrayList<String>();
+            List<String> sideBClassNamesList = new ArrayList<String>();
+            List<Long> sideAIdsList = new ArrayList<Long>();
+            List<Long> linksIdsList = new ArrayList<Long>();
+            List<Long> sideBIdsList = new ArrayList<Long>();
+            sideAClassNamesList.addAll(Arrays.asList(sideAClassNames));
+            linksClassNamesList.addAll(Arrays.asList(linksClassNames));
+            sideBClassNamesList.addAll(Arrays.asList(sideBClassNames));
+            sideAIdsList.addAll(Arrays.asList(sideAIds));
+            linksIdsList.addAll(Arrays.asList(linksIds));
+            sideBIdsList.addAll(Arrays.asList(sideBIds));
+            
+            port.connectPhysicalLinks(sideAClassNamesList, sideAIdsList, linksClassNamesList, linksIdsList, sideBClassNamesList, sideBIdsList, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    //Service Manager
+    public boolean associateObjectToService(String objectClass, long objectId, String serviceClass, long serviceId){
+        try{
+            port.associateObjectToService(objectClass, objectId, serviceClass, serviceId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean releaseObjectFromService(String serviceClass, long serviceId, long targetId){
+        try{
+            port.releaseObjectFromService(serviceClass, serviceId, targetId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    public LocalObjectLight[] getServiceResources(String serviceClass, long serviceId){
+        try{
+            List <RemoteObjectLight> instances = port.getServiceResources(serviceClass, serviceId, this.session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[instances.size()];
+
+            int i = 0;
+            for (RemoteObjectLight rol : instances){
+                res[i] = new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName());
+                i++;
+            }
+
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight createService (String serviceClass, String customerClass, long customerId, String attributes[], String attributeValues) {
+        try{
+            long newServiceId = port.createService(serviceClass, customerClass, 
+                    customerId, null, null, this.session.getSessionId());
+            return new LocalObjectLight(newServiceId, null, serviceClass);
+
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+
+    public LocalObjectLight createCustomer (String customerClass, String attributes[], String attributeValues) {
+        try{
+            long newServiceId = port.createCustomer(customerClass, null, null, this.session.getSessionId());
+            return new LocalObjectLight(newServiceId, null, customerClass);
+
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObjectLight[] getServices(String customerClass, long customerId) {
+        try{
+            List <RemoteObjectLight> instances = port.getServices(customerClass, customerId, this.session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[instances.size()];
+
+            int i = 0;
+            for (RemoteObjectLight rol : instances){
+                res[i] = new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName());
+                i++;
+            }
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    //End Service Manager
+    
+    public LocalObjectLight[] getObjectSpecialChildren(String objectClass, long objectId) {
+        try{
+            List<RemoteObjectLight> specialChildren = port.getObjectSpecialChildren (
+                    objectClass, objectId, session.getSessionId());
+            LocalObjectLight[] res = new LocalObjectLight[specialChildren.size()];
+            int i = 0;
+            for (RemoteObjectLight rol : specialChildren){
+                res[i] = new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName());
+                i++;
+            }
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Query methods. Click on the + sign on the left to edit the code.">
@@ -784,14 +1268,22 @@ public class CommunicationsStub {
      */
     public LocalResultRecord[] executeQuery(LocalTransientQuery query){
         try{
-            TransientQuery remoteQuery = LocalTransientQueryImpl.toTransientQuery(query);
+            TransientQuery remoteQuery = LocalTransientQuery.toTransientQuery(query);
             List<ResultRecord> myResult = port.executeQuery(remoteQuery,session.getSessionId());
-            LocalResultRecordImpl[] res = new LocalResultRecordImpl[myResult.size()];
+            LocalResultRecord[] res = new LocalResultRecord[myResult.size()];
             //The first record is used to store the table headers
-            res[0] = new LocalResultRecordImpl(null, myResult.get(0).getExtraColumns());
-            for (int i = 1; i<res.length ; i++)
-                res[i] = new LocalResultRecordImpl(
-                        new LocalObjectLightImpl(myResult.get(i).getObject()), myResult.get(i).getExtraColumns());
+            res[0] = new LocalResultRecord(null, myResult.get(0).getExtraColumns());
+            for (int i = 1; i < res.length ; i++){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : myResult.get(i).getObject().getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                
+                LocalObjectLight anObjectLight = new LocalObjectLight(myResult.get(i).getObject().getClassName(),
+                        myResult.get(i).getObject().getName(), myResult.get(i).getObject().getOid(), validators);
+                
+                res[i] = new LocalResultRecord(
+                        anObjectLight, myResult.get(i).getExtraColumns());
+            }
             return res;
         }catch(Exception ex){
             this.error = (ex instanceof SOAPFaultException)? ex.getMessage() : ex.getClass().getSimpleName()+": "+ ex.getMessage();
@@ -859,10 +1351,10 @@ public class CommunicationsStub {
     public LocalQueryLight[] getQueries(boolean showAll){
         try{
             List<RemoteQueryLight> queries = port.getQueries(showAll, session.getSessionId());
-            LocalQueryLightImpl[] res = new LocalQueryLightImpl[queries.size()];
+            LocalQueryLight[] res = new LocalQueryLight[queries.size()];
             int i = 0;
             for (RemoteQueryLight query : queries){
-                res[i] = new LocalQueryLightImpl(query);
+                res[i] = new LocalQueryLight(query);
                 i++;
             }
             return res;
@@ -879,7 +1371,7 @@ public class CommunicationsStub {
      */
     public LocalQuery getQuery(long queryId){
         try{
-            return new LocalQueryImpl(port.getQuery(queryId, session.getSessionId()));
+            return new LocalQuery(port.getQuery(queryId, session.getSessionId()));
         }catch(Exception ex){
             this.error = (ex instanceof SOAPFaultException)? ex.getMessage() : ex.getClass().getSimpleName()+": "+ ex.getMessage();
             return null;
@@ -906,11 +1398,25 @@ public class CommunicationsStub {
         try{
             if (refreshMeta){
                 for (LocalClassMetadata lcm : cache.getMetadataIndex()){
-                    LocalClassMetadata myLocal =
-                            new LocalClassMetadataImpl(port.getClass(lcm.getClassName(),this.session.getSessionId()));
-                    if(myLocal!=null){
-                        cache.addMeta(new LocalClassMetadata[]{myLocal});
-                    }
+                    ClassInfo cm = port.getClass(lcm.getClassName(),this.session.getSessionId());
+                    HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cm.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+            
+                    LocalClassMetadata myLocal = new LocalClassMetadata(cm.getId(),
+                            cm.getClassName(),
+                            cm.getDisplayName(),
+                            cm.getParentClassName(),
+                            cm.isAbstract(),cm.isViewable(), cm.isListType(),
+                            cm.isCustom(), cm.isInDesign(),
+                            cm.getSmallIcon(), validators, cm.getIcon(),
+                            cm.getDescription(), cm.getAttributeIds(), 
+                            cm.getAttributeNames().toArray(new String[0]),
+                            cm.getAttributeTypes().toArray(new String[0]),
+                            cm.getAttributeDisplayNames().toArray(new String[0]),
+                            cm.getAttributesIsVisible(), cm.getAttributesDescription().toArray(new String[0]));
+                    
+                    cache.addMeta(new LocalClassMetadata[]{myLocal});
                 }
             }
             if (refreshLightMeta){
@@ -1033,7 +1539,17 @@ public class CommunicationsStub {
             LocalClassMetadataLight[] res = new LocalClassMetadataLight[listTypes.size()];
             int i = 0;
             for (ClassInfoLight cil : listTypes){
-                res[i] = new LocalClassMetadataLightImpl(cil);
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                    for (Validator validator : cil.getValidators())
+                        validators.put(validator.getLabel(), validator.getValue());
+                    
+                res[i] = new LocalClassMetadataLight(cil.getId(),
+                                cil.getClassName(),
+                                cil.getDisplayName(),
+                                cil.getParentClassName(),
+                                cil.isAbstract(),cil.isViewable(), cil.isListType(),
+                                cil.isCustom(), cil.isInDesign(), 
+                                cil.getSmallIcon(), validators);
                 i++;
             }
             return res;
@@ -1072,7 +1588,7 @@ public class CommunicationsStub {
 
             int i = 0;
             for (UserInfo user : users){
-                localUsers[i] = (LocalUserObject) new LocalUserObjectImpl(user);
+                localUsers[i] = (LocalUserObject) new LocalUserObject(user);
                 i++;
             }
             return localUsers;
@@ -1087,12 +1603,12 @@ public class CommunicationsStub {
      */
     public LocalUserGroupObject[] getGroups() {
         try{
-            List<UserGroupInfo> groups = port.getGroups(this.session.getSessionId());
+            List<GroupInfo> groups = port.getGroups(this.session.getSessionId());
             LocalUserGroupObject[] localGroups = new LocalUserGroupObject[groups.size()];
 
             int i = 0;
-            for (UserGroupInfo group : groups){
-                localGroups[i] = (LocalUserGroupObject) new LocalUserGroupObjectImpl(group);
+            for (GroupInfo group : groups){
+                localGroups[i] = (LocalUserGroupObject) new LocalUserGroupObject(group);
                 i++;
             }
             return localGroups;
@@ -1111,8 +1627,8 @@ public class CommunicationsStub {
             Random random = new Random();
             UserInfo newUser = new UserInfo();
             newUser.setUserName("user"+random.nextInt(10000));
-            newUser.setOid(port.createUser(newUser.getUserName(), "kuwaiba", null, null, true, null, null, this.session.getSessionId()));
-            return new LocalUserObjectImpl(newUser);
+            newUser.setId(port.createUser(newUser.getUserName(), "kuwaiba", null, null, true, null, null, this.session.getSessionId()));
+            return new LocalUserObject(newUser);
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
@@ -1161,10 +1677,10 @@ public class CommunicationsStub {
     public LocalUserGroupObject addGroup(){
         try{
             Random random = new Random();
-            UserGroupInfo newGroup = new UserGroupInfo();
+            GroupInfo newGroup = new GroupInfo();
             newGroup.setName("group"+random.nextInt(10000));
-            newGroup.setOid(port.createGroup(newGroup.getName(), null, null, null, this.session.getSessionId()));
-            return new LocalUserGroupObjectImpl(newGroup);
+            newGroup.setId(port.createGroup(newGroup.getName(), null, null, null, this.session.getSessionId()));
+            return new LocalUserGroupObject(newGroup);
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
@@ -1218,7 +1734,7 @@ public class CommunicationsStub {
     public LocalObjectView getObjectRelatedView(long oid, String objectClass, long viewId){
         try{
             ViewInfo view = port.getObjectRelatedView(oid, objectClass, viewId, session.getSessionId());
-            return new LocalObjectViewImpl(view.getId(), view.getName(), view.getDescription(), view.getType(), view.getStructure(), view.getBackground());
+            return new LocalObjectView(view.getId(), view.getName(), view.getDescription(), view.getType(), view.getStructure(), view.getBackground());
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -1236,7 +1752,7 @@ public class CommunicationsStub {
             List<ViewInfoLight> views = port.getObjectRelatedViews(oid, objectClass, -1, 10, session.getSessionId());
             List<LocalObjectViewLight> res = new ArrayList<LocalObjectViewLight>();
             for (ViewInfoLight view : views)
-                res.add(new LocalObjectViewLightImpl(view.getId(), view.getName(), view.getDescription(), view.getType()));
+                res.add(new LocalObjectViewLight(view.getId(), view.getName(), view.getDescription(), view.getType()));
             return res;
         }catch(Exception ex){
             this.error =  ex.getMessage();
@@ -1255,7 +1771,7 @@ public class CommunicationsStub {
             List<ViewInfoLight> views = port.getGeneralViews(viewType, -1, session.getSessionId());
             List<LocalObjectViewLight> res = new ArrayList<LocalObjectViewLight>();
             for (ViewInfoLight view : views)
-                res.add(new LocalObjectViewLightImpl(view.getId(), view.getName(), view.getDescription(), view.getType()));
+                res.add(new LocalObjectViewLight(view.getId(), view.getName(), view.getDescription(), view.getType()));
             return res;
         }catch(Exception ex){
             this.error =  ex.getMessage();
@@ -1271,7 +1787,7 @@ public class CommunicationsStub {
     public LocalObjectView getGeneralView(long viewId) {
         try{
             ViewInfo view = port.getGeneralView(viewId, session.getSessionId());
-            return new LocalObjectViewImpl(view.getId(), view.getName(), view.getDescription(), view.getType(), view.getStructure(), view.getBackground());
+            return new LocalObjectView(view.getId(), view.getName(), view.getDescription(), view.getType(), view.getStructure(), view.getBackground());
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -1376,24 +1892,7 @@ public class CommunicationsStub {
     }// </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Services methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Relates a resource to a service
-     * @param resourceClassName
-     * @param resourceId
-     * @param serviceClassName
-     * @param serviceId
-     * @return
-     */
-    public boolean relateResourceToService(String resourceClassName, long resourceId, String serviceClassName, long serviceId){
-//        try{
-//            return port.relateResourceToService(resourceClassName, resourceId,
-//                    serviceClassName,serviceId,this.session.getSessionId());
-//        }catch(Exception ex){
-//            this.error = (ex instanceof SOAPFaultException)? ex.getMessage() : ex.getClass().getSimpleName()+": "+ ex.getMessage();
-//            return false;
-//        }
-        return false;
-    }// </editor-fold>
+// </editor-fold>
     
     // <editor-fold defaultstate="collapsed" desc="Pools methods. Click on the + sign on the left to edit the code.">
     /**
@@ -1403,10 +1902,10 @@ public class CommunicationsStub {
      * @param className What kind of objects can this pool contain?
      * @return The newly created pool
      */
-    public LocalObjectLight createPool(String name, String description, String className){
+    public LocalObjectLight createPool(long parentId, String name, String description, String className){
         try{
-            long objectId  = port.createPool(name, description, className,session.getSessionId());
-            return new LocalObjectLightImpl(objectId, name, className);
+            long objectId  = port.createPool(parentId, name, description, className,session.getSessionId());
+            return new LocalObjectLight(objectId, name, className);
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -1416,7 +1915,7 @@ public class CommunicationsStub {
     public LocalObjectLight createPoolItem (long poolId, String className){
         try{
             long objectId  = port.createPoolItem(poolId, className, null, null, -1,session.getSessionId());
-            return new LocalObjectLightImpl(objectId, null, className);
+            return new LocalObjectLight(objectId, null, className);
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -1445,7 +1944,10 @@ public class CommunicationsStub {
             List<LocalObjectLight> res = new ArrayList<LocalObjectLight>();
 
             for (RemoteObjectLight rol : items) {
-                res.add(new LocalObjectLightImpl(rol));
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : rol.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                res.add(new LocalObjectLight(rol.getClassName(), rol.getName(), rol.getOid(), validators));
             }
 
             return res;
@@ -1465,7 +1967,10 @@ public class CommunicationsStub {
             List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
 
             for (RemoteObjectLight rol : children){
-                res.add(new LocalObjectLightImpl(rol));
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : rol.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                res.add(new LocalObjectLight(rol.getClassName(), rol.getName(), rol.getOid(), validators));
             }
             return res;
         }catch(Exception ex){
@@ -1476,19 +1981,19 @@ public class CommunicationsStub {
     
     // <editor-fold defaultstate="collapsed" desc="Sync methods. Click on the + sign on the left to edit the code.">
     /**
-     * Load data from a file 
+     * BulkUpload from a file
      * @param choosenFile csv file with the data
      * @return percent  of progress
      */
-    public String loadDataFromFile(byte[] choosenFile){
-        try{
-            return port.loadDataFromFile(choosenFile, this.session.getSessionId());
-        }catch(Exception ex){
-            this.error =  ex.getMessage();
-            return "";
-        }
-    }
-     public byte[] downloadErrors(String fileName){
+//    public String loadDataFromFile(byte[] choosenFile){
+//        try{
+//            return port.loadDataFromFile(choosenFile, this.session.getSessionId());
+//        }catch(Exception ex){
+//            this.error =  ex.getMessage();
+//            return "";
+//        }
+//    }
+/*     public byte[] downloadErrors(String fileName){
         try{
             return port.downloadErrors(fileName, this.session.getSessionId());
         }catch(Exception ex){
@@ -1504,6 +2009,6 @@ public class CommunicationsStub {
             this.error =  ex.getMessage();
             return null;
         }
-    }
-    // </editor-fold>   
+    }*/
+    // </editor-fold>    
 }

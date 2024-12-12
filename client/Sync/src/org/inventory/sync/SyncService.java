@@ -46,21 +46,21 @@ public class SyncService implements ActionListener{
         
     }
     
-    public void loadFile(byte[] choosenFile){
+    public void loadFile(byte[] file){
         CommunicationsStub com = CommunicationsStub.getInstance();
-        fileName = com.loadDataFromFile(choosenFile);
+        //fileName = com.loadDataFromFile(choosenFile);
     }
     
     public void downloadErrors(){
         logFileName = ERRORS+fileName;
         CommunicationsStub com = CommunicationsStub.getInstance();
-        wrongLinesResults = com.downloadErrors(fileName);
+        //wrongLinesResults = com.downloadErrors(fileName);
     }    
     
     public void downloadLog(){
         wrongLinesFileName = LOGS+fileName;
         CommunicationsStub com = CommunicationsStub.getInstance();
-        logResults = com.downloadLog(fileName);
+        //logResults = com.downloadLog(fileName);
     }
 
     public byte[] getLogResults() {

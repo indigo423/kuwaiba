@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010 - 2014 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -29,11 +29,10 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.views.LocalObjectView;
+import org.inventory.communications.core.views.LocalObjectViewLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.api.visual.LocalObjectView;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
 import org.inventory.views.topology.scene.ObjectConnectionWidget;
 import org.inventory.views.topology.scene.ObjectNodeWidget;
 import org.inventory.views.topology.scene.TopologyViewScene;
@@ -107,7 +106,7 @@ public class TopologyViewService implements LookupListener {
         if(tvId == 0){
             tvId = com.createGeneralView(LocalObjectViewLight.TYPE_TOPOLOGY, (String)viewProperties[0], (String)viewProperties[1], viewStructure, background);
             if(tvId != -1)
-                tvtc.getNotifier().showSimplePopup("Sucess", NotificationUtil.INFO, "Topology view created successfully");
+                tvtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO, "Topology view created successfully");
             else
                 tvtc.getNotifier().showSimplePopup("Error", NotificationUtil.INFO, com.getError());
         }
@@ -141,10 +140,9 @@ public class TopologyViewService implements LookupListener {
         tvId = localView.getId();
         viewProperties[0] = localView.getName();
         viewProperties[1] = localView.getDescription();
-        if (localView == null){
+        if (localView == null)
             tvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
-            return;
-        }else{
+        else{
             tvtc.getScene().clear();
             try {
                 parseXML(localView.getStructure());
@@ -209,14 +207,12 @@ public class TopologyViewService implements LookupListener {
                 }else{
                     if (reader.getName().equals(qIcon)){
                             if(Integer.valueOf(reader.getAttributeValue(null,"type"))==1){
-                                LocalObjectLight lol = LocalStuffFactory.createLocalObjectLight();
-                                lol.setOid(Long.valueOf(reader.getAttributeValue(null,"id")));
                                 int x = Double.valueOf(reader.getAttributeValue(null,"x")).intValue();
                                 int y = Double.valueOf(reader.getAttributeValue(null,"y")).intValue();
-                                lol.setName(scene.CLOUD_ICON + reader.getElementText());
+                                LocalObjectLight lol = new LocalObjectLight(Long.valueOf(reader.getAttributeValue(null,"id")), 
+                                        scene.CLOUD_ICON + reader.getElementText(), null);
                                 Widget myCloud = scene.addNode(lol);
                                 myCloud.setPreferredLocation(new Point(x, y));
-
                             }
                         }
                     else{
@@ -227,12 +223,10 @@ public class TopologyViewService implements LookupListener {
                             Long bSide = Long.valueOf(reader.getAttributeValue(null,"bside"));
 
                             if (edgeName != null){
-                                LocalObjectLight aSideObject = LocalStuffFactory.createLocalObjectLight();
-                                aSideObject.setOid(aSide);
+                                LocalObjectLight aSideObject = new LocalObjectLight(aSide, null, null);
                                 Widget aSideWidget = scene.findWidget(aSideObject);
 
-                                LocalObjectLight bSideObject = LocalStuffFactory.createLocalObjectLight();
-                                bSideObject.setOid(bSide);
+                                LocalObjectLight bSideObject = new LocalObjectLight(bSide, null, null);
                                 Widget bSideWidget = scene.findWidget(bSideObject);
 
                                 if (aSideWidget == null || bSideWidget == null)
@@ -285,7 +279,7 @@ public class TopologyViewService implements LookupListener {
                             }//end icons
                         }//end polygons
                     }//end else labels
-                }//HATA AQUI
+                }
             }
         }
         reader.close();

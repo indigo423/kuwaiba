@@ -19,12 +19,12 @@ import java.beans.PropertyEditorSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.util.Constants;
 
 /**
  * Provides a custom property editor for list-type values where you can choose one item
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class ListAttributeMetadataProperty extends PropertyEditorSupport{
     

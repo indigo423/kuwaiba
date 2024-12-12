@@ -22,8 +22,8 @@ import java.util.Set;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
 import org.openide.WizardDescriptor;
 import org.openide.WizardValidationException;
 import org.openide.util.HelpCtx;
@@ -77,8 +77,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                         }else{
                                             switch(wizardType){
                                                 case ConnectionWizard.WIZARDTYPE_CONTAINERS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1)
+                                                    if (com.getMetaForClass(aSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_NODE) == 1){
+                                                        if(com.getMetaForClass(bSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_NODE) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a container";
@@ -91,8 +91,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                                     }
                                                     break;
                                                 case ConnectionWizard.WIZARDTYPE_CONNECTIONS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1)
+                                                    if (com.getMetaForClass(aSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_ENDPOINT) == 1){
+                                                        if(com.getMetaForClass(bSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_ENDPOINT) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a link";
@@ -138,8 +138,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                         }else{
                                             switch(wizardType){
                                                 case ConnectionWizard.WIZARDTYPE_CONTAINERS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1)
+                                                    if (com.getMetaForClass(aSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_NODE) == 1){
+                                                        if(com.getMetaForClass(bSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_NODE) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a container";
@@ -152,8 +152,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                                     }
                                                     break;
                                                 case ConnectionWizard.WIZARDTYPE_CONNECTIONS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1)
+                                                    if (com.getMetaForClass(aSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_ENDPOINT) == 1){
+                                                        if(com.getMetaForClass(bSelection.getClassName(), false).getValidator(Constants.VALIDATOR_PHYSICAL_ENDPOINT) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a link";
@@ -242,6 +242,7 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
             ((WizardDescriptor)settings).putProperty("bSide", bSelection.getOid());//NOI18N
             ((WizardDescriptor)settings).putProperty("aSideClass", aSelection.getClassName());//NOI18N
             ((WizardDescriptor)settings).putProperty("bSideClass", bSelection.getClassName());//NOI18N
+            ((WizardDescriptor)settings).putProperty("wizardType", wizardType);//NOI18N
         }
     }
 

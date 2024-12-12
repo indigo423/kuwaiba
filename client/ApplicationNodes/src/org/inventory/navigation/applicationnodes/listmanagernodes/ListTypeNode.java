@@ -17,7 +17,7 @@
 package org.inventory.navigation.applicationnodes.listmanagernodes;
 
 import javax.swing.Action;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.navigation.applicationnodes.listmanagernodes.actions.CreateListTypeAction;
 import org.openide.nodes.AbstractNode;
 

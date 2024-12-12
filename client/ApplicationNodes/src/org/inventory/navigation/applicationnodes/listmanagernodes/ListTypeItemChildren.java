@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.LocalObjectListItem;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.openide.nodes.Node;
@@ -32,11 +32,8 @@ import org.openide.util.Lookup;
  * These children represent the items within the list
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class ListTypeItemChildren extends ObjectChildren{
+public class ListTypeItemChildren extends ObjectChildren {
 
-    public ListTypeItemChildren() {
-        keys = new ArrayList<LocalObjectLight>();
-    }
 
     //This is basically the same code as in ObjectChildren but changes ObjectNodes for ListElementNodes
     @Override
@@ -51,22 +48,16 @@ public class ListTypeItemChildren extends ObjectChildren{
     @Override
     public void addNotify(){
         if (this.getNode() instanceof ListTypeNode){
+            collapsed = false;
             LocalClassMetadataLight lcml = ((ListTypeNode)this.getNode()).getObject();
             List<LocalObjectListItem> myObjects = CommunicationsStub.getInstance().getList(lcml.getClassName(), false, false);
 
             if (myObjects == null){
                 Lookup.getDefault().lookup(NotificationUtil.class).
-                        showSimplePopup("List Generation", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
+                        showSimplePopup("Error", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
             }else{
-                for (LocalObjectListItem child : myObjects){
-                    ListTypeItemNode newNode = new ListTypeItemNode(child);
-                    // Remove it if it already exists (if this is not done,
-                    // it will duplicate the nodes created when the parent was collapsed)
-                    keys.remove(child);
-                    keys.add(child);
-                    remove(new Node[]{newNode});
-                    add(new Node[]{newNode});
-               }
+                for (LocalObjectListItem child : myObjects)
+                    add(new Node[]{new ListTypeItemNode(child)});
             }
         }
     }

@@ -22,8 +22,8 @@ import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.navigation.applicationnodes.pools.PoolNode;
@@ -32,7 +32,7 @@ import org.openide.util.Lookup;
 
 /**
  * Creates a new pool
- * @author Charles Edward Bedon Cortazar <charles.bedon@neotropic.co>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class NewPoolAction extends AbstractAction{
     /**
@@ -72,7 +72,7 @@ public class NewPoolAction extends AbstractAction{
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
         
-                    LocalObjectLight newPool = com.createPool(((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
+                    LocalObjectLight newPool = com.createPool(-1, ((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
                             ((JTextField)pnlMyDialog.getComponent("txtDescription")).getText(), 
                             ((LocalClassMetadataLight)((JComboBox)pnlMyDialog.getComponent("lstType")).getSelectedItem()).getClassName());
                     

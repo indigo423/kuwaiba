@@ -22,8 +22,8 @@ import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.text.DefaultEditorKit;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.behaviors.RefreshableTopComponent;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
@@ -34,6 +34,7 @@ import org.openide.explorer.view.BeanTreeView;
 import org.openide.nodes.Node;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
+import org.openide.windows.Mode;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
@@ -44,7 +45,7 @@ import org.openide.windows.WindowManager;
 @ConvertAsProperties(dtd = "-//org.inventory.navigation.navigationtree//NavigationTree//EN",
 autostore = false)
 public final class NavigationTreeTopComponent extends TopComponent
-            implements ExplorerManager.Provider, RefreshableTopComponent{
+            implements ExplorerManager.Provider, Refreshable{
 
     /** path to the icon used by the component and its open action */
     static final String ICON_PATH = "org/inventory/navigation/navigationtree/res/icon.png";
@@ -142,19 +143,25 @@ public final class NavigationTreeTopComponent extends TopComponent
     public void componentOpened() {
         setRoot();
         ExplorerUtils.activateActions(em, true);
+        TopComponent propertiesWindow = WindowManager.getDefault().findTopComponent("properties");
+        Mode navigator = WindowManager.getDefault().findMode("navigator"); //NOI18N
+        if (!propertiesWindow.isOpened()){
+            propertiesWindow.open();
+            navigator.dockInto(propertiesWindow);
+        }
     }
 
     @Override
     public void componentClosed() {
         ExplorerUtils.activateActions(em, false);
         em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
+        //Workaround, because when you close a TC whose mode is "explorer" and open it again,
+        //it docks as "explorer". This forces the TC to be always docked "explorer"
+        Mode myMode = WindowManager.getDefault().findMode("explorer"); //NOI18N
+        myMode.dockInto(this);
     }
 
     void writeProperties(java.util.Properties p) {
-        // better to version settings since initial version as advocated at
-        // http://wiki.apidesign.org/wiki/PropertyFiles
-        p.setProperty("version", "1.0");
-        // TODO store your settings
     }
 
     Object readProperties(java.util.Properties p) {
@@ -166,8 +173,7 @@ public final class NavigationTreeTopComponent extends TopComponent
     }
 
     private void readPropertiesImpl(java.util.Properties p) {
-        String version = p.getProperty("version");
-        // TODO read your settings according to their version
+        
     }
 
     @Override
@@ -183,7 +189,7 @@ public final class NavigationTreeTopComponent extends TopComponent
     public void setRoot(){
         LocalObjectLight[] rootChildren = nts.getRootChildren();
         if (rootChildren != null){
-            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren));
+            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren, false));
             em.setRootContext(root);
         }
     }

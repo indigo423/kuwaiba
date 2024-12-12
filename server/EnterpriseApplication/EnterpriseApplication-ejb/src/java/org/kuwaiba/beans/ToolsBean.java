@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import javax.ejb.Stateless;
 import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
+import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
 import org.kuwaiba.exceptions.ServerSideException;
 import org.kuwaiba.psremoteinterfaces.ApplicationEntityManagerRemote;
 
@@ -35,12 +36,12 @@ import org.kuwaiba.psremoteinterfaces.ApplicationEntityManagerRemote;
 public class ToolsBean implements ToolsBeanRemote {
     private static ApplicationEntityManagerRemote aem;
     @Override
-    public void resetAdmin()  throws ServerSideException{
+    public void resetAdmin()  throws ServerSideException, NotAuthorizedException{
         try{
-            getAEMInstance().setUserProperties("admin",null, "kuwaiba", "Tyler", "Durden", true, null, null);
+            getAEMInstance().setUserProperties("admin",null, "kuwaiba", null, null, true, null, null, null, null);
         }catch(ApplicationObjectNotFoundException ex){ //If the user does not exist, create it
             try{
-                getAEMInstance().createUser("admin", "kuwaiba", "Tyler", "Durden", true, null, null);
+                getAEMInstance().createUser("admin", "kuwaiba", "Radamel", "Falcao", true, null, null);
             }catch(RemoteException re){
                 throw new ServerSideException(Level.SEVERE, re.getMessage());
             }catch(InvalidArgumentException ie){
@@ -51,19 +52,18 @@ public class ToolsBean implements ToolsBeanRemote {
         }catch(InvalidArgumentException ex){
             throw new ServerSideException(Level.SEVERE, ex.getMessage());
         }
-        
     }
 
-    @Override
-    public void createDefaultGroups() throws ServerSideException{
-        try {
-            getAEMInstance().createGroup("Administrators", "Administrators Group", null, null);
-            getAEMInstance().createGroup("Users", "Standard Users Group", null, null);
-        } catch (Exception ex) {
-            Logger.getLogger(ToolsBean.class.getName()).log(Level.INFO, ex.getMessage());
-            throw new ServerSideException(Level.SEVERE, ex.getMessage());
-        }
-    }
+//    @Override
+//    public void createDefaultGroups() throws ServerSideException{
+//        try {
+//            getAEMInstance().createGroup("Administrators", "Administrators Group", null, null);
+//            getAEMInstance().createGroup("Users", "Standard Users Group", null, null);
+//        } catch (Exception ex) {
+//            Logger.getLogger(ToolsBean.class.getName()).log(Level.INFO, ex.getMessage());
+//            throw new ServerSideException(Level.SEVERE, ex.getMessage());
+//        }
+//    }
     
     private static ApplicationEntityManagerRemote getAEMInstance(){
         if (aem == null){

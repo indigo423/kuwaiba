@@ -22,15 +22,16 @@
 
 package org.inventory.views.gis.dialogs;
 
+import javax.swing.JPanel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
+import org.inventory.communications.core.views.LocalObjectViewLight;
 
 /**
  *
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class OpenDialog extends javax.swing.JPanel {
+public class OpenDialog extends JPanel {
 
     /** Creates new form OpenDialog */
     public OpenDialog(LocalObjectViewLight[] views) {

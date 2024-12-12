@@ -17,8 +17,8 @@
 package org.inventory.core.usermanager;
 
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.session.LocalUserGroupObject;
-import org.inventory.core.services.api.session.LocalUserObject;
+import org.inventory.communications.core.LocalUserGroupObject;
+import org.inventory.communications.core.LocalUserObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.usermanager.nodes.GroupChildren;
 import org.inventory.core.usermanager.nodes.UserChildren;
@@ -28,7 +28,7 @@ import org.openide.nodes.AbstractNode;
 
 /**
  * Provides the logic to the associated TopComponent
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class UserManagerService {
     private UserManagerTopComponent umtc;
@@ -86,6 +86,10 @@ public class UserManagerService {
      */
     public void populateGroupsList() {
         LocalUserGroupObject[] groups = com.getGroups();
+        if (groups == null){
+            umtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            return;
+        }
         //Do nothing if there are no groups
         if (groups.length == 0)
             return;

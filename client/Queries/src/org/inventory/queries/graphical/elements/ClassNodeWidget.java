@@ -19,12 +19,12 @@ package org.inventory.queries.graphical.elements;
 import java.util.List;
 import java.util.Random;
 import javax.swing.JCheckBox;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.queries.LocalTransientQuery;
+import org.inventory.communications.util.Constants;
 import org.inventory.queries.graphical.QueryEditorScene;
 import org.inventory.queries.graphical.elements.filters.SimpleCriteriaNodeWidget;
 import org.netbeans.api.visual.vmd.VMDColorScheme;
@@ -40,6 +40,7 @@ public class ClassNodeWidget extends QueryEditorNodeWidget{
      * The model object to be represented by this widget
      */
     private LocalClassMetadata myClass;
+    private LocalClassMetadataLight myClassLight;
     /**
      * Should this widget show  the <strong>parent</strong> field
      */
@@ -54,33 +55,36 @@ public class ClassNodeWidget extends QueryEditorNodeWidget{
         this.myClass = lcm;
         this.hasParentField = hasParentField;
         this.hasIdField = hasIdField;
+        this.myClassLight = new LocalClassMetadataLight();
+        this.myClassLight.setClassName(lcm.getClassName());
         setNodeName(lcm.getClassName());
     }
     
     public LocalClassMetadata getWrappedClass() {
         return myClass;
     }
+    
+    public LocalClassMetadataLight getWrappedClassLigth() {
+        return myClassLight;
+    }
 
     @Override
     public void build(String id) {
-        defaultPinId = "DefaultPin_"+new Random().nextInt(1000);
+        defaultPinId = "DefaultPin_" + new Random().nextInt(1000);
         ((QueryEditorScene)getScene()).addPin(myClass, defaultPinId);
 
         if (hasParentField){
-            LocalAttributeMetadata attributeParent = LocalStuffFactory.createLocalAttributeMetadata();
-            attributeParent.setName("parent"); //NOI18N
-            attributeParent.setType(LocalObjectLight.class);
-            attributeParent.setMapping(Constants.MAPPING_MANYTOONE);
+            LocalAttributeMetadata attributeParent = new LocalAttributeMetadata(0, 
+                    Constants.PROPERTY_PARENT,LocalObjectLight.class, null, true, 
+                    Constants.MAPPING_MANYTOONE, null);
             ((QueryEditorScene)getScene()).addPin(myClass, attributeParent);
         }
 
         //We add the attribute "id" manually since it's a special one and it's not in the metadata
         if (hasIdField){
-            LocalAttributeMetadata attributeId = LocalStuffFactory.createLocalAttributeMetadata();
-            attributeId.setName("id"); //NOI18N
-            attributeId.setId(-1);
-            attributeId.setType(Long.class);
-            attributeId.setMapping(Constants.MAPPING_PRIMITIVE);
+            LocalAttributeMetadata attributeId = new LocalAttributeMetadata(-1, 
+                    Constants.PROPERTY_ID,Long.class, null, true, 
+                    Constants.MAPPING_PRIMITIVE, null);
             ((QueryEditorScene)getScene()).addPin(myClass, attributeId);
         }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package org.inventory.queries.graphical.elements.filters;
 import java.util.List;
 import java.util.Random;
 import javax.swing.JComboBox;
-import org.inventory.core.services.api.LocalObjectListItem;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectListItem;
+import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.queries.graphical.QueryEditorScene;
 import org.netbeans.api.visual.vmd.VMDPinWidget;
 import org.netbeans.api.visual.widget.ComponentWidget;

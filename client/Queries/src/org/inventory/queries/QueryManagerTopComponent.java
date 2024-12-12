@@ -25,11 +25,11 @@ import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.queries.LocalQueryLight;
+import org.inventory.communications.core.queries.LocalResultRecord;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.api.queries.LocalQueryLight;
-import org.inventory.core.services.api.queries.LocalResultRecord;
 import org.inventory.queries.graphical.ComplexQueryResultTopComponent;
 import org.inventory.queries.graphical.QueryEditorScene;
 import org.inventory.queries.graphical.dialogs.CreateQueryPanel;
@@ -39,16 +39,13 @@ import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 import org.openide.util.ImageUtilities;
-import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 import org.openide.util.Lookup;
 
 /**
- * Top component which displays something.
+ * Query manager Top component 
  */
-@ConvertAsProperties(dtd = "-//org.inventory.queries//QueryManager//EN",
-autostore = false)
 public final class QueryManagerTopComponent extends TopComponent implements ActionListener{
 
     private static QueryManagerTopComponent instance;
@@ -270,6 +267,7 @@ public final class QueryManagerTopComponent extends TopComponent implements Acti
                                         (String)qbs.getQueryProperties()[1],(Boolean)qbs.getQueryProperties()[2]);
             DialogDescriptor dd = new DialogDescriptor(cqp,
                     "Set query settings", true, new ActionListener() {
+                        @Override
                                 public void actionPerformed(ActionEvent e){
                                     if (e.getSource() == DialogDescriptor.OK_OPTION){
                                         qbs.setQueryProperties(cqp.getValues());

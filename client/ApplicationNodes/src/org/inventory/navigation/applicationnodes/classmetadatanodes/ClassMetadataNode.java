@@ -20,11 +20,11 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.util.Constants;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.action.CreateAttributeAction;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.action.DeleteAttributeAction;
 import org.inventory.navigation.applicationnodes.attributemetadatanodes.properties.ClassAttributeMetadataProperty;
@@ -40,7 +40,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents a ClassMetadata entity as a node within the data model manager
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadataNode extends AbstractNode implements PropertyChangeListener{
     
@@ -120,7 +120,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
     public void refresh(){
         LocalClassMetadataLight classMetadataRefresh;
         
-        classMetadataRefresh = com.getLightMetaForClass(classMetadata.getOid(), true);
+        classMetadataRefresh = com.getMetaForClass(classMetadata.getOid(), true);
         
         if(classMetadataRefresh == null)
             nu.showSimplePopup("Error refreshing class metadata", NotificationUtil.ERROR, com.getError());

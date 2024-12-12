@@ -16,11 +16,10 @@
 package org.inventory.navigation.applicationnodes.classmetadatanodes.action;
 
 import java.awt.event.ActionEvent;
-import java.util.Random;
 import javax.swing.AbstractAction;
+import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataNode;
 import org.openide.nodes.Node;
@@ -28,7 +27,7 @@ import org.openide.util.Lookup;
 
 /**
  * Action that requests a metadata class creation
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class CreateClassAction extends AbstractAction {
     
@@ -47,21 +46,20 @@ public class CreateClassAction extends AbstractAction {
    
     @Override
     public void actionPerformed(ActionEvent ae) {
-        String className = "NewClass" + new Random().nextInt(10000); //NOI8N
+        String className = JOptionPane.showInputDialog(null, "Please enter the class name");
+        
+        if (className == null)
+            return;
+        
         NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
-        long classId = com.createClassMetadata(className, 
-                                                              "","", node.getName(), true, true, 0, false, true);
+        long classId = com.createClassMetadata(className, "","", node.getClassMetadata().getClassName(), 
+                true, true, 0, false, true);
         if (classId == -1)
             nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.ERROR,
                     com.getError());
         else{
-            LocalClassMetadataLight lcml = LocalStuffFactory.createLocalClassMetadataLight();
-            lcml.setClassName(className);
-            lcml.setAbstract(false);
-            lcml.setCustom(true);
-            lcml.setDisplayName(className);
-            lcml.setInDesign(true);
-            lcml.setOid(classId);
+            LocalClassMetadataLight lcml = new LocalClassMetadataLight(classId, className, 
+                    className, null, false, true, false, true, true, null, null);
             node.getChildren().add(new Node[]{new ClassMetadataNode(lcml)});
             nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.INFO,
                     java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CLASS_CREATED"));

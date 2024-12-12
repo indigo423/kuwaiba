@@ -22,8 +22,8 @@ import java.beans.PropertyEditorSupport;
 import java.beans.PropertyVetoException;
 import java.beans.VetoableChangeListener;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.session.LocalUserGroupObjectLight;
-import org.inventory.core.services.api.session.LocalUserObject;
+import org.inventory.communications.core.LocalUserGroupObjectLight;
+import org.inventory.communications.core.LocalUserObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.explorer.propertysheet.ExPropertyEditor;
 import org.openide.explorer.propertysheet.PropertyEnv;
@@ -31,7 +31,7 @@ import org.openide.util.Lookup;
 
 /**
  * This is the editor for changing the groups for a given users
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class GroupsEditorSupport extends PropertyEditorSupport
     implements ExPropertyEditor, VetoableChangeListener{
@@ -60,11 +60,11 @@ public class GroupsEditorSupport extends PropertyEditorSupport
      * Reference to the NotificationUtil instance
      */
     private NotificationUtil nu;
-    public GroupsEditorSupport(LocalUserGroupObjectLight[] _allGroups, LocalUserObject _user){
-        this.allGroups = _allGroups;
+    public GroupsEditorSupport(LocalUserGroupObjectLight[] allGroups, LocalUserObject user){
+        this.allGroups = allGroups;
         this.com = CommunicationsStub.getInstance();
         this.nu = Lookup.getDefault().lookup(NotificationUtil.class);
-        this.user = _user;
+        this.user = user;
     }
 
     @Override

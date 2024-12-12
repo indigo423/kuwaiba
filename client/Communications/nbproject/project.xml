@@ -15,14 +15,6 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
-                    <code-name-base>org.inventory.core.services</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>1.0</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
                     <code-name-base>org.inventory.ext.wax</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -41,6 +33,11 @@
             </module-dependencies>
             <public-packages>
                 <package>org.inventory.communications</package>
+                <package>org.inventory.communications.core</package>
+                <package>org.inventory.communications.core.caching</package>
+                <package>org.inventory.communications.core.queries</package>
+                <package>org.inventory.communications.core.views</package>
+                <package>org.inventory.communications.util</package>
             </public-packages>
         </data>
     </configuration>

@@ -19,8 +19,8 @@ package org.inventory.views.gis.scene.providers;
 import java.awt.Color;
 import java.awt.Point;
 import javax.swing.JOptionPane;
-import org.inventory.communications.SharedInformation;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.wizards.physicalconnections.ConnectionWizard;
 import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.action.ConnectorState;
@@ -97,27 +97,27 @@ public class PhysicalConnectionProvider implements ConnectProvider{
         Color lineColor;
         switch (currentConnectionSelection){
             case CONNECTION_WIRECONTAINER:
-                connectionClass = SharedInformation.CLASS_WIRECONTAINER;
+                connectionClass = Constants.CLASS_WIRECONTAINER;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONTAINERS;
                 lineColor = COLOR_WIRECONTAINER;
                 break;
             case CONNECTION_WIRELESSCONTAINER:
-                connectionClass = SharedInformation.CLASS_WIRELESSCONTAINER;
+                connectionClass = Constants.CLASS_WIRELESSCONTAINER;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONTAINERS;
                 lineColor = COLOR_WIRELESSCONTAINER;
                 break;
             case CONNECTION_ELECTRICALLINK:
-                connectionClass = SharedInformation.CLASS_ELECTRICALLINK;
+                connectionClass = Constants.CLASS_ELECTRICALLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 lineColor = COLOR_ELECTRICALLINK;
                 break;
             case CONNECTION_OPTICALLINK:
-                connectionClass = SharedInformation.CLASS_OPTICALLINK;
+                connectionClass = Constants.CLASS_OPTICALLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 lineColor = COLOR_OPTICALLINK;
                 break;
             case CONNECTION_WIRELESSLINK:
-                connectionClass = SharedInformation.CLASS_WIRELESSLINK;
+                connectionClass = Constants.CLASS_WIRELESSLINK;
                 wizardType = ConnectionWizard.WIZARDTYPE_CONNECTIONS;
                 lineColor = COLOR_WIRELESSLINK;
                 break;
@@ -147,15 +147,15 @@ public class PhysicalConnectionProvider implements ConnectProvider{
     }
 
     public static Color getConnectionColor(String connectionClass){
-        if (connectionClass.equals(SharedInformation.CLASS_ELECTRICALLINK))
+        if (connectionClass.equals(Constants.CLASS_ELECTRICALLINK))
             return COLOR_ELECTRICALLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_OPTICALLINK))
+        if (connectionClass.equals(Constants.CLASS_OPTICALLINK))
             return COLOR_OPTICALLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRELESSLINK))
+        if (connectionClass.equals(Constants.CLASS_WIRELESSLINK))
             return COLOR_WIRELESSLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRECONTAINER))
+        if (connectionClass.equals(Constants.CLASS_WIRECONTAINER))
             return COLOR_WIRECONTAINER;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRELESSCONTAINER))
+        if (connectionClass.equals(Constants.CLASS_WIRELESSCONTAINER))
             return COLOR_WIRELESSCONTAINER;
         return Color.BLACK;
     }

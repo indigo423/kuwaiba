@@ -23,17 +23,17 @@ import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.caching.Cache;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.caching.Cache;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataNode;
 import org.openide.util.Lookup;
 
 /**
  *  Creates an attribute metadata
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class CreateAttributeAction extends AbstractAction {
     

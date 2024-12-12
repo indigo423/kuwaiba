@@ -21,7 +21,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import javax.swing.JOptionPane;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.views.gis.scene.GISViewScene;
 import org.inventory.views.gis.scene.GeoPositionedNodeWidget;
 import org.netbeans.api.visual.action.AcceptProvider;
@@ -46,9 +46,9 @@ public class AcceptActionProvider implements AcceptProvider{
 
     @Override
     public ConnectorState isAcceptable(Widget widget, Point point, Transferable transferable) {
-        if (transferable.isDataFlavorSupported(LocalObjectLight.DATA_FLAVOR)&& scene.hasView()){
+//        if (transferable.isDataFlavorSupported(LocalObjectLight.DATA_FLAVOR)&& scene.hasView()){
             return ConnectorState.ACCEPT;
-        }else return ConnectorState.REJECT_AND_STOP;
+//        }else return ConnectorState.REJECT_AND_STOP;
     }
 
     @Override
@@ -57,8 +57,8 @@ public class AcceptActionProvider implements AcceptProvider{
             LocalObjectLight droppedObject = (LocalObjectLight) transferable.getTransferData(LocalObjectLight.DATA_FLAVOR);
             if (!scene.isNode(droppedObject)){
                 Widget newNode = scene.addNode(droppedObject);
-                double[] coordinates = scene.pixelToCoordinate(point);
-                ((GeoPositionedNodeWidget)newNode).setCoordinates(coordinates[0], coordinates[1]);
+//                double[] coordinates = scene.pixelToCoordinate(point);
+//                ((GeoPositionedNodeWidget)newNode).setCoordinates(coordinates[0], coordinates[1]);
                 newNode.setPreferredLocation(point);
                 scene.repaint();
             }else

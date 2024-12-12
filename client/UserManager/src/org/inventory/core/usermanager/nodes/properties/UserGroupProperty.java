@@ -18,9 +18,7 @@ package org.inventory.core.usermanager.nodes.properties;
 
 import java.lang.reflect.InvocationTargetException;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.session.LocalUserGroupObject;
+import org.inventory.communications.core.LocalUserGroupObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.usermanager.nodes.GroupNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
@@ -28,7 +26,7 @@ import org.openide.util.Lookup;
 
 /**
  * Represents a single group's property
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class UserGroupProperty extends ReadWrite{
 
@@ -43,10 +41,10 @@ public class UserGroupProperty extends ReadWrite{
      */
     private CommunicationsStub com;
 
-    public UserGroupProperty(String _name,String _displayName,String _toolTextTip,Object _value, LocalUserGroupObject _group){
-        super(_name,_value.getClass(),_displayName,_toolTextTip);
-        this.object = _group;
-        this.value = _value;
+    public UserGroupProperty(String name,String displayName,String toolTextTip,Object value, LocalUserGroupObject group){
+        super(name,value.getClass(),displayName,toolTextTip);
+        this.object = group;
+        this.value = value;
         this.com = CommunicationsStub.getInstance();
     }
 

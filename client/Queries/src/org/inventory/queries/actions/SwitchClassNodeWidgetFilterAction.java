@@ -21,11 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.AbstractAction;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectListItem;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.queries.graphical.elements.QueryEditorNodeWidget;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.queries.graphical.QueryEditorScene;
 import org.inventory.queries.graphical.elements.ClassNodeWidget;
+import org.inventory.queries.graphical.elements.QueryEditorNodeWidget;
 import org.inventory.queries.graphical.elements.filters.ListTypeFilter;
 import org.netbeans.api.visual.widget.Widget;
 
@@ -53,6 +53,7 @@ public class SwitchClassNodeWidgetFilterAction extends AbstractAction{
             classNode = node;
         }
 
+    @Override
         public void actionPerformed(ActionEvent e) {
             String incomingConnectionObject = ((QueryEditorScene)classNode.getScene()).
                     findPinEdges(((QueryEditorNodeWidget)classNode).getDefaultPinId(), false, true).iterator().next();
@@ -61,8 +62,8 @@ public class SwitchClassNodeWidgetFilterAction extends AbstractAction{
                 ((QueryEditorScene)node.getScene()).removeAllRelatedNodes(node.getWrappedClass(), false);
 
                 ListTypeFilter newNode = (ListTypeFilter) ((QueryEditorScene)node.getScene()).
-                        addNode(node.getWrappedClass().asLocalClassMetadataLight());
-                List<LocalObjectListItem> items = CommunicationsStub.getInstance().getList(node.getWrappedClass().getClassName(), true, false);
+                        addNode(node.getWrappedClassLigth());
+                List<LocalObjectListItem> items = CommunicationsStub.getInstance().getList(node.getWrappedClassLigth().getClassName(), true, false);
                 if (items == null)
                     newNode.build(new ArrayList<LocalObjectListItem>());
                 else
@@ -76,7 +77,7 @@ public class SwitchClassNodeWidgetFilterAction extends AbstractAction{
                
                ((QueryEditorScene)node.getScene()).removeNode(node.getWrappedClass());
                LocalClassMetadata lcm = CommunicationsStub.getInstance().getMetaForClass(node.getNodeName(), false);
-               ClassNodeWidget newNode = null;
+               ClassNodeWidget newNode;
                if (lcm != null)
                     newNode = (ClassNodeWidget) ((QueryEditorScene)node.getScene()).addNode(lcm);
                else return;

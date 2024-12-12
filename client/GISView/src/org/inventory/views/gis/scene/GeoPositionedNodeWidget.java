@@ -16,7 +16,7 @@
 
 package org.inventory.views.gis.scene;
 
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 
 /**
  * An ObjectNodeWidget with
@@ -68,9 +68,9 @@ public class GeoPositionedNodeWidget extends ObjectNodeWidget{
      * This method updates the widget geo-coordinates from the scene coordinates
      */
     public void updateCoordinates() {
-        double[] coordinates = ((GISViewScene)getScene()).pixelToCoordinate(getPreferredLocation());
-        this.latitude = coordinates[0];
-        this.longitude = coordinates[1];
+//        double[] coordinates = ((GISViewScene)getScene()).pixelToCoordinate(getPreferredLocation());
+//        this.latitude = coordinates[0];
+//        this.longitude = coordinates[1];
         
     }
 }

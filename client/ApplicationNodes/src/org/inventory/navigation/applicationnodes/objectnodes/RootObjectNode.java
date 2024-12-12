@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,29 +17,26 @@
 package org.inventory.navigation.applicationnodes.objectnodes;
 
 import javax.swing.Action;
-import org.inventory.communications.LocalStuffFactory;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateBusinessObjectAction;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Children;
-import org.openide.util.lookup.Lookups;
 
 /**
  * Simple class to represent the root node
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class RootObjectNode extends AbstractNode{
+public class RootObjectNode extends AbstractNode {
 
    static final String DEFAULT_ICON_PATH = "org/inventory/navigation/applicationnodes/res/root.png";
 
     public RootObjectNode(Children children) {
-        super(children,Lookups.singleton(LocalStuffFactory.createLocalObjectLight())); //Dummy object
+        super(children); //Dummy object
         setDisplayName(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_ROOT"));
         setIconBaseWithExtension(DEFAULT_ICON_PATH);
     }
 
     @Override
     public Action[] getActions(boolean context){
-        CreateBusinessObjectAction createAction = new CreateBusinessObjectAction(this);
-        return new Action[]{createAction};
+        return new Action[]{new CreateBusinessObjectAction(this)};
     }
 }

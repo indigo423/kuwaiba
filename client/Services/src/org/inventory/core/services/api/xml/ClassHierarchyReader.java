@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.inventory.core.services.api.xml;
 
 import java.util.Date;
 import java.util.List;
-import org.inventory.core.services.api.metadata.LocalClassWrapper;
+import org.inventory.communications.core.LocalClassWrapper;
 
 /**
  * This readers reads a class hierarchy descriptor as defined in the <a href="http://sourceforge.net/apps/mediawiki/kuwaiba/index.php?title=XML_Documents">wiki</a> page

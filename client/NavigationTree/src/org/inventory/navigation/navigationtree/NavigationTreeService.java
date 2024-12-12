@@ -18,7 +18,7 @@ package org.inventory.navigation.navigationtree;
 
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.util.Lookup;
 
@@ -30,9 +30,10 @@ public class NavigationTreeService {
     private NavigationTreeTopComponent component;
     private CommunicationsStub com = CommunicationsStub.getInstance();
 
-    public NavigationTreeService(NavigationTreeTopComponent _component){
-        this.component = _component;
+    public NavigationTreeService(NavigationTreeTopComponent component){
+        this.component = component;
     }
+    
     public LocalObjectLight[] getRootChildren(){
         List<LocalObjectLight> rootChildren = com.getObjectChildren(-1, -1);
         if(rootChildren != null)

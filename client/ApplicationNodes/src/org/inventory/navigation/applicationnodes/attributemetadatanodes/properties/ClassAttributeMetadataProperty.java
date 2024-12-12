@@ -17,14 +17,14 @@ package org.inventory.navigation.applicationnodes.attributemetadatanodes.propert
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalAttributeMetadata;
 import org.inventory.navigation.applicationnodes.attributemetadatanodes.customeditor.AttributeEditorSupport;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataNode;
 import org.openide.nodes.PropertySupport;
 
 /**
  * Provides a property editor
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class ClassAttributeMetadataProperty extends PropertySupport.ReadWrite {
 

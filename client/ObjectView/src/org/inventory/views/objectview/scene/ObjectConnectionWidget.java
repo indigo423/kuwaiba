@@ -20,8 +20,9 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import org.inventory.communications.SharedInformation;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
+import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.netbeans.api.visual.anchor.PointShape;
 import org.netbeans.api.visual.router.Router;
 import org.netbeans.api.visual.widget.FreeConnectionWidget;
@@ -30,7 +31,7 @@ import org.netbeans.api.visual.widget.FreeConnectionWidget;
  * Extends the functionality of a simple connection widget
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class ObjectConnectionWidget extends FreeConnectionWidget implements ActionListener{
+public class ObjectConnectionWidget extends FreeConnectionWidget implements ActionListener, SelectableWidget{
 
     /**
      * Some constants
@@ -47,7 +48,8 @@ public class ObjectConnectionWidget extends FreeConnectionWidget implements Acti
     /**
      * The wrapped business object
      */
-    private LocalObjectLight object;
+    //private LocalObjectLight object;
+    private ObjectNode node;
 
     /**
      * We don't take the router from the scene directly because it's possible that in some
@@ -56,14 +58,13 @@ public class ObjectConnectionWidget extends FreeConnectionWidget implements Acti
      * @param connection
      * @param router
      */
-    public ObjectConnectionWidget(ViewScene scene, LocalObjectLight connection,
-            Router router, Color lineColor){
+    public ObjectConnectionWidget(ViewScene scene, LocalObjectLight connection, Router router){
         super(scene);
-        this.object = connection;
-        setToolTipText((String)connection.getName()+" ["+connection.getClassName()+"]"); //NOI18N
+        this.node = new ObjectNode(connection);
+        setToolTipText(connection.toString()); //NOI18N
         setRouter(router);
-        setStroke(new BasicStroke(3));
-        setLineColor(lineColor);
+        setStroke(new BasicStroke(2));
+        setLineColor(getConnectionColor(connection.getClassName()));
         setControlPointShape(PointShape.SQUARE_FILLED_BIG);
         setEndPointShape(PointShape.SQUARE_FILLED_BIG);
         getActions().addAction(scene.createSelectAction());
@@ -74,28 +75,32 @@ public class ObjectConnectionWidget extends FreeConnectionWidget implements Acti
 
         scene.getMoveControlPointAction().addActionListener(this);
         getActions().addAction(scene.getMoveControlPointAction());
-
-        //getActions().addAction(ActionFactory.createPopupMenuAction(scene.getEdgeMenu()));
     }
 
     public LocalObjectLight getObject() {
-        return object;
+        return node.getObject();
+    }
+
+    @Override
+    public ObjectNode getNode() {
+        return node;
     }
 
     public static Color getConnectionColor(String connectionClass){
-        if (connectionClass.equals(SharedInformation.CLASS_ELECTRICALLINK))
+        if (connectionClass.equals(Constants.CLASS_ELECTRICALLINK))
             return COLOR_ELECTRICALLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_OPTICALLINK))
+        if (connectionClass.equals(Constants.CLASS_OPTICALLINK))
             return COLOR_OPTICALLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRELESSLINK))
+        if (connectionClass.equals(Constants.CLASS_WIRELESSLINK))
             return COLOR_WIRELESSLINK;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRECONTAINER))
+        if (connectionClass.equals(Constants.CLASS_WIRECONTAINER))
             return COLOR_WIRE;
-        if (connectionClass.equals(SharedInformation.CLASS_WIRELESSCONTAINER))
+        if (connectionClass.equals(Constants.CLASS_WIRELESSCONTAINER))
             return COLOR_WIRELESS;
         return Color.BLACK;
     }
 
+    @Override
     public void actionPerformed(ActionEvent e) {
         ((ViewScene)getScene()).fireChangeEvent(e);
     }

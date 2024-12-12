@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,24 +16,16 @@
 
 package org.inventory.navigation.applicationnodes.querynodes;
 
-import org.inventory.core.services.api.queries.LocalResultRecord;
+import org.inventory.communications.core.queries.LocalResultRecord;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.openide.nodes.Sheet;
 
 /**
  * A node used to represents a single result in query result
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class QueryResultRecordNode extends ObjectNode{
 
     public QueryResultRecordNode(LocalResultRecord record) {
         super(record.getObject(),true);
     }
-
-    @Override
-    protected Sheet createSheet() {
-        return super.createSheet();
-    }
-
-
 }

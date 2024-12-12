@@ -21,14 +21,14 @@ import javax.swing.AbstractAction;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
-import org.openide.nodes.Node;
+import org.openide.nodes.AbstractNode;
 import org.openide.util.Lookup;
 import org.openide.util.actions.Presenter.Popup;
 
@@ -36,37 +36,35 @@ import org.openide.util.actions.Presenter.Popup;
  * Action that requests a business object creation
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public final class CreateBusinessObjectAction extends AbstractAction implements Popup{
-    private Node node;
+public final class CreateBusinessObjectAction extends AbstractAction implements Popup {
+    private AbstractNode node;
     private CommunicationsStub com;
 
-    public CreateBusinessObjectAction(){
+    public CreateBusinessObjectAction(ObjectNode node) {
         putValue(NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW"));
         com = CommunicationsStub.getInstance();
+        this.node = node;
     }
 
-    public CreateBusinessObjectAction(ObjectNode _node) {
-        this();
-        this.node = _node;
+    public CreateBusinessObjectAction(RootObjectNode node) {
+        putValue(NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW"));
+        com = CommunicationsStub.getInstance();
+        this.node = node;
     }
-
-    public CreateBusinessObjectAction (RootObjectNode _ron){
-        this();
-        node = _ron;
-    }
-
+    
     @Override
     public void actionPerformed(ActionEvent ev) {
         NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
         LocalObjectLight myLol = com.createObject(
                 ((JMenuItem)ev.getSource()).getName(),
-                (node instanceof RootObjectNode) ? null : (((ObjectNode)node)).getObject().getClassName(),
-                (node instanceof RootObjectNode) ? -1 : (((ObjectNode)node)).getObject().getOid(), 0);
+                node instanceof RootObjectNode ? null : ((ObjectNode)node).getObject().getClassName(),
+                node instanceof RootObjectNode? -1 : ((ObjectNode)node).getObject().getOid(), 0);
         if (myLol == null)
-            nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.ERROR,
-                    com.getError());
+            nu.showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
         else{
-            ((ObjectChildren)node.getChildren()).add(new ObjectNode[]{new ObjectNode(myLol)});
+            if (!((ObjectChildren)node.getChildren()).isCollapsed())
+                ((ObjectChildren)node.getChildren()).add(new ObjectNode[]{new ObjectNode(myLol)});
+            
             nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.INFO,
                     java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATED"));
         }
@@ -80,20 +78,19 @@ public final class CreateBusinessObjectAction extends AbstractAction implements 
         if (node instanceof RootObjectNode) //For the root node
             items = com.getPossibleChildren(null, false);
         else
-            items = CommunicationsStub.getInstance().
-                    getPossibleChildren(((ObjectNode)node).getObject().getClassName(),false);
+            items = com.getPossibleChildren(((ObjectNode)node).getObject().getClassName(),false);
 
         if (items.isEmpty())
-			mnuPossibleChildren.setEnabled(false);
+            mnuPossibleChildren.setEnabled(false);
         else
-			for(LocalClassMetadataLight item: items){
-				JMenuItem smiChildren = new JMenuItem(item.getClassName());
-				smiChildren.setName(item.getClassName());
-				smiChildren.addActionListener(this);
-				mnuPossibleChildren.add(smiChildren);
-			}
+            for(LocalClassMetadataLight item: items){
+                    JMenuItem smiChildren = new JMenuItem(item.getClassName());
+                    smiChildren.setName(item.getClassName());
+                    smiChildren.addActionListener(this);
+                    mnuPossibleChildren.add(smiChildren);
+            }
 		
-		MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
+        MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
 		
         return mnuPossibleChildren;
     }

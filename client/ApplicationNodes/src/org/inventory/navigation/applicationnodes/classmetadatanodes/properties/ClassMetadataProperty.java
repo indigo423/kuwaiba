@@ -22,15 +22,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.caching.Cache;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.caching.Cache;
+import org.inventory.communications.util.Constants;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
 import org.openide.util.Lookup;
 
 /**
  * ClassMetadata properties
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class ClassMetadataProperty extends ReadWrite {
 

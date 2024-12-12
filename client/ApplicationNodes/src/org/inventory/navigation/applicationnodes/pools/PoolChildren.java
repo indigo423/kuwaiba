@@ -17,7 +17,7 @@ package org.inventory.navigation.applicationnodes.pools;
 
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.nodes.Children;
@@ -25,8 +25,8 @@ import org.openide.nodes.Node;
 import org.openide.util.Lookup;
 
 /**
- *
- * @author zim
+ * Children for pool nodes
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class PoolChildren extends Children.Array{
 
@@ -40,7 +40,7 @@ public class PoolChildren extends Children.Array{
         List<LocalObjectLight> items = CommunicationsStub.getInstance().getPoolItems(pool.getOid());
         if (items == null)
             Lookup.getDefault().lookup(NotificationUtil.class).
-                        showSimplePopup("List Generation", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
+                        showSimplePopup("Error", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
         else{
             for (LocalObjectLight item : items){
                 ObjectNode newNode = new ObjectNode(item);

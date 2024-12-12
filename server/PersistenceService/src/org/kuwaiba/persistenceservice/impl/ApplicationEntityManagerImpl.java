@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,10 +32,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kuwaiba.apis.persistence.application.ActivityLogEntry;
 import org.kuwaiba.apis.persistence.application.CompactQuery;
 import org.kuwaiba.apis.persistence.application.ExtendedQuery;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
 import org.kuwaiba.apis.persistence.application.ResultRecord;
+import org.kuwaiba.apis.persistence.application.Session;
 import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.application.ViewObject;
 import org.kuwaiba.apis.persistence.application.ViewObjectLight;
@@ -45,6 +47,7 @@ import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundExceptio
 import org.kuwaiba.apis.persistence.exceptions.ArraySizeMismatchException;
 import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
+import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
 import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
 import org.kuwaiba.apis.persistence.interfaces.ApplicationEntityManager;
@@ -74,7 +77,6 @@ import org.neo4j.kernel.EmbeddedGraphDatabase;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ApplicationEntityManagerImpl implements ApplicationEntityManager, ApplicationEntityManagerRemote {
-
     /**
      * Graph db service
      */
@@ -83,6 +85,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
      * Class index
      */
     private Index<Node> classIndex;
+    /**
+     * Object index
+     */
+    private Index<Node> objectIndex;
     /**
      * Users index
      */
@@ -104,21 +110,34 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
      */
     private Index<Node> poolsIndex;
     /**
+     * Privilege index 
+     */
+    private Index<Node> privilegeIndex;
+    /**
      * Index for general views (those not related to a particular object)
      */
     private Index<Node> generalViewsIndex;
+    /**
+     * Index for special nodes(like group root node)
+     */
+    private Index<Node> specialNodesIndex;
+    /**
+     * Instance of business entity manager
+     */
     private  BusinessEntityManagerImpl bem;
     /**
      * Reference to the singleton instance of CacheManager
      */
     private CacheManager cm;
-
+    /**
+     * Hashmap with the current sessions. The key is the username, the value is the respective session object
+     */
+    private HashMap<String, Session> sessions;
+    
     public ApplicationEntityManagerImpl() {
         this.cm = CacheManager.getInstance();
     }
 
-    
-    
     public ApplicationEntityManagerImpl(ConnectionManager cmn) {
         this();
         this.graphDb = (EmbeddedGraphDatabase)cmn.getConnectionHandler();
@@ -127,46 +146,51 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         this.queryIndex = graphDb.index().forNodes(Constants.INDEX_QUERIES);
         this.classIndex = graphDb.index().forNodes(Constants.INDEX_CLASS);
         this.listTypeItemsIndex = graphDb.index().forNodes(Constants.INDEX_LIST_TYPE_ITEMS);
+        this.objectIndex = graphDb.index().forNodes(Constants.INDEX_OBJECTS);
         this.generalViewsIndex = graphDb.index().forNodes(Constants.INDEX_GENERAL_VIEWS);
         this.poolsIndex = graphDb.index().forNodes(Constants.INDEX_POOLS);
+        this.privilegeIndex = graphDb.index().forNodes(Constants.INDEX_PRIVILEGE_NODES);
+        this.specialNodesIndex = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES);
         
         for (Node listTypeNode : listTypeItemsIndex.query(Constants.PROPERTY_ID, "*")){
             GenericObjectList aListType = Util.createGenericObjectListFromNode(listTypeNode);
             cm.putListType(aListType);
         }
+        
+        this.sessions = new HashMap<String, Session>();
+    }
+    
+    public HashMap<String, Session> getSessions(){
+        return sessions;
     }
 
     @Override
-    public UserProfile login(String username, String password) {
-        if (username == null || password == null){
+    public UserProfile login(String userName, String password) {
+        if (userName == null || password == null)
             return null;
-        }
-        Node user = userIndex.get(Constants.PROPERTY_NAME,username).getSingle();
-        if (user == null){
+        
+        Node userNode = userIndex.get(Constants.PROPERTY_NAME,userName).getSingle();
+        if (userNode == null)
             return null;
-        }
-        if (!(Boolean)user.getProperty(Constants.PROPERTY_ENABLED)){
+        
+        if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
             return null;
+        
+        if (Util.getMD5Hash(password).equals(userNode.getProperty(Constants.PROPERTY_PASSWORD))){
+            UserProfile user = Util.createUserProfileFromNode(userNode);
+            cm.putUser(user);
+            return user;
         }
-        if (Util.getMD5Hash(password).equals(user.getProperty(Constants.PROPERTY_PASSWORD))){
-            return new UserProfile(user.getId(),
-                    (String)user.getProperty(Constants.PROPERTY_NAME),
-                    (String)user.getProperty(Constants.PROPERTY_FIRST_NAME),
-                    (String)user.getProperty(Constants.PROPERTY_LAST_NAME),
-                    (Boolean)user.getProperty(Constants.PROPERTY_ENABLED),
-                    (Long)user.getProperty(Constants.PROPERTY_CREATION_DATE),
-                    //(List<Integer>)user.getProperty(UserProfile.PROPERTY_PRIVILEGES)
-                    new int[0]);
-        }
-        else{
+        else
             return null;
-        }
     }
 
+    //TODO add ipAddress, sessionId
     @Override
     public long createUser(String userName, String password, String firstName,
-            String lastName, boolean enabled, int[] privileges, long[] groups)
-            throws InvalidArgumentException {
+            String lastName, boolean enabled, long[] privileges, long[] groups)
+            throws InvalidArgumentException, NotAuthorizedException, NotAuthorizedException {
+        //validateCall("createUser", ipAddres, sessions.get(sessionId).getUser().getUserName());
         Transaction tx = null;
         
         if (userName == null){
@@ -183,7 +207,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         }
         Node storedUser = userIndex.get(Constants.PROPERTY_NAME,userName).getSingle();
         if (storedUser != null){
-            throw new InvalidArgumentException(String.format("The username %1s is already in use", userName), Level.WARNING);
+            throw new InvalidArgumentException(String.format("User name %s already exists", userName), Level.WARNING);
         }
         try{
             tx = graphDb.beginTx();
@@ -216,7 +240,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     else{
                         tx.failure();
                         tx.finish();
-                        throw new InvalidArgumentException(String.format("Group with id %1s can't be found",groupId), Level.OFF);
+                        throw new InvalidArgumentException(String.format("Group with id %s can not be found",groupId), Level.OFF);
                     }
                 }
             }
@@ -225,8 +249,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             
             tx.success();
             
-            cm.putUser(new UserProfile(newUser.getId(), userName,
-            firstName, lastName, true, (Long)newUser.getProperty(Constants.PROPERTY_CREATION_DATE), privileges));
+            cm.putUser(Util.createUserProfileFromNode(newUser));
 
             return newUser.getId();
            
@@ -245,171 +268,218 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
 
     @Override
     public void setUserProperties(long oid, String userName, String password, String firstName,
-            String lastName, boolean enabled, int[] privileges, long[] groups)
-            throws InvalidArgumentException, ApplicationObjectNotFoundException {
+            String lastName, boolean enabled, long[] privileges, long[] groups, String ipAddress, String sessionId)
+            throws InvalidArgumentException, ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("setUserProperties", ipAddress, sessionId);
+        
+        Node userNode = userIndex.get(Constants.PROPERTY_ID, oid).getSingle();
+        if(userNode == null)
+            throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s",oid));
+        
         Transaction tx = null;
         if(userName != null){
-            if (userName.trim().equals("")){
-                throw new InvalidArgumentException("Username can not be an empty string", Level.INFO);
-            }
-            Node storedUser = userIndex.get(Constants.PROPERTY_NAME,userName).getSingle();
-            if (storedUser != null){
-                throw new InvalidArgumentException(String.format("The username %1s is already in use", userName), Level.WARNING);
-            }
+            if (userName.trim().equals(""))
+                throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
+
+            Node storedUser = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
+            if (storedUser != null)
+                throw new InvalidArgumentException(String.format("User name %s already exists", userName), Level.WARNING);
         }
         if(password != null){
-            if (password.trim().equals("")){
+            if (password.trim().isEmpty())
                 throw new InvalidArgumentException("Password can't be an empty string", Level.INFO);
-            }
         }
-        Node userNode = userIndex.get(Constants.PROPERTY_ID, oid).getSingle();
-        if(userNode == null){
-            throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %1s",oid));
-        }
+        
         try{
             tx =  graphDb.beginTx();
             if (userName != null){
                 //refresh the userindex
                 userIndex.remove(userNode, Constants.PROPERTY_NAME, (String)userNode.getProperty(Constants.PROPERTY_NAME));
+                cm.removeUser(userName);
                 userNode.setProperty(Constants.PROPERTY_NAME, userName);
                 userIndex.putIfAbsent(userNode, Constants.PROPERTY_NAME, userName);
             }
-            if (password != null){
+            if (password != null)
                 userNode.setProperty(Constants.PROPERTY_PASSWORD, Util.getMD5Hash(password));
-            }
-            if(firstName != null){
+            if(firstName != null)
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
-            }
-            if(lastName != null){
+            if(lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-            }
             if(groups != null){
                 Iterable<Relationship> relationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships){
+                for (Relationship relationship : relationships)
                     relationship.delete();
-                }
                 for (long id : groups) {
                     Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
                     userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
                 }
             }
+            if (privileges != null){
+                Iterable<Relationship> privilegesRelationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
+                for (Relationship relationship : privilegesRelationships)
+                    relationship.delete();
+                for(long privilegeCode : privileges){
+                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
+                    if(privilegeNode != null)
+                        privilegeNode.createRelationshipTo(userNode, RelTypes.HAS_PRIVILEGE);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode), Level.OFF);
+                    }
+                }
+            }
+            
             tx.success();
+            tx.finish();
+            cm.putUser(Util.createUserProfileFromNode(userNode));
         }catch(Exception ex){
-            Logger.getLogger("Set user properties: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
+            Logger.getLogger("setUserProperties: "+ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
-                tx.finish();
-            }
         }
     }
-    
+
     @Override
-    public void setUserProperties(String oldUserName, String newUserName, String password,
-            String firstName, String lastName, boolean enabled, int[] privileges, long[] groups)
-            throws InvalidArgumentException, ApplicationObjectNotFoundException {
+    public void setUserProperties(String formerUsername, String newUserName, String password, String firstName,
+            String lastName, boolean enabled, long[] privileges, long[] groups, String ipAddress, String sessionId)
+            throws InvalidArgumentException, ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        //validateCall("setUserProperties", ipAddress, sessionId);
+        
+        Node userNode = userIndex.get(Constants.PROPERTY_NAME, formerUsername).getSingle();
+        if(userNode == null)
+            throw new ApplicationObjectNotFoundException(String.format("Can not find a user with name %s", formerUsername));
+        
         Transaction tx = null;
-        if(oldUserName == null){
-            throw new InvalidArgumentException("Username can not be null", Level.INFO);
-        }
         if(newUserName != null){
-            if (newUserName.trim().equals("")){
-                throw new InvalidArgumentException("Username can not be an empty string", Level.INFO);
-            }
-            Node storedUser = userIndex.get(Constants.PROPERTY_NAME,newUserName).getSingle();
-            if (storedUser != null){
-                throw new InvalidArgumentException(String.format("The username %1s is already in use", newUserName), Level.WARNING);
-            }
+            if (newUserName.trim().equals(""))
+                throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
+
+            Node storedUser = userIndex.get(Constants.PROPERTY_NAME, newUserName).getSingle();
+            if (storedUser != null)
+                throw new InvalidArgumentException(String.format("User name %s already exists", newUserName), Level.WARNING);
         }
         if(password != null){
-            if (password.trim().equals("")){
+            if (password.trim().isEmpty())
                 throw new InvalidArgumentException("Password can't be an empty string", Level.INFO);
-            }
         }
-        Node userNode = userIndex.get(Constants.PROPERTY_NAME, oldUserName).getSingle();
-        if(userNode == null){
-            throw new ApplicationObjectNotFoundException(String.format("Can not find a user with name %1s",oldUserName));
-        }
+        
         try{
             tx =  graphDb.beginTx();
             if (newUserName != null){
                 //refresh the userindex
-                userIndex.remove(userNode, Constants.PROPERTY_NAME, oldUserName);
+                userIndex.remove(userNode, Constants.PROPERTY_NAME, (String)userNode.getProperty(Constants.PROPERTY_NAME));
                 userNode.setProperty(Constants.PROPERTY_NAME, newUserName);
                 userIndex.putIfAbsent(userNode, Constants.PROPERTY_NAME, newUserName);
+                cm.removeUser(newUserName);
             }
-            if (password != null){
+            if (password != null)
                 userNode.setProperty(Constants.PROPERTY_PASSWORD, Util.getMD5Hash(password));
-            }
-            if(firstName != null){
+            if(firstName != null)
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
-            }
-            if(lastName != null){
+            if(lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-            }
             if(groups != null){
                 Iterable<Relationship> relationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships){
+                for (Relationship relationship : relationships)
                     relationship.delete();
-                }
                 for (long id : groups) {
                     Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
                     userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
                 }
             }
+            if (privileges != null){
+                Iterable<Relationship> privilegesRelationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
+                for (Relationship relationship : privilegesRelationships)
+                    relationship.delete();
+                for(long privilegeCode : privileges){
+                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
+                    if(privilegeNode != null)
+                        privilegeNode.createRelationshipTo(userNode, RelTypes.HAS_PRIVILEGE);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode), Level.OFF);
+                    }
+                }
+            }
+            
             tx.success();
+            tx.finish();
+            cm.putUser(Util.createUserProfileFromNode(userNode));
         }catch(Exception ex){
-            Logger.getLogger("Set user properties: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
+            Logger.getLogger("setUserProperties: "+ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
-                tx.finish();
-            }
         }
     }
     
     @Override
     public long createGroup(String groupName, String description,
-            int[] privileges, long[] users) throws InvalidArgumentException {
+            long[] privileges, long[] users) 
+            throws InvalidArgumentException, NotAuthorizedException {
+        
+        //validateCall("createGroup", ipAddress, sessions.get(sessionId).getUser().getUserName());
+        
         Transaction tx = null;
         if (groupName == null){
             throw new InvalidArgumentException("Group name can not be null", Level.INFO);
         }
         if (groupName.trim().equals("")){
-            throw new InvalidArgumentException("User name can't be an empty string", Level.INFO);
+            throw new InvalidArgumentException("Group name can not be an empty string", Level.INFO);
         }
         Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME,groupName).getSingle();
         if (storedGroup != null){
-            throw new InvalidArgumentException(String.format("The group name %1s is already in use", groupName), Level.WARNING);
+            throw new InvalidArgumentException(String.format("Group %s already exists", groupName), Level.WARNING);
         }
         try{
             tx = graphDb.beginTx();
-            Node newGroup = graphDb.createNode();
+            Node newGroupNode = graphDb.createNode();
 
-            newGroup.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
-            newGroup.setProperty(Constants.PROPERTY_NAME, groupName);
-            if(description != null){
-                description="";
-                newGroup.setProperty(Constants.PROPERTY_DESCRIPTION, description);
+            newGroupNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
+            newGroupNode.setProperty(Constants.PROPERTY_NAME, groupName);
+            if(description != null)
+                newGroupNode.setProperty(Constants.PROPERTY_DESCRIPTION, "");
+            if (users != null){
+                for (long userId : users) {
+                    Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+                    if(userNode != null)
+                        userNode.createRelationshipTo(newGroupNode, RelTypes.BELONGS_TO_GROUP);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("User with id %s can not be found",userId), Level.OFF);
+                    }
+                }
             }
-            groupIndex.putIfAbsent(newGroup, Constants.PROPERTY_ID, newGroup.getId());
-            groupIndex.putIfAbsent(newGroup, Constants.PROPERTY_NAME, groupName);
-
-            cm.putGroup(new GroupProfile(newGroup.getId(), groupName,
-                description, (Long)newGroup.getProperty(Constants.PROPERTY_CREATION_DATE)));
-
+            if (privileges != null){
+                for(long privilegeCode : privileges){
+                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
+                    if(privilegeNode != null)
+                        privilegeNode.createRelationshipTo(newGroupNode, RelTypes.HAS_PRIVILEGE);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode), Level.OFF);
+                    }
+                }
+            }
+            specialNodesIndex.get(Constants.PROPERTY_NAME, Constants.NODE_GROUPS).getSingle().createRelationshipTo(newGroupNode, RelTypes.GROUP);
+           
+            groupIndex.putIfAbsent(newGroupNode, Constants.PROPERTY_ID, newGroupNode.getId());
+            groupIndex.putIfAbsent(newGroupNode, Constants.PROPERTY_NAME, groupName);
             tx.success();
+            tx.finish();
+            cm.putGroup(Util.createGroupProfileFromNode(newGroupNode));
             
-            return newGroup.getId();
+            return newGroupNode.getId();
             
         }catch(Exception ex){
-            Logger.getLogger("Create group: "+ex.getMessage()); //NOI18N
+            Logger.getLogger("createGroup: "+ex.getMessage()); //NOI18N
             if (tx != null){
                 tx.failure();
             }
@@ -422,7 +492,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<UserProfile> getUsers() {
+    public List<UserProfile> getUsers(String ipAddress, String sessionId) throws NotAuthorizedException{
+        
+        validateCall("getUsers", ipAddress, sessionId);
+        
         IndexHits<Node> usersNodes = userIndex.query(Constants.PROPERTY_NAME, "*");
 
         List<UserProfile> users = new ArrayList<UserProfile>();
@@ -434,21 +507,25 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<GroupProfile> getGroups() {
+    public List<GroupProfile> getGroups(String ipAddress, String sessionId) throws NotAuthorizedException{
+        
+        validateCall("getGroups", ipAddress, sessionId);
+        
         IndexHits<Node> groupsNodes = groupIndex.query(Constants.PROPERTY_NAME, "*");
 
         List<GroupProfile> groups =  new ArrayList<GroupProfile>();
         for (Node node : groupsNodes)
-        {
             groups.add((Util.createGroupProfileFromNode(node)));
-        }
         return groups;
     }
 
     @Override
     public void setGroupProperties(long id, String groupName, String description,
-            int[] privileges, long[] users)
-            throws InvalidArgumentException, ApplicationObjectNotFoundException{
+            long[] privileges, long[] users, String ipAddress, String sessionId)
+            throws InvalidArgumentException, ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("setGroupProperties", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -458,54 +535,65 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %1s",id));
             }
             if(groupName != null){
-                if (groupName.trim().equals("")){
-                    throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
-                }
-                if (cm.getUser(groupName) == null)
-                {
-                    Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME, groupName).getSingle();
-                    if (storedGroup != null){
+                if (groupName.trim().equals(""))
+                    throw new InvalidArgumentException("Group name can not be an empty string", Level.INFO);
+                Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME, groupName).getSingle();
+                    if (storedGroup != null)
                         throw new InvalidArgumentException(String.format("The group name %1s is already in use", groupName), Level.WARNING);
-                    }
-                }
                 groupIndex.remove(groupNode, Constants.PROPERTY_NAME, (String)groupNode.getProperty(Constants.PROPERTY_NAME));
                 cm.removeGroup((String)groupNode.getProperty(Constants.PROPERTY_NAME));
-
                 groupNode.setProperty(Constants.PROPERTY_NAME, groupName);
-                groupIndex.putIfAbsent(groupNode, Constants.PROPERTY_NAME, groupName);
-                cm.putGroup(new GroupProfile(groupNode.getId(), groupName,
-                description, (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE)));
             }
-            if(description != null){
+            if(description != null)
                 groupNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
-            }
             if(users != null){
                 Iterable<Relationship> relationships = groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships){
+                for (Relationship relationship : relationships)
                     relationship.delete();
-                }
                 for (long userId : users) {
                     Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
-                    userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
+                    if(userNode != null)
+                        userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("User with id %s can not be found",userId), Level.OFF);
+                    }
                 }
             }
-
+            if (privileges != null){
+                Iterable<Relationship> privilegesRelationships = groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
+                for (Relationship relationship : privilegesRelationships)
+                    relationship.delete();
+                for(long privilegeCode : privileges){
+                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
+                    if(privilegeNode != null)
+                        privilegeNode.createRelationshipTo(groupNode, RelTypes.HAS_PRIVILEGE);
+                    else{
+                        tx.failure();
+                        tx.finish();
+                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode), Level.OFF);
+                    }
+                }
+            }
+            groupIndex.putIfAbsent(groupNode, Constants.PROPERTY_NAME, groupName);
+            cm.putGroup(Util.createGroupProfileFromNode(groupNode));
             tx.success();
+            tx.finish();
         }catch(Exception ex){
-            Logger.getLogger("Set group properties: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
-        throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
-                tx.finish();
-            }
+            Logger.getLogger("setGroupProperties: "+ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();
+            throw new RuntimeException(ex.getMessage());
         }
     }
 
     @Override
-    public void deleteUsers(long[] oids) throws ApplicationObjectNotFoundException {
+    public void deleteUsers(long[] oids, String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("deleteUsers", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -515,7 +603,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 {
                     Node userNode = userIndex.get(Constants.PROPERTY_ID, id).getSingle();
                     if(userNode == null){
-                        throw new ApplicationObjectNotFoundException(String.format("Can not find the user with id %1s",id));
+                        throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s",id));
                     }
                     cm.removeUser((String)userNode.getProperty(Constants.PROPERTY_NAME));
                     Iterable<Relationship> relationships = userNode.getRelationships();
@@ -527,57 +615,56 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 }
             }
             tx.success();
+            tx.finish();
         }catch(Exception ex){
-            Logger.getLogger("Delete users: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
-        throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
-                tx.finish();
-            }
+            Logger.getLogger("deleteUsers: "+ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();    
+            throw new RuntimeException(ex.getMessage());
         }
     }
 
     @Override
-    public void deleteGroups(long[] oids) throws ApplicationObjectNotFoundException {
+    public void deleteGroups(long[] oids, String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("deleteGroups", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             if(oids != null){
                 tx = graphDb.beginTx();
                 for (long id : oids) {
                     Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
-                    if(groupNode == null){
+                    if(groupNode == null)
                         throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %1s",id));
-                    }
+                    
                     cm.removeGroup((String)groupNode.getProperty(Constants.PROPERTY_NAME));
 
                     Iterable<Relationship> relationships = groupNode.getRelationships();
-                    for (Relationship relationship : relationships) {
+                    for (Relationship relationship : relationships) 
                         relationship.delete();
-                    }
+                    
                     groupIndex.remove(groupNode);
                     groupNode.delete();
                 }
                 tx.success();
-            }
-        }catch(Exception ex){
-            Logger.getLogger("Delete groups: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
-        throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
                 tx.finish();
             }
+        }catch(Exception ex){
+            Logger.getLogger("deleteGroups: "+ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();
+            throw new RuntimeException(ex.getMessage());
         }
     }
 
     @Override
-    public RemoteBusinessObjectLight getListTypeItem(String listTypeName) 
-            throws MetadataObjectNotFoundException, InvalidArgumentException{
+    public RemoteBusinessObjectLight getListTypeItem(String listTypeName, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getListTypeItem", ipAddress, sessionId);
+        
         if (listTypeName == null)
            throw new InvalidArgumentException("Item name and class name can not be null", Level.INFO);
         GenericObjectList listType = cm.getListType(listTypeName);
@@ -591,19 +678,21 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     
    //List type related methods
     @Override
-   public long createListTypeItem(String className, String name, String displayName)
-            throws MetadataObjectNotFoundException, InvalidArgumentException {
+   public long createListTypeItem(String className, String name, String displayName, String ipAddress, String sessionId)
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
        
+       validateCall("createListTypeItem", ipAddress, sessionId);
+        
        if (name == null || className == null){
            throw new InvalidArgumentException("Item name and class name can not be null", Level.INFO);
        }
        
        Node classNode = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
        if (classNode ==  null){
-           throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %1s",className));
+           throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s",className));
        }
-       if (!cm.isSubClass("GenericObjectList", className)){
-            throw new InvalidArgumentException(String.format("Class %1s is not a list type", className), Level.WARNING);
+       if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className)){
+            throw new InvalidArgumentException(String.format("Class %s is not a list type", className), Level.WARNING);
        }
        Transaction tx = null;
        try{
@@ -615,53 +704,57 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
            newItem.createRelationshipTo(classNode, RelTypes.INSTANCE_OF);
            listTypeItemsIndex.putIfAbsent(newItem, Constants.PROPERTY_ID, newItem.getId());
            tx.success();
+           tx.finish();
            GenericObjectList newListType = new GenericObjectList(newItem.getId(), name);
            cm.putListType(newListType);
            return newItem.getId();
         }catch(Exception ex){
             Logger.getLogger("createListTypeItem: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     @Override
-    public void deleteListTypeItem(String className, long oid, boolean realeaseRelationships) throws MetadataObjectNotFoundException, OperationNotPermittedException, ObjectNotFoundException{
+    public void deleteListTypeItem(String className, long oid, boolean realeaseRelationships, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, OperationNotPermittedException, ObjectNotFoundException, NotAuthorizedException {
+       
+        validateCall("deleteListTypeItem", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
-            if (!cm.isSubClass("GenericObjectList", className))
-                throw new InvalidArgumentException(String.format("Class %1s is not a list type", className), Level.WARNING);
+            if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className))
+                throw new InvalidArgumentException(String.format("Class %s is not a list type", className), Level.WARNING);
 
             Node instance = getInstanceOfClass(className, oid);
             Util.deleteObject(instance, realeaseRelationships);
 
             tx.success();
+            tx.finish();
             cm.removeListType(className);
             
         }catch(Exception ex){
             Logger.getLogger("deleteListTypeItem: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     @Override
-    public List<RemoteBusinessObjectLight> getListTypeItems(String className) throws MetadataObjectNotFoundException, InvalidArgumentException{
+    public List<RemoteBusinessObjectLight> getListTypeItems(String className, String ipAddress, String sessionId)
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getListTypeItems", ipAddress, sessionId);
+        
         Node classNode = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
         if (classNode ==  null)
-            throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %1s",className));
+            throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s",className));
 
-        if (!Util.isSubClass("GenericObjectList", classNode))
-            throw new InvalidArgumentException(String.format("Class %1s is not a list type", className), Level.WARNING);
+        if (!Util.isSubClass(Constants.CLASS_GENERICOBJECTLIST, classNode))
+            throw new InvalidArgumentException(String.format("Class %s is not a list type", className), Level.WARNING);
 
         Iterable<Relationship> childrenAsRelationships = classNode.getRelationships(RelTypes.INSTANCE_OF);
         List<RemoteBusinessObjectLight> children = new ArrayList<RemoteBusinessObjectLight>();
@@ -674,8 +767,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<ClassMetadataLight> getInstanceableListTypes() throws ApplicationObjectNotFoundException {
-        Node genericObjectListNode = classIndex.get(Constants.PROPERTY_NAME, "GenericObjectList").getSingle();
+    public List<ClassMetadataLight> getInstanceableListTypes(String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("getInstanceableListTypes", ipAddress, sessionId);
+        
+        Node genericObjectListNode = classIndex.get(Constants.PROPERTY_NAME, Constants.CLASS_GENERICOBJECTLIST).getSingle();
 
         if (genericObjectListNode == null)
             throw new ApplicationObjectNotFoundException("ClassGenericObjectList not found");
@@ -702,7 +799,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public long createObjectRelatedView(long oid, String objectClass, String name, String description, int viewType, byte[] structure, byte[] background) throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException {
+    public long createObjectRelatedView(long oid, String objectClass, String name, String description, int viewType, 
+        byte[] structure, byte[] background, String ipAddress, String sessionId) 
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("createObjectRelatedView", ipAddress, sessionId);
+        
         if (objectClass == null)
             throw new InvalidArgumentException("The root object can not be related to any view", Level.INFO);
         
@@ -730,7 +832,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     Util.saveFile(props.getProperty("background_path"), fileName, background);
                     viewNode.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
                 }catch(Exception ex){
-                    throw new InvalidArgumentException(String.format("Background image for view %1s couldn't be saved",oid), Level.SEVERE);
+                    throw new InvalidArgumentException(String.format("Background image for view %s could not be saved",oid), Level.SEVERE);
                 }
             }
 
@@ -738,20 +840,22 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 viewNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
 
             tx.success();
+            tx.finish();
             return viewNode.getId();
         }catch (Exception ex){
             Logger.getLogger("createObjectRelatedView: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     @Override
-    public long createGeneralView(int viewType, String name, String description, byte[] structure, byte[] background) throws InvalidArgumentException {
+    public long createGeneralView(int viewType, String name, String description, byte[] structure, byte[] background, String ipAddress, String sessionId)
+            throws InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("createGeneralView", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -791,7 +895,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public void updateObjectRelatedView(long oid, String objectClass, long viewId, String name, String description, byte[] structure, byte[] background) throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException {
+    public void updateObjectRelatedView(long oid, String objectClass, long viewId, 
+    String name, String description, byte[] structure, byte[] background, String ipAddress, String sessionId)
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("updateObjectRelatedView", ipAddress, sessionId);
+        
         if (objectClass == null)
             throw new InvalidArgumentException("The root object does not have any view", Level.INFO);
         Node instance = getInstanceOfClass(objectClass, oid);
@@ -854,7 +963,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public void updateGeneralView(long oid, String name, String description, byte[] structure, byte[] background) throws InvalidArgumentException, ObjectNotFoundException {
+    public void updateGeneralView(long oid, String name, String description, byte[] structure, byte[] background, String ipAddress, String sessionId)
+            throws InvalidArgumentException, ObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("updateGeneralView", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -883,20 +996,21 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 gView.removeProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME);
 
             tx.success();
+            tx.finish();
             
         }catch (Exception ex){
             Logger.getLogger("updateGeneralView: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     @Override
-    public void deleteGeneralViews(long[] ids) throws ObjectNotFoundException {
+    public void deleteGeneralViews(long[] ids, String ipAddress, String sessionId) throws ObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("deleteGeneralViews", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -906,19 +1020,21 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 gView.delete();
             }
             tx.success();
+            tx.finish();
         }catch (Exception ex){
             Logger.getLogger("deleteGeneralView: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     @Override
-    public ViewObject getObjectRelatedView(long oid, String objectClass, long viewId) throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException {
+    public ViewObject getObjectRelatedView(long oid, String objectClass, long viewId, String ipAddress, String sessionId)
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getObjectRelatedView", ipAddress, sessionId);
+        
         Node instance = getInstanceOfClass(objectClass, oid);
 
         for (Relationship rel : instance.getRelationships(RelTypes.HAS_VIEW, Direction.OUTGOING)){
@@ -949,7 +1065,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<ViewObjectLight> getObjectRelatedViews(long oid, String objectClass, int limit) throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException {
+    public List<ViewObjectLight> getObjectRelatedViews(long oid, String objectClass, int limit, String ipAddress, String sessionId)
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getObjectRelatedViews", ipAddress, sessionId);
+        
         Node instance = getInstanceOfClass(objectClass, oid);
         List<ViewObjectLight> res = new ArrayList<ViewObjectLight>();
         int i = 0;
@@ -969,7 +1089,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<ViewObjectLight> getGeneralViews(int viewType, int limit) throws InvalidArgumentException {
+    public List<ViewObjectLight> getGeneralViews(int viewType, int limit, String ipAddress, String sessionId) 
+            throws InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getGeneralViews", ipAddress, sessionId);
+        
         String cypherQuery = "START gView=node:"+ Constants.INDEX_GENERAL_VIEWS +"('id:*')";
         if (viewType != -1)
             cypherQuery += " WHERE gView."+Constants.PROPERTY_TYPE+"="+viewType;
@@ -998,7 +1122,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public ViewObject getGeneralView(long viewId) throws ObjectNotFoundException {
+    public ViewObject getGeneralView(long viewId, String ipAddress, String sessionId) throws ObjectNotFoundException, NotAuthorizedException {
+        
+        validateCall("getGeneralView", ipAddress, sessionId);
+        
         Node gView = generalViewsIndex.get(Constants.PROPERTY_ID,viewId).getSingle();
 
         if (gView == null)
@@ -1025,35 +1152,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         return aView;
     }
 
-    //Helpers
-    private Node getInstanceOfClass(String className, long oid) throws MetadataObjectNotFoundException, ObjectNotFoundException{
-
-        //if any of the parameters is null, return the dummy root
-        if (className == null){
-            return graphDb.getReferenceNode().getSingleRelationship(RelTypes.DUMMY_ROOT, Direction.BOTH).getEndNode();
-        }
-        Node classNode = classIndex.get(Constants.PROPERTY_NAME,className).getSingle();
-        if (classNode == null){
-            throw new MetadataObjectNotFoundException(String.format("Class %1s can not be found", className));
-        }
-        Iterable<Relationship> instances = classNode.getRelationships(RelTypes.INSTANCE_OF);
-        while (instances.iterator().hasNext()){
-            Node otherSide = instances.iterator().next().getStartNode();
-            if (otherSide.getId() == oid){
-                return otherSide;
-            }
-        }
-        throw new ObjectNotFoundException(className, oid);
-    }
-    
-    
-    
-    //end helpers
-
     //Queries
+    @Override
     public long createQuery(String queryName, long ownerOid, byte[] queryStructure,
-            String description) throws MetadataObjectNotFoundException, InvalidArgumentException{
-
+            String description, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException{
+        
+        validateCall("createQuery", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -1089,9 +1195,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         }
     }
 
+    @Override
     public void saveQuery(long queryOid, String queryName, long ownerOid,
-            byte[] queryStructure, String description) throws MetadataObjectNotFoundException{
+            byte[] queryStructure, String description, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, NotAuthorizedException{
 
+        validateCall("saveQuery", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -1132,7 +1242,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         }
     }
 
-    public void deleteQuery(long queryOid) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+    @Override
+    public void deleteQuery(long queryOid, String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("deleteQuery", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -1160,8 +1275,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<CompactQuery> getQueries(boolean showPublic) 
-            throws ApplicationObjectNotFoundException, InvalidArgumentException{
+    public List<CompactQuery> getQueries(boolean showPublic, String ipAddress, String sessionId) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, NotAuthorizedException{
+        
+        validateCall("getQueries", ipAddress, sessionId);
+        
         List<CompactQuery> queryList = new ArrayList<CompactQuery>();
         IndexHits<Node> queries = queryIndex.query(CompactQuery.PROPERTY_ID, "*");
         for (Node queryNode : queries)
@@ -1188,7 +1306,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public CompactQuery getQuery(long queryOid) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+    public CompactQuery getQuery(long queryOid, String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getQuery", ipAddress, sessionId);
         
         CompactQuery cq =  new CompactQuery();
 
@@ -1218,7 +1339,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<ResultRecord> executeQuery(ExtendedQuery query) throws MetadataObjectNotFoundException, InvalidArgumentException {
+    public List<ResultRecord> executeQuery(ExtendedQuery query, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("executeQuery", ipAddress, sessionId);
         
         CypherQueryBuilder cqb = new CypherQueryBuilder();
         cqb.setClassNodes(getNodesFromQuery(query));
@@ -1227,7 +1351,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         return cqb.getResultList();
     }
     
-    public byte[] getClassHierachy(boolean showAll) throws MetadataObjectNotFoundException, InvalidArgumentException{
+    @Override
+    public byte[] getClassHierachy(boolean showAll, String ipAddress, String sessionId) 
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException{
+        
+        validateCall("getClassHierachy", ipAddress, sessionId);
+        
         ByteArrayOutputStream bas = new ByteArrayOutputStream();
         WAX xmlWriter = new WAX(bas);
         StartTagWAX rootTag = xmlWriter.start("hierarchy");
@@ -1247,10 +1376,32 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
     
     //Pools
-    public long createPool(String name, String description, String instancesOfClass, long owner) throws MetadataObjectNotFoundException, InvalidArgumentException {
+    /**
+     * Creates a pool
+     * @param parentId Parent id. -1 for none
+     * @param name Pool name
+     * @param description Pool description
+     * @param instancesOfClass What kind of elements can be contained in this pool
+     * @return the id of the new pool
+     * @throws MetadataObjectNotFoundException
+     * @throws InvalidArgumentException 
+     */
+    public long createPool(long parentId, String name, String description, String instancesOfClass, String ipAddress, String sessionId)
+            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("createPool", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
+            
+            Node parentNode = null;
+            if (parentId != -1){
+                parentNode = objectIndex.get(Constants.PROPERTY_ID, parentId).getSingle();
+
+                if (parentNode == null)
+                    throw new ObjectNotFoundException("N/A", parentId);
+            }
             
             Node poolNode =  graphDb.createNode();
             if (name != null)
@@ -1260,32 +1411,28 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             
             ClassMetadata classMetadata = cm.getClass(instancesOfClass);
             if (classMetadata == null)
-                throw new MetadataObjectNotFoundException(String.format("Class %1s can not be found", instancesOfClass));
-            
-            Node user = userIndex.get(Constants.PROPERTY_ID, owner).getSingle();
-            if (user == null)
-                throw new InvalidArgumentException(String.format("User with id %1 doesn't exist", owner), Level.SEVERE);
+                throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", instancesOfClass));
             
             poolNode.setProperty(Constants.PROPERTY_CLASS_NAME, instancesOfClass);
-            poolNode.createRelationshipTo(user, RelTypes.OWNS_POOL);
+            
+            if (parentNode != null)
+                poolNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF_SPECIAL);
             
             poolsIndex.putIfAbsent(poolNode, Constants.PROPERTY_ID, poolNode.getId());
             tx.success();
+            tx.finish();
             return poolNode.getId();
-
         }catch(Exception ex){
             Logger.getLogger("createPool: "+ex.getMessage()); //NOI18N
             tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
     /**
      * Creates an object inside a pool
-     * @param poolId Parent pool id
+     * @param poolId Parent pool id. 
      * @param attributeNames Attributes to be set
      * @param attributeValues Attribute values to be set
      * @param templateId Template used to create the object, if applicable. -1 for none
@@ -1294,8 +1441,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
      * @return the id of the newly created object
      */
     @Override
-    public long createPoolItem(long poolId, String className, String[] attributeNames, String[][] attributeValues, long templateId) 
-            throws ApplicationObjectNotFoundException, InvalidArgumentException, ArraySizeMismatchException {
+    public long createPoolItem(long poolId, String className, String[] attributeNames, 
+    String[][] attributeValues, long templateId, String ipAddress, String sessionId) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, ArraySizeMismatchException, NotAuthorizedException {
+        
+        validateCall("createPoolItem", ipAddress, sessionId);
         
         if (attributeNames != null && attributeValues != null){
             if (attributeNames.length != attributeValues.length)
@@ -1308,19 +1458,19 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             Node pool = poolsIndex.get(Constants.PROPERTY_ID, poolId).getSingle();
             
             if (pool == null)
-                throw new ApplicationObjectNotFoundException(String.format("Pool with id %1s can not be found", poolId));
+                throw new ApplicationObjectNotFoundException(String.format("Pool with id %s can not be found", poolId));
             
             if (!pool.hasProperty(Constants.PROPERTY_CLASS_NAME))
                 throw new InvalidArgumentException("This pool has not set his class name attribute", Level.INFO);
             
             Node classNode = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
             if (classNode == null)
-                throw new MetadataObjectNotFoundException(String.format("Class %1s can not be found", className));
+                throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", className));
             
             ClassMetadata classMetadata = cm.getClass(className);
             
             if (!cm.isSubClass((String)pool.getProperty(Constants.PROPERTY_CLASS_NAME), className))
-                throw new InvalidArgumentException(String.format("Class %1s is not subclass of %2s", className, (String)pool.getProperty(Constants.PROPERTY_CLASS_NAME)), Level.OFF);
+                throw new InvalidArgumentException(String.format("Class %s is not subclass of %s", className, (String)pool.getProperty(Constants.PROPERTY_CLASS_NAME)), Level.OFF);
             
             HashMap<String, List<String>> attributes = new HashMap<String, List<String>>();
             if (attributeNames != null && attributeValues != null){
@@ -1334,7 +1484,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             return newObject.getId();
 
         }catch(Exception ex){
-            Logger.getLogger("createPoolItem: "+ex.getMessage()); //NOI18N
+            Logger.getLogger("createPoolItem: " + ex.getMessage()); //NOI18N
             tx.failure();
             throw new RuntimeException(ex.getMessage());
         }finally{
@@ -1343,14 +1493,18 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         }
     }
 
-    public void deletePools(long[] ids) throws InvalidArgumentException {
+    @Override
+    public void deletePools(long[] ids, String ipAddress, String sessionId) throws NotAuthorizedException, InvalidArgumentException {
+        
+        validateCall("deletePools", ipAddress, sessionId);
+        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
             for (long id : ids){
                 Node poolNode = poolsIndex.get(Constants.PROPERTY_ID, id).getSingle();
                 if (poolNode == null)
-                    throw new InvalidArgumentException(String.format("A pool with id %1 does not exist", id),Level.INFO);
+                    throw new InvalidArgumentException(String.format("A pool with id %s does not exist", id),Level.INFO);
                 
                 //Let's delete the objects inside, if possible
                 HashMap<String, long[]> toBeDeleted = new HashMap<String, long[]>();
@@ -1363,7 +1517,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     //    toBeDeleted.put(className, Arrays.asList(toBeDeleted.get(className)). );
                 }
                 
-                bem.deleteObjects(toBeDeleted, false);
+                bem.deleteObjects(toBeDeleted, false, ipAddress, sessionId);
                 
                 for (Relationship rel : poolNode.getRelationships())
                     rel.delete();
@@ -1383,7 +1537,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         }
     }
 
-    public List<RemoteBusinessObjectLight> getPools(int limit) {
+    @Override
+    public List<RemoteBusinessObjectLight> getPools(int limit, String ipAddress, String sessionId) throws NotAuthorizedException{
+        
+        validateCall("getPools", ipAddress, sessionId);
+        
         IndexHits<Node> poolNodes = poolsIndex.query(Constants.PROPERTY_ID, "*");
 
         List<RemoteBusinessObjectLight> pools  = new ArrayList<RemoteBusinessObjectLight>();
@@ -1394,7 +1552,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                      break;
                 i++;
             }
-                
             RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(node.getId(), 
                                     node.hasProperty(Constants.PROPERTY_NAME) ? (String)node.getProperty(Constants.PROPERTY_NAME) : null,
                                     node.hasProperty(Constants.PROPERTY_CLASS_NAME) ? (String)node.getProperty(Constants.PROPERTY_CLASS_NAME) : null);
@@ -1404,12 +1561,16 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         return pools;
     }
     
-    public List<RemoteBusinessObjectLight> getPoolItems(long poolId, int limit) throws ApplicationObjectNotFoundException{
+    @Override
+    public List<RemoteBusinessObjectLight> getPoolItems(long poolId, int limit, String ipAddress, String sessionId)
+            throws ApplicationObjectNotFoundException, NotAuthorizedException{
+        
+        validateCall("getPoolItems", ipAddress, sessionId);
         
         Node poolNode = poolsIndex.get(Constants.PROPERTY_ID, poolId).getSingle();
 
         if (poolNode == null)
-            throw new ApplicationObjectNotFoundException(String.format("The pool with id %1s could not be found", poolId));
+            throw new ApplicationObjectNotFoundException(String.format("The pool with id %s could not be found", poolId));
         
         List<RemoteBusinessObjectLight> poolItems  = new ArrayList<RemoteBusinessObjectLight>();
         
@@ -1430,13 +1591,166 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         return poolItems;
     }
     
+    @Override
+    public List<ActivityLogEntry> getBusinessObjectAuditTrail(String objectClass, long objectId, int limit, String ipAddress, String sessionId) 
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+        
+        validateCall("getBusinessObjectAuditTrail", ipAddress, sessionId);
+        
+        if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, objectClass))
+            throw new InvalidArgumentException(String.format("Class %s is not subclass of %s",
+                    objectClass, Constants.CLASS_INVENTORYOBJECT), Level.INFO);
+        Node instanceNode = getInstanceOfClass(objectClass, objectId);
+        List<ActivityLogEntry> log = new ArrayList<ActivityLogEntry>();
+        int i = 0;
+        for (Relationship rel : instanceNode.getRelationships(RelTypes.HAS_HISTORY_ENTRY)){
+            if (limit != 0){
+                if (i < limit)
+                    i++;
+                else
+                    break;
+            }
+            Node logEntry = rel.getEndNode();
+            log.add(new ActivityLogEntry(logEntry.getId(), instanceNode.getId(), (Integer)logEntry.getProperty(Constants.PROPERTY_TYPE), 
+                    (String)logEntry.getSingleRelationship(RelTypes.PERFORMED_BY, Direction.OUTGOING).getEndNode().getProperty(Constants.PROPERTY_NAME), 
+                    (Long)logEntry.getProperty(Constants.PROPERTY_CREATION_DATE), 
+                    logEntry.hasProperty(Constants.PROPERTY_AFFECTED_PROPERTY) ? (String)logEntry.getProperty(Constants.PROPERTY_AFFECTED_PROPERTY) : null, 
+                    logEntry.hasProperty(Constants.PROPERTY_OLD_VALUE) ? (String)logEntry.getProperty(Constants.PROPERTY_OLD_VALUE) :  null, 
+                    logEntry.hasProperty(Constants.PROPERTY_NEW_VALUE) ? (String)logEntry.getProperty(Constants.PROPERTY_NEW_VALUE) : null, 
+                    logEntry.hasProperty(Constants.PROPERTY_NOTES) ? (String)logEntry.getProperty(Constants.PROPERTY_NOTES) : null));
+        }
+        return log;
+    }
+    
+    /**
+     * Retrieves the list of activity log entries
+     * @param page current page
+     * @param limit limit of results per page. 0 to retrieve them all
+     * @return The list of activity log entries
+     */
+    @Override
+    public List<ActivityLogEntry> getGeneralActivityAuditTrail(int page, int limit, String ipAddress, String sessionId) throws NotAuthorizedException{
+        Node generalActivityLogNode = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES).
+                get(Constants.PROPERTY_NAME, Constants.NODE_GENERAL_ACTIVITY_LOG).getSingle();
+
+        validateCall("getGeneralActivityAuditTrail", ipAddress, sessionId);
+        
+        List<ActivityLogEntry> log = new ArrayList<ActivityLogEntry>();
+        int i = 0, toBeSkipped = 0;
+        int lowerLimit = page * limit - limit;
+        for (Relationship rel : generalActivityLogNode.getRelationships(Direction.INCOMING,RelTypes.CHILD_OF_SPECIAL)){
+            if (toBeSkipped < lowerLimit){
+                toBeSkipped++;
+                continue;
+            }
+            
+            if (limit != 0){
+                if (i < limit)
+                    i++;
+                else
+                    break;
+            }
+            Node logEntry = rel.getStartNode();
+            Node relatedObject = logEntry.hasRelationship(Direction.INCOMING, RelTypes.HAS_HISTORY_ENTRY) ?
+                                    logEntry.getSingleRelationship(RelTypes.HAS_HISTORY_ENTRY, Direction.INCOMING).getStartNode() : null;
+            
+            log.add(new ActivityLogEntry(logEntry.getId(), relatedObject == null ? 0 : relatedObject.getId(), (Integer)logEntry.getProperty(Constants.PROPERTY_TYPE), 
+                    (String)logEntry.getSingleRelationship(RelTypes.PERFORMED_BY, Direction.OUTGOING).getEndNode().getProperty(Constants.PROPERTY_NAME), 
+                    (Long)logEntry.getProperty(Constants.PROPERTY_CREATION_DATE), 
+                    logEntry.hasProperty(Constants.PROPERTY_AFFECTED_PROPERTY) ? (String)logEntry.getProperty(Constants.PROPERTY_AFFECTED_PROPERTY) : null, 
+                    logEntry.hasProperty(Constants.PROPERTY_OLD_VALUE) ? (String)logEntry.getProperty(Constants.PROPERTY_OLD_VALUE) :  null, 
+                    logEntry.hasProperty(Constants.PROPERTY_NEW_VALUE) ? (String)logEntry.getProperty(Constants.PROPERTY_NEW_VALUE) : null, 
+                    logEntry.hasProperty(Constants.PROPERTY_NOTES) ? (String)logEntry.getProperty(Constants.PROPERTY_NOTES) : null));
+        }
+        return log;
+    }
+    
+    @Override
+    public void validateCall(String methodName, String ipAddress, String sessionId)
+            throws NotAuthorizedException{
+        Session aSession = sessions.get(sessionId);
+//        try {
+//        if(cm!=null){
+//            for (Privilege privilege : cm.getUser(user.getUserName()).getPrivileges()){
+//                if(privilege.getMethodName().contentEquals(methodName))
+//                    return;
+//            }
+//            for (GroupProfile groupProfile : cm.getUser(user.getUserName()).getGroups()) {
+//                for (Privilege privilege : groupProfile.getPrivileges()){
+//                    if(privilege.getMethodName().equals(methodName))
+//                        return;
+//                }
+//            }
+//        }
+            if(aSession == null)
+                throw new NotAuthorizedException("Invalid session ID");
+            if (!aSession.getIpAddress().equals(ipAddress))
+                throw new NotAuthorizedException(String.format("The IP %s does not match with the one registered for this session", ipAddress));
+//            Node userNode = userIndex.get(Constants.PROPERTY_ID, aSession.getUser().getId()).getSingle();
+//            if(userNode == null)
+//                throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s",aSession.getUser().getId()));
+//            
+//            Iterable<Relationship> groupUsersRels = userNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING);
+//            for (Relationship groupUsersRel : groupUsersRels) {
+//                Node groupNode = groupUsersRel.getEndNode();
+//                for(Relationship rel : groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
+//                    if(methodName.equals((String)rel.getStartNode().getProperty(Constants.PROPERTY_NAME)))
+//                        return;
+//            }
+//            for(Relationship userPrivilegesRel: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING)){
+//                if(methodName.equals((String)(userPrivilegesRel.getStartNode().getProperty(Constants.PROPERTY_NAME))))
+//                    return;
+//            }
+//            throw new NotAuthorizedException(methodName,sessions.get(sessionId).getUser().getUserName());
+//        }catch(Exception ex){
+//            throw new RuntimeException(ex.getMessage());
+//        }
+    }
+
+    @Override
+    public Session createSession(String userName, String password, String IPAddress) throws ApplicationObjectNotFoundException {
+        if (userName == null || password == null)
+            throw  new ApplicationObjectNotFoundException("User or Password can not be null");
+        
+        Node userNode = userIndex.get(Constants.PROPERTY_NAME,userName).getSingle();
+        if (userNode == null)
+            throw new ApplicationObjectNotFoundException("User does not exist");
+        
+        if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
+            throw new ApplicationObjectNotFoundException("The user is not enable to peform operations");
+        
+        if (Util.getMD5Hash(password).equals(userNode.getProperty(Constants.PROPERTY_PASSWORD))){
+            UserProfile user = Util.createUserProfileFromNode(userNode);
+            cm.putUser(user);
+        }
+        else
+            throw  new ApplicationObjectNotFoundException("Wrong Password");
+        for (Session aSession : sessions.values()){
+            if (aSession.getUser().getUserName().equals(userName)){
+                Logger.getLogger("createSession").log(Level.INFO, String.format("An existing session for user %1s has been dropped", aSession.getUser().getUserName()));
+                sessions.remove(aSession.getToken());
+                break;
+            }
+        }
+        Session newSession = new Session(Util.createUserProfileFromNode(userNode), IPAddress);
+        sessions.put(newSession.getToken(), newSession);
+        return newSession;
+    }
+
+    @Override
+    public void closeSession(String sessionId, String remoteAddress) throws NotAuthorizedException {
+        Session aSession = sessions.get(sessionId);
+        if (aSession == null)
+            throw new NotAuthorizedException("Invalid session ID");
+        if (!aSession.getIpAddress().equals(remoteAddress))
+            throw new NotAuthorizedException(String.format("The IP %s does not match with the one registered for this session", remoteAddress));
+        sessions.remove(sessionId);
+    }
+            
     public void setBusinessEntityManager(BusinessEntityManagerImpl bem) {
         this.bem = bem;
     }
-
-    /**
-     * Helpers
-     */
+    // Helpers
     /**
      * recursive method used to generate a single "class" node (see the <a href="http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_describe_the_data_model">wiki</a> for details)
      * @param classNode Node representing the class to be added
@@ -1512,7 +1826,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         subclassesTag.end();
         currentTag.end();
     }
-    
     /**
      * Reads a ExtendedQuery looking for the classes involved in the query and returns all class nodes
      * @param query
@@ -1528,9 +1841,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         
         return classNodes;
     }
-
-    //Helpers
-     private String readJoins(List<String> l, ExtendedQuery query){
+    
+    private String readJoins(List<String> l, ExtendedQuery query){
         
         String className;
 
@@ -1548,6 +1860,24 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             l.add(className);
         return className;
     }
-     
     
+    private Node getInstanceOfClass(String className, long oid) throws MetadataObjectNotFoundException, ObjectNotFoundException, NotAuthorizedException{
+        //if any of the parameters is null, return the dummy root
+        if (className == null){
+            return graphDb.getReferenceNode().getSingleRelationship(RelTypes.DUMMY_ROOT, Direction.BOTH).getEndNode();
+        }
+        Node classNode = classIndex.get(Constants.PROPERTY_NAME,className).getSingle();
+        if (classNode == null){
+            throw new MetadataObjectNotFoundException(String.format("Class %1s can not be found", className));
+        }
+        Iterable<Relationship> instances = classNode.getRelationships(RelTypes.INSTANCE_OF);
+        while (instances.iterator().hasNext()){
+            Node otherSide = instances.iterator().next().getStartNode();
+            if (otherSide.getId() == oid){
+                return otherSide;
+            }
+        }
+        throw new ObjectNotFoundException(className, oid);
+    }
+    //end Helpers
 }

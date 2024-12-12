@@ -25,13 +25,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.views.topology.scene.ObjectConnectionWidget;
 import org.inventory.views.topology.scene.TopologyViewScene;
 
 
 /**
- * A edge menu
+ * The menu associated to an edge
  * @author Adrian Martinez <adrian.martinez@kuwaiba.org>
  */
 
@@ -49,7 +48,7 @@ public class ConnectionMenu implements PopupMenuProvider, ActionListener {
 
     public ConnectionMenu(TopologyViewScene scene) {
         this.scene = scene;
-        menu = new JPopupMenu("Connecttion Menu"); //NOI18N
+        menu = new JPopupMenu("Connection Menu"); //NOI18N
         JMenuItem item;
 
         item = new JMenuItem("Delete Control Point");

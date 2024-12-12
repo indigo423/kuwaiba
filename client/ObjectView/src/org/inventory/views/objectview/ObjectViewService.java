@@ -20,20 +20,18 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.communications.SharedInformation;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.views.LocalObjectView;
+import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.api.visual.LocalObjectView;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
 import org.inventory.core.services.utils.Utils;
-import org.inventory.views.objectview.scene.ObjectConnectionWidget;
 import org.inventory.views.objectview.scene.ObjectNodeWidget;
 import org.inventory.views.objectview.scene.ViewBuilder;
 import org.inventory.views.objectview.scene.ViewScene;
@@ -54,8 +52,8 @@ public class ObjectViewService implements LookupListener{
     private CommunicationsStub com;
     private ViewBuilder viewBuilder;
 
-    public ObjectViewService(ObjectViewTopComponent _vrtc){
-        this.vrtc = _vrtc;
+    public ObjectViewService(ObjectViewTopComponent vrtc){
+        this.vrtc = vrtc;
         this.com = CommunicationsStub.getInstance();
     }
 
@@ -63,7 +61,7 @@ public class ObjectViewService implements LookupListener{
      * Add this instance as listener for the selected nodes in the NavigationTree.
      * Should be called when the TopComponent is opened
      */
-    public void initializeLookListener(){
+    public void initializeLookupListener(){
         selectedNodes = Utilities.actionsGlobalContext().lookupResult(LocalObjectLight.class);
         selectedNodes.addLookupListener(this);
         if (selectedNodes.allInstances().size() == 1) //There's a node already selected
@@ -82,6 +80,7 @@ public class ObjectViewService implements LookupListener{
      * Updates the view when a new object is selected
      * @param ev
      */
+    @Override
     public void resultChanged(LookupEvent ev) {
         Lookup.Result lookupResult = (Lookup.Result)ev.getSource();
         if(lookupResult.allInstances().size() == 1){
@@ -97,14 +96,10 @@ public class ObjectViewService implements LookupListener{
            vrtc.setHtmlDisplayName(null); //Clear the displayname in case it was set to another value
 
             //We clean the scene...
-           vrtc.getScene().getNodesLayer().removeChildren();
-           vrtc.getScene().getEdgesLayer().removeChildren();
-           vrtc.getScene().getBackgroundLayer().removeChildren();
-           vrtc.getScene().getInteractionLayer().removeChildren();
-           vrtc.getScene().getLabelsLayer().removeChildren();
+           vrtc.getScene().clear();
 
            if (myObject.getOid() != -1){ //Other nodes than the root one
-               if(!com.getLightMetaForClass(myObject.getClassName(), false).isViewable()){
+               if(!com.getMetaForClass(myObject.getClassName(), false).isViewable()){
                    vrtc.getNotifier().showStatusMessage("This object doesn't have any view", false);
                    disableView();
                    return;
@@ -134,7 +129,7 @@ public class ObjectViewService implements LookupListener{
        
        if(views.isEmpty()){ //There are no saved views
            List<LocalObjectLight> myChildren = com.getObjectChildren(myObject.getOid(), com.getMetaForClass(myObject.getClassName(),false).getOid());
-           List<LocalObject> myConnections = com.getChildrenOfClass(myObject.getOid(),myObject.getClassName(), SharedInformation.CLASS_GENERICCONNECTION);
+           List<LocalObject> myConnections = com.getChildrenOfClass(myObject.getOid(),myObject.getClassName(), Constants.CLASS_GENERICCONNECTION);
            //TODO: Change for a ViewFactory
            viewBuilder = new ViewBuilder(null, vrtc.getScene());
            viewBuilder.buildDefaultView(myChildren, myConnections);
@@ -198,7 +193,7 @@ public class ObjectViewService implements LookupListener{
             long viewId = com.createObjectRelatedView(vrtc.getScene().getCurrentObject().getOid(),
                     vrtc.getScene().getCurrentObject().getClassName(), null, null,0, viewStructure, vrtc.getScene().getBackgroundImage());
             if (viewId != -1){ //NOI18N
-                vrtc.getScene().setCurrentView(LocalStuffFactory.createLocalObjectViewLight(viewId, null, null,0));
+                vrtc.getScene().setCurrentView(new LocalObjectViewLight(viewId, null, null,0));
                 vrtc.setHtmlDisplayName(vrtc.getDisplayName());
             }
             else{
@@ -218,26 +213,17 @@ public class ObjectViewService implements LookupListener{
         List<LocalObjectLight> childrenNodes = com.getObjectChildren(vrtc.getScene().getCurrentObject().getOid(),
                 com.getMetaForClass(vrtc.getScene().getCurrentObject().getClassName(), false).getOid());
         List<LocalObject> childrenEdges = com.getChildrenOfClass(vrtc.getScene().getCurrentObject().getOid(),
-                vrtc.getScene().getCurrentObject().getClassName(),SharedInformation.CLASS_GENERICCONNECTION);
+                vrtc.getScene().getCurrentObject().getClassName(),Constants.CLASS_GENERICCONNECTION);
+
+        Collection[] nodesIntersection = Utils.inverseIntersection(childrenNodes, vrtc.getScene().getNodes());
+        Collection[] edgesIntersection = Utils.inverseIntersection(childrenEdges, vrtc.getScene().getEdges());
         
-        List<LocalObjectLight> currentNodes = new ArrayList<LocalObjectLight>();
-        List<LocalObjectLight> currentEdges = new ArrayList<LocalObjectLight>();
-
-        for (Widget widget : vrtc.getScene().getNodesLayer().getChildren())
-            currentNodes.add(((ObjectNodeWidget)widget).getObject());
-
-        for (Widget widget : vrtc.getScene().getEdgesLayer().getChildren())
-            currentEdges.add(((ObjectConnectionWidget)widget).getObject());
-
-        Object[] nodesIntersection = Utils.inverseIntersection(childrenNodes, currentNodes);
-        Object[] edgesIntersection = Utils.inverseIntersection(childrenEdges, currentEdges);
-        
-        viewBuilder.refreshView((List<LocalObjectLight>)nodesIntersection[0], (List<LocalObjectLight>)edgesIntersection[0],
-                (List<LocalObjectLight>)nodesIntersection[1], (List<LocalObjectLight>)edgesIntersection[1]);
+        viewBuilder.refreshView((Collection<LocalObjectLight>)nodesIntersection[0], (Collection<LocalObjectLight>)edgesIntersection[0],
+                (Collection<LocalObjectLight>)nodesIntersection[1], (Collection<LocalObjectLight>)edgesIntersection[1]);
         vrtc.getScene().validate();
         vrtc.getScene().repaint();
-        if (!((List)nodesIntersection[0]).isEmpty() || !((List)nodesIntersection[1]).isEmpty()
-                || !((List)edgesIntersection[0]).isEmpty() || !((List)edgesIntersection[1]).isEmpty())
+        if (!nodesIntersection[0].isEmpty() || !nodesIntersection[1].isEmpty()
+                || !edgesIntersection[0].isEmpty() || !edgesIntersection[1].isEmpty())
             vrtc.getScene().fireChangeEvent(new ActionEvent(this, ViewScene.SCENE_CHANGE, "Refresh result"));
     }
 }

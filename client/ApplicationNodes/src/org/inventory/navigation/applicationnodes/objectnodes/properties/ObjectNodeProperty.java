@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012, 2013 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.Date;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.factories.ObjectFactory;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.LocalObjectListItem;
+import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.util.Constants;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
@@ -35,7 +34,7 @@ import org.openide.util.Lookup;
 /**
  * Provides a valid representation of LocalObjects attributes as Properties,
  * as LocalObject is just a proxy and can't be a bean itself
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListener{
     private Object value;
@@ -45,30 +44,30 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
     /**
      * This constructor is called when the type is anything but a list
      */
-    public ObjectNodeProperty(String _name, Class _valueType, Object _value,
-            String _displayName,String _toolTextTip,ObjectNode _node) {
-        super(_name,_valueType,_displayName,_toolTextTip);
-        this.setName(_name);
-        this.value = _value;
-        this.node = _node;
-        this.getPropertyEditor().addPropertyChangeListener(this);
+    public ObjectNodeProperty(String name, Class valueType, Object value,
+            String displayName,String toolTextTip,ObjectNode node) {
+        super(name,valueType,displayName,toolTextTip);
+        this.setName(name);
+        this.value = value;
+        this.node = node;
+        getPropertyEditor().addPropertyChangeListener(this);
     }
 
     /**
      * This constructor is called when the property is a list
-     * @param _name
+     * @param name
      */
-    public ObjectNodeProperty(String _name, Class _valueType, Object _value,
-            String _displayName,String _toolTextTip, List<LocalObjectListItem> _list, ObjectNode _node) {
-        super(_name,_valueType,_displayName,_toolTextTip);
-        if (_value != null)
-            this.value = _value;
+    public ObjectNodeProperty(String name, Class valueType, Object value,
+            String displayName,String toolTextTip, List<LocalObjectListItem> list, ObjectNode node) {
+        super(name,valueType,displayName,toolTextTip);
+        if (value != null)
+            this.value = value;
         else
             //If it is a null value, we create a dummy null value from the generic method available in the interface
-            this.value = ObjectFactory.createNullItem();
-        this.list = _list;
-        this.node = _node;
-        this.getPropertyEditor().addPropertyChangeListener(this);
+            this.value = new LocalObjectListItem();
+        this.list = list;
+        this.node = node;
+        getPropertyEditor().addPropertyChangeListener(this);
     }
 
     @Override
@@ -79,15 +78,15 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         try{
-            LocalObject update = Lookup.getDefault().lookup(LocalObject.class);
+            LocalObject update;
             
             if (t instanceof LocalObjectListItem)
-                update.setLocalObject(node.getObject().getClassName(),
-                    new String[]{this.getName()}, new Object[]{((LocalObjectListItem)t).getOid()});
+                update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
+                        new String[]{this.getName()}, new Object[]{((LocalObjectListItem)t).getOid()});
             else
-                update.setLocalObject(node.getObject().getClassName(),
-                    new String[]{this.getName()}, new Object[]{t});
-            update.setOid(node.getObject().getOid());
+                update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
+                        new String[]{this.getName()}, new Object[]{t});
+                
             if(!CommunicationsStub.getInstance().saveObject(update))
                 throw new Exception(CommunicationsStub.getInstance().getError());
             else
@@ -95,7 +94,6 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
             
             if (node instanceof ListTypeItemNode)
                 CommunicationsStub.getInstance().getList(node.getObject().getClassName(), true, true);
-            
         }catch(Exception e){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("Object update", NotificationUtil.ERROR, "An error occurred while updating this object: "+e.getMessage());
@@ -131,7 +129,6 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
         //Dates are read only  by now until we integrate a date picker
         if (getValueType().equals(Date.class))
             return false;
-        
         return true;
     }
 }

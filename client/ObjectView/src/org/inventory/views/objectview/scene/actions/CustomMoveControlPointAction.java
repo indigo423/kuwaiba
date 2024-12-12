@@ -63,7 +63,7 @@ import org.inventory.views.objectview.scene.ViewScene;
  * copy of org.netbeans.modules.visual.action.MoveControlPointAction since this is not
  * reachable from the current code.
  * This class was licensed under CDDL and keeps the licensing
- * @author Alex, modified by Charles Edward Bedon Cortazar <charles.bedon@zoho.com> for project Kuwaiba 2010
+ * @author Alex, modified by Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org> for project Kuwaiba 2010
  */
 public final class CustomMoveControlPointAction extends WidgetAction.LockedAdapter {
 

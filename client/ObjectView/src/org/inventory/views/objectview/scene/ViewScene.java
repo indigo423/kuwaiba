@@ -27,16 +27,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.inventory.communications.SharedInformation;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
 import org.inventory.core.services.utils.Utils;
 import org.inventory.views.objectview.scene.actions.CustomAddRemoveControlPointAction;
 import org.inventory.views.objectview.scene.actions.CustomMoveAction;
 import org.inventory.views.objectview.scene.actions.CustomMoveControlPointAction;
-import org.inventory.views.objectview.scene.menus.EdgeMenu;
+import org.inventory.views.objectview.scene.menus.ObjectWidgetMenu;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.graph.GraphScene;
 import org.netbeans.api.visual.model.ObjectSceneEvent;
@@ -54,8 +53,7 @@ import org.netbeans.api.visual.widget.Widget;
  * This is the main scene for an object's view
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
-
+public final class ViewScene extends GraphScene<LocalObjectLight, LocalObjectLight>{
     /**
      * This layer is used to paint the auxiliary elements 
      */
@@ -104,10 +102,6 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      */
     private LabelInplaceTextEditor inplaceEditor = new LabelInplaceTextEditor();
     /**
-     * Popup menu used for edges
-     */
-    private EdgeMenu edgeMenu = new EdgeMenu();
-    /**
      * Object owning the current view
      */
     private LocalObjectLight currentObject;
@@ -154,9 +148,10 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         myConnectionProvider = new PhysicalConnectionProvider();
         
         addChild(backgroundLayer);
-        addChild(nodesLayer);
         addChild(edgesLayer);
+        addChild(nodesLayer);
         addChild(labelsLayer);
+	addChild(interactionLayer);
         
         getActions().addAction(ActionFactory.createZoomAction());
         getActions().addAction(ActionFactory.createPanAction());
@@ -164,17 +159,26 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         setActiveTool(ACTION_SELECT);
         addObjectSceneListener(new ObjectSceneListener() {
 
+            @Override
             public void objectAdded(ObjectSceneEvent ose, Object o) {}
+            @Override
             public void objectRemoved(ObjectSceneEvent ose, Object o) {}
+            @Override
             public void objectStateChanged(ObjectSceneEvent ose, Object o, ObjectState os, ObjectState os1) {}
+            @Override
             public void selectionChanged(ObjectSceneEvent ose, Set<Object> oldSelection, Set<Object> newSelection) {
                 if (newSelection.size() == 1){
-                    fireChangeEvent(new ActionEvent(newSelection.iterator().next(),
-                            SCENE_OBJECTSELECTED, "object-selected-operation"));
+                    Widget selectedWidget = findWidget(newSelection.iterator().next());
+                    if (selectedWidget instanceof SelectableWidget)
+                        fireChangeEvent(new ActionEvent(((SelectableWidget)selectedWidget).getNode(),
+                                SCENE_OBJECTSELECTED, "object-selected-operation"));
                 }
             }
+            @Override
             public void highlightingChanged(ObjectSceneEvent ose, Set<Object> set, Set<Object> set1) {}
+            @Override
             public void hoverChanged(ObjectSceneEvent ose, Object o, Object o1) {}
+            @Override
             public void focusChanged(ObjectSceneEvent ose, Object o, Object o1) {}
         }, ObjectSceneEventType.OBJECT_SELECTION_CHANGED);
         this.notifier = notifier;
@@ -187,12 +191,18 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      */
     @Override
     protected Widget attachNodeWidget(LocalObjectLight node) {
-        return null;
+        ObjectNodeWidget widget = new ObjectNodeWidget(this, node);
+        widget.getActions().addAction(ActionFactory.createPopupMenuAction(new ObjectWidgetMenu()));
+        nodesLayer.addChild(widget);
+        return widget;
     }
 
     @Override
-    protected Widget attachEdgeWidget(LocalObject edge) {
-        return null;
+    protected Widget attachEdgeWidget(LocalObjectLight edge) {
+        ObjectConnectionWidget widget = new ObjectConnectionWidget(this, edge, freeRouter);
+        widget.getActions().addAction(ActionFactory.createPopupMenuAction(new ObjectWidgetMenu()));
+        edgesLayer.addChild(widget);
+        return widget;
     }
 
     /**
@@ -202,11 +212,11 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      * @param sourceNode
      */
     @Override
-    protected void attachEdgeSourceAnchor(LocalObject edge, LocalObjectLight oldSourceNode, LocalObjectLight sourceNode) {
+    protected void attachEdgeSourceAnchor(LocalObjectLight edge, LocalObjectLight oldSourceNode, LocalObjectLight sourceNode) {
     }
 
     @Override
-    protected void attachEdgeTargetAnchor(LocalObject edge, LocalObjectLight oldTargetNode, LocalObjectLight targetNode) {
+    protected void attachEdgeTargetAnchor(LocalObjectLight edge, LocalObjectLight oldTargetNode, LocalObjectLight targetNode) {
     }
 
     public LayerWidget getInteractionLayer() {
@@ -264,10 +274,6 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
     public Router getFreeRouter() {
         return freeRouter;
     }
-
-    public EdgeMenu getEdgeMenu() {
-        return edgeMenu;
-    }
     
     public PhysicalConnectionProvider getConnectionProvider(){
         return this.myConnectionProvider;
@@ -277,7 +283,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         synchronized (getSceneAnimator()) {
             double zoom = getSceneAnimator().isAnimatingZoomFactor () ? getSceneAnimator().getTargetZoomFactor () : getZoomFactor ();
             if(zoom < 4){
-                getSceneAnimator().animateZoomFactor (zoom + 0.5);
+                getSceneAnimator().animateZoomFactor (zoom + 0.1);
                 validate();
             }
         }
@@ -287,7 +293,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         synchronized (getSceneAnimator()) {
             double zoom = getSceneAnimator().isAnimatingZoomFactor () ? getSceneAnimator().getTargetZoomFactor () : getZoomFactor ();
             if(zoom > 0)
-                getSceneAnimator().animateZoomFactor (zoom - 0.5);
+                getSceneAnimator().animateZoomFactor (zoom - 0.1);
         }
     }
 
@@ -322,9 +328,13 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
     }
 
     public void clear(){
-        List myClone = new ArrayList(getObjects());
-        for(Object obj : myClone)
-            removeObject(obj);
+        List<LocalObjectLight> clonedNodes = new ArrayList<LocalObjectLight>(getNodes());
+        List<LocalObjectLight> clonedEdges = new ArrayList<LocalObjectLight>(getEdges());
+        
+        for(LocalObjectLight lol : clonedNodes)
+            removeNode(lol);
+        for(LocalObjectLight lol : clonedEdges)
+            removeEdge(lol);
 
         moveAction.clearActionListeners();
         addRemoveControlPointAction.clearActionListeners();
@@ -361,7 +371,7 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         ByteArrayOutputStream bas = new ByteArrayOutputStream();
         WAX xmlWriter = new WAX(bas);
         StartTagWAX mainTag = xmlWriter.start("view");
-        mainTag.attr("version", SharedInformation.VIEW_FORMAT_VERSION); //NOI18N
+        mainTag.attr("version", Constants.VIEW_FORMAT_VERSION); //NOI18N
         //TODO: Get the class name from some else
         mainTag.start("class").text("DefaultView").end();
         StartTagWAX nodesTag = mainTag.start("nodes");
@@ -377,7 +387,13 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
             StartTagWAX edgeTag = edgesTag.start("edge");
             edgeTag.attr("id", ((ObjectConnectionWidget)edgeWidget).getObject().getOid());
             edgeTag.attr("class", ((ObjectConnectionWidget)edgeWidget).getObject().getClassName());
+            //I haven't managed to find out why sometimes the view gets screwed. This is a dirty
+            //"solution", but I expect to solve it once we rewrite this module
+            if (((ObjectConnectionWidget)edgeWidget).getSourceAnchor() == null)
+                continue;
             edgeTag.attr("aside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
+            if (((ObjectConnectionWidget)edgeWidget).getTargetAnchor() == null)
+                continue;
             edgeTag.attr("bside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
             for (Point point : ((ObjectConnectionWidget)edgeWidget).getControlPoints())
                 edgeTag.start("controlpoint").attr("x", point.x).attr("y", point.y).end();

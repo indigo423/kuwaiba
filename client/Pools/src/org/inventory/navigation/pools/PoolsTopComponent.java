@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.ActionMap;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.behaviors.RefreshableTopComponent;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
@@ -33,6 +33,7 @@ import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
 import org.openide.nodes.Node;
 import org.openide.util.NbBundle;
+import org.openide.windows.Mode;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
@@ -54,7 +55,7 @@ persistenceType = TopComponent.PERSISTENCE_NEVER)
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_PoolsAction",
 preferredID = "PoolsTopComponent")
-public final class PoolsTopComponent extends TopComponent implements ExplorerManager.Provider, RefreshableTopComponent{
+public final class PoolsTopComponent extends TopComponent implements ExplorerManager.Provider, Refreshable{
     
     private static final String PREFERRED_ID = "PoolsTopComponent";
     private static PoolsTopComponent instance;
@@ -130,6 +131,10 @@ public final class PoolsTopComponent extends TopComponent implements ExplorerMan
     @Override
     public void componentClosed() {
         em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
+        //Workaround, because when you close a TC whose mode is "explorer" and open it again,
+        //it docks as "explorer". This forces the TC to be always docked "explorer"
+        Mode myMode = WindowManager.getDefault().findMode("explorer"); //NOI18N
+        myMode.dockInto(this);
     }
 
     void writeProperties(java.util.Properties p) {

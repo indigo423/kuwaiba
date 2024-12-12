@@ -18,14 +18,14 @@ package org.inventory.views.gis.scene;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.netbeans.api.visual.anchor.PointShape;
 
 /**
  * An ObjectConnectionWidget with geopositioned control points
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class GeoPositionedConnectionWidget extends ObjectConnectionWidget{
+public class GeoPositionedConnectionWidget extends ObjectConnectionWidget {
 
     /**
      * Geopositioned control points as a set of pairs (latitude, longitude)

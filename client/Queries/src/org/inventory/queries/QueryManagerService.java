@@ -28,16 +28,15 @@ import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.xml.stream.XMLStreamException;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadata;
-import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalClassMetadata;
+import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.queries.LocalQuery;
+import org.inventory.communications.core.queries.LocalQueryLight;
+import org.inventory.communications.core.queries.LocalResultRecord;
+import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.api.queries.LocalQuery;
-import org.inventory.core.services.api.queries.LocalQueryLight;
-import org.inventory.core.services.api.queries.LocalResultRecord;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.queries.graphical.elements.QueryEditorNodeWidget;
 import org.inventory.queries.graphical.QueryEditorScene;
@@ -48,7 +47,7 @@ import org.inventory.queries.graphical.elements.filters.ListTypeFilter;
  * This class will replace the old QueryManagerService in next releases
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class QueryManagerService implements ActionListener{
+public class QueryManagerService implements ActionListener {
 
     private QueryManagerTopComponent qbtc;
     private CommunicationsStub com = CommunicationsStub.getInstance();
@@ -170,9 +169,11 @@ public class QueryManagerService implements ActionListener{
         queryProperties = newProperties;
     }
 
+    @Override
     public void actionPerformed(ActionEvent e) {
         JCheckBox insideCheck = (JCheckBox)e.getSource();
         LocalAttributeMetadata lam = (LocalAttributeMetadata)insideCheck.getClientProperty("attribute");
+        boolean isParentMenu = false;
         switch (e.getID()){
             case QueryEditorScene.SCENE_FILTERENABLED:
                 QueryEditorNodeWidget newNode;
@@ -216,19 +217,28 @@ public class QueryManagerService implements ActionListener{
                             return;
                         }
                         myMetadata = com.getMetaForClass(selectedValue.getClassName(),false);
+                        isParentMenu = true;
                     }else
-                        myMetadata = com.getLightMetaForClass((String)insideCheck.getClientProperty("className"),false);
-                        
-                    newNode = (ClassNodeWidget)qbtc.getQueryScene().findWidget(myMetadata);
+                    myMetadata = com.getMetaForClass((String)insideCheck.getClientProperty("className"),false);
+                    LocalClassMetadataLight myMetadataLight;
+                    if(!isParentMenu){
+                        myMetadataLight = new LocalClassMetadataLight(myMetadata.getOid(), 
+                        myMetadata.getClassName(), myMetadata.getDisplayName(),
+                        myMetadata.getParentName(), myMetadata.isAbstract(), 
+                        myMetadata.isViewable(), myMetadata.isListType(), myMetadata.isCustom(), false, null, null);
+                    }
+                    else 
+                        myMetadataLight = myMetadata;
+                    newNode = (ClassNodeWidget)qbtc.getQueryScene().findWidget(myMetadataLight);
                     if (newNode == null){
-                        newNode = (QueryEditorNodeWidget) qbtc.getQueryScene().addNode(myMetadata);
+                        newNode = (QueryEditorNodeWidget) qbtc.getQueryScene().addNode(myMetadataLight);
                         if (newNode instanceof ListTypeFilter)
                             ((ListTypeFilter)newNode).build(com.getList(((ListTypeFilter)newNode).getWrappedClass().getClassName(), true, false));
                         else
                             newNode.build(null);
                         qbtc.getQueryScene().validate();
                     }
-                    insideCheck.putClientProperty("related-node", myMetadata);
+                    insideCheck.putClientProperty("related-node", myMetadataLight);
                 }else{
                     String newNodeId = lam.getType().getSimpleName()+"_"+new Random().nextInt(10000);
                     newNode = (QueryEditorNodeWidget)qbtc.getQueryScene().addNode(newNodeId);
@@ -263,7 +273,7 @@ public class QueryManagerService implements ActionListener{
             return;
         }
         try {
-            LocalTransientQuery transientQuery = LocalStuffFactory.createLocalTransientQuery(localQuery);
+            LocalTransientQuery transientQuery = new LocalTransientQuery(localQuery);
             qbtc.getQueryScene().clear();
             ClassNodeWidget rootNode = renderClassNode(transientQuery);
             qbtc.getQueryScene().setCurrentSearchedClass(rootNode.getWrappedClass());

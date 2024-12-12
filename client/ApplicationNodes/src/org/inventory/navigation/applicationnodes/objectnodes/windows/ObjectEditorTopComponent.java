@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Shows an editor for a given object embedding a PropertySheetView
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ObjectEditorTopComponent extends TopComponent{
 
@@ -36,13 +36,11 @@ public class ObjectEditorTopComponent extends TopComponent{
     private PropertySheetView editor;
     private Node node;
 
-    public ObjectEditorTopComponent(){}
-
-    public ObjectEditorTopComponent(Node _node) {
+    public ObjectEditorTopComponent(Node node) {
 
         setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         editor = new PropertySheetView();
-        this.node = _node;
+        this.node = node;
 
         this.setDisplayName(node.getDisplayName());
 
@@ -52,7 +50,7 @@ public class ObjectEditorTopComponent extends TopComponent{
             myMode.dockInto(this);
         else{
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
-            nu.showSimplePopup("Display Warning", NotificationUtil.WARNING, "\"Properties\" Window Mode not available");
+            nu.showSimplePopup("Error", NotificationUtil.WARNING, "\"Properties\" Window Mode not available");
         }
 
         setLayout(new BorderLayout());

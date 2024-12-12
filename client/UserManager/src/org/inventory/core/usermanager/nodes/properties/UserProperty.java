@@ -19,11 +19,9 @@ package org.inventory.core.usermanager.nodes.properties;
 import java.beans.PropertyEditorSupport;
 import java.lang.reflect.InvocationTargetException;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.api.LocalObject;
-import org.inventory.core.services.api.session.LocalUserGroupObjectLight;
-import org.inventory.core.services.api.session.LocalUserObject;
+import org.inventory.communications.core.LocalUserGroupObjectLight;
+import org.inventory.communications.core.LocalUserObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.utils.Utils;
 import org.inventory.core.usermanager.nodes.UserNode;
 import org.inventory.core.usermanager.nodes.customeditor.GroupsEditorSupport;
 import org.inventory.core.usermanager.nodes.customeditor.PasswordEditorSupport;
@@ -41,7 +39,7 @@ public class UserProperty extends ReadWrite{
      */
     private Object value;
 
-    private LocalUserObject object;
+    private LocalUserObject user;
     /**
      * Reference to the communication component
      */
@@ -55,7 +53,7 @@ public class UserProperty extends ReadWrite{
     public UserProperty(String name,String displayName,String toolTextTip,
             Object value, LocalUserObject user){
         super(name, value.getClass(),displayName, toolTextTip);
-        this.object = user;
+        this.user = user;
         this.value = value;
         this.com = CommunicationsStub.getInstance();
         if (name.equals(UserNode.PROP_PASSWORD) || name.equals(UserNode.PROP_GROUPS))
@@ -70,20 +68,20 @@ public class UserProperty extends ReadWrite{
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
-        LocalUserGroupObjectLight[] groups = object.getGroups();
+        LocalUserGroupObjectLight[] groups = user.getGroups();
         long[] oids = new long[groups.length];
         for (int i = 0; i < groups.length; i++)
             oids[i] = groups[i].getOid();
 
         boolean success = false;
         if (this.getName().equals(UserNode.PROP_USERNAME))
-            success = com.setUserProperties(object.getOid(), (String)t, null, null, null, oids);
+            success = com.setUserProperties(user.getOid(), (String)t, null, null, null, oids);
         else if(this.getName().equals(UserNode.PROP_PASSWORD))
-            success = com.setUserProperties(object.getOid(), null, (String)t, null, null, oids);
+            success = com.setUserProperties(user.getOid(), null, (String)t, null, null, oids);
         else if(this.getName().equals(UserNode.PROP_FIRSTNAME))
-            success = com.setUserProperties(object.getOid(), null, null, (String)t, null, oids);
+            success = com.setUserProperties(user.getOid(), null, null, (String)t, null, oids);
         else if(this.getName().equals(UserNode.PROP_LASTNAME))
-            success = com.setUserProperties(object.getOid(), null, null, null, (String)t, oids);
+            success = com.setUserProperties(user.getOid(), null, null, null, (String)t, oids);
         
         if(!success){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
@@ -109,7 +107,7 @@ public class UserProperty extends ReadWrite{
             return pes;
         }
         if (this.getName().equals(UserNode.PROP_GROUPS)) //NOI18N
-                return new GroupsEditorSupport(com.getGroups(),this.object);
+                return new GroupsEditorSupport(com.getGroups(),this.user);
 
         return null;
     }
@@ -119,12 +117,7 @@ public class UserProperty extends ReadWrite{
      * @param passwd a String with the password to be set for this user
      */
     public void setPassword(String passwd) {
-        LocalObject update = Lookup.getDefault().lookup(LocalObject.class);
-        //The password is hashed before setting it
-        update.setLocalObject("User", //NOI18N
-                new String[]{UserNode.PROP_PASSWORD}, new Object[]{Utils.getMD5Hash(passwd)}); //NOI18N
-        update.setOid(this.object.getOid());
-        if(!com.saveObject(update)){
+        if(!com.setUserProperties(user.getOid(), null, passwd, null, null, null)){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("User Update", NotificationUtil.ERROR, com.getError());
         }

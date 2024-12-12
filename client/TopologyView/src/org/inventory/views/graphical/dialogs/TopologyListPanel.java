@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,22 +16,22 @@
 
 package org.inventory.views.graphical.dialogs;
 
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.SystemColor;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.inventory.core.services.api.visual.LocalObjectViewLight;
+import org.inventory.communications.core.views.LocalObjectViewLight;
 
 /**
- *
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * List of available topologies
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class TopologyListPanel extends javax.swing.JPanel implements ListSelectionListener{
+public class TopologyListPanel extends JPanel implements ListSelectionListener{
 
     private LocalObjectViewLight[] elements;
 
@@ -51,7 +51,6 @@ public class TopologyListPanel extends javax.swing.JPanel implements ListSelecti
                     item.setOpaque(true);
                 else
                     item.setOpaque(false);
-
                 return item;
             }
         });

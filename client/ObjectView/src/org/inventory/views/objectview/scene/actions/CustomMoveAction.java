@@ -58,7 +58,7 @@ import java.util.ArrayList;
 import org.inventory.views.objectview.scene.ViewScene;
 
 /**
- * @author David Kaspar, modified by Charles Edward Bedon Cortazar <charles.bedon@zoho.com> for project Kuwaiba 2010
+ * @author David Kaspar, modified by Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public final class CustomMoveAction extends WidgetAction.LockedAdapter {
 

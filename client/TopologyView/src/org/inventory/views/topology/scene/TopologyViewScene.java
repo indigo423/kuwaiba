@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010 - 2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,20 +21,24 @@ import com.ociweb.xml.WAX;
 import java.awt.BasicStroke;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.LocalStuffFactory;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.inventory.views.topology.scene.menus.IconMenu;
 import org.inventory.views.topology.scene.menus.ConnectionMenu;
-import org.inventory.views.topology.scene.menus.PolygonMenu;
+import org.inventory.views.topology.scene.menus.IconMenu;
 import org.inventory.views.topology.scene.menus.LabelMenu;
 import org.inventory.views.topology.scene.menus.NodeMenu;
+import org.inventory.views.topology.scene.menus.PolygonMenu;
 import org.inventory.views.topology.scene.provider.AcceptActionProvider;
 import org.inventory.views.topology.scene.provider.LabelTextFieldEditor;
 import org.inventory.views.topology.scene.provider.SceneConnectProvider;
@@ -49,6 +53,7 @@ import org.netbeans.api.visual.model.ObjectState;
 import org.netbeans.api.visual.router.RouterFactory;
 import org.netbeans.api.visual.widget.LayerWidget;
 import org.netbeans.api.visual.widget.Widget;
+import org.openide.nodes.Node;
 import org.openide.util.ImageUtilities;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.Lookups;
@@ -140,8 +145,17 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
      * Random to name the labels,frames and clouds
      */
     private Random randomGenerator;
+    /**
+     * Action listeners
+     */
+    private List<ActionListener> listeners;
+    public final static int SCENE_OBJECTADDED = 1;
+    /**
+     * Default notifier
+     */
+    private NotificationUtil notifier;
 
-    public TopologyViewScene() {
+    public TopologyViewScene(NotificationUtil notifier) {
         getActions().addAction(ActionFactory.createAcceptAction(new AcceptActionProvider(this)));
 
         nodesLayer = new LayerWidget(this);
@@ -188,12 +202,13 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         getActions().addAction(ActionFactory.createAcceptAction(new AcceptActionProvider(this)));
 
         setActiveTool(ObjectNodeWidget.ACTION_SELECT);
+        this.notifier = notifier;
     }
 
     @Override
     protected Widget attachNodeWidget(Object node) {
         if(node instanceof LocalObjectLight){
-            if(!((LocalObjectLight)node).getName().contains(CLOUD_ICON)){
+            if(((LocalObjectLight)node).getName() == null || !((LocalObjectLight)node).getName().contains(CLOUD_ICON)){
                 ObjectNodeWidget myWidget = new ObjectNodeWidget(this, (LocalObjectLight)node);
                 nodesLayer.addChild(myWidget);
                 Image myIcon = CommunicationsStub.getInstance().getMetaForClass(((LocalObjectLight)node).getClassName(), false).getIcon();
@@ -205,18 +220,20 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
                 myWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createMoveAction());
                 myWidget.getActions(ObjectNodeWidget.ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
                 myWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createPopupMenuAction(nodeMenu));
+                fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "lol-add-operation"));
                 return myWidget;
             }
             else{
-                LocalObjectLight lol = LocalStuffFactory.createLocalObjectLight();
-                lol.setOid(randomGenerator.nextInt(1000));
+                LocalObjectLight lol = new LocalObjectLight(randomGenerator.nextInt(1000), null, null);
                 ObjectNodeWidget cloudWidget = new ObjectNodeWidget(this, lol);
                 iconsLayer.addChild(cloudWidget);
                 cloudWidget.setImage(cloudIcon);
                 cloudWidget.setLabel(((LocalObjectLight)node).getName().substring(9));
                 cloudWidget.getActions().addAction (ActionFactory.createInplaceEditorAction (new LabelTextFieldEditor()));
-                cloudWidget.getActions().addAction(ActionFactory.createMoveAction());
+                cloudWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createMoveAction());
+                cloudWidget.getActions(ObjectNodeWidget.ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
                 cloudWidget.getActions().addAction(ActionFactory.createPopupMenuAction(iconMenu));
+                fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "cloud-add-operation"));
                 return cloudWidget;
             }
         }
@@ -227,6 +244,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
             myFrame.getActions().addAction(ActionFactory.createPopupMenuAction(frameMenu));
             myFrame.getActions ().addAction (ActionFactory.createResizeAction ());
             myFrame.getActions().addAction(ActionFactory.createMoveAction());
+            fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "frame-add-operation"));
             return myFrame;
         }//labels
         if((node.toString().contains(FREE_LABEL))){
@@ -235,6 +253,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
             myFreeLabel.getActions().addAction(ActionFactory.createMoveAction());
             myFreeLabel.getActions().addAction (ActionFactory.createInplaceEditorAction (new LabelTextFieldEditor()));
             myFreeLabel.getActions().addAction(ActionFactory.createPopupMenuAction(labelMenu));
+            fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "label-add-operation"));
             return myFreeLabel;
         }
         else
@@ -315,9 +334,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         this.repaint();
     }
     public void addFreeCloud(){
-        LocalObjectLight lol = LocalStuffFactory.createLocalObjectLight();
-        lol.setOid(randomGenerator.nextInt(1000));
-        lol.setName(CLOUD_ICON + "New Icon");
+        LocalObjectLight lol = new LocalObjectLight(randomGenerator.nextInt(1000), CLOUD_ICON + "New Icon", null);
         Widget f = addNode(lol);
         f.setPreferredLocation (new Point (100, 100));
         this.validate();
@@ -329,6 +346,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
             removeNode(getNodes().iterator().next());
         while (!getEdges().isEmpty())
             removeEdge(getEdges().iterator().next());
+        
     }
 
     public LayerWidget getNodesLayer() {
@@ -429,5 +447,29 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         mainTag.end().close();
         return bas.toByteArray();
     }
+    
+    /**
+     * To listen for scene changes implementing the observer design pattern
+     * @param listener
+     */
+    public void addActionListener(ActionListener listener){
+        if (listeners == null)
+            listeners = new ArrayList<ActionListener>();
+        listeners.add(listener);
+    }
 
+    public void removeActionListener(ActionListener listener){
+        if (listeners == null)
+            return;
+        listeners.remove(listener);
+    }
+    
+    public void fireChangeEvent(ActionEvent ev){
+        for (ActionListener listener : listeners)
+            listener.actionPerformed(ev);
+    }
+    
+    public NotificationUtil getNotifier() {
+        return notifier;
+    }
 }

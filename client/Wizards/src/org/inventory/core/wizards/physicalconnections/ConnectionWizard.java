@@ -16,7 +16,8 @@
 
 package org.inventory.core.wizards.physicalconnections;
 
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
+
 
 /**
  * This class manages the wizard life cycle

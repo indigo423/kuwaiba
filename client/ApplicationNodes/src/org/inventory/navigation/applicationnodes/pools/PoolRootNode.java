@@ -17,7 +17,7 @@ package org.inventory.navigation.applicationnodes.pools;
 
 import java.awt.Image;
 import javax.swing.Action;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.applicationnodes.pools.actions.NewPoolAction;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Children;
@@ -33,16 +33,12 @@ public class PoolRootNode extends AbstractNode {
     private static Image defaultIcon = ImageUtilities.loadImage(ICON_PATH);
     
     public PoolRootNode (LocalObjectLight[] pools){
-        this();
+        super (new Children.Array());
+        setName(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_POOLS"));
         for (LocalObjectLight pool : pools)
             getChildren().add(new PoolNode[] { new PoolNode(pool)});
     }
     
-    public PoolRootNode (){
-        super (new Children.Array());
-        setName(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_POOLS"));
-    }
-
     @Override
     public Action[] getActions(boolean context){
         return new Action[]{new NewPoolAction(this)};

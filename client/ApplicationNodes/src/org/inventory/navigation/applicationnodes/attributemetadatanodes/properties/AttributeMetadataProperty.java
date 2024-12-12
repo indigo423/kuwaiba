@@ -19,15 +19,15 @@ import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.caching.Cache;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.caching.Cache;
+import org.inventory.communications.util.Constants;
 import org.inventory.navigation.applicationnodes.attributemetadatanodes.AttributeMetadataNode;
 import org.openide.nodes.PropertySupport;
 import org.openide.util.Lookup;
 
 /**
  * Provides a property editor
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class AttributeMetadataProperty extends PropertySupport.ReadWrite {
 

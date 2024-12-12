@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,16 +19,15 @@ package org.inventory.navigation.applicationnodes.querynodes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.inventory.core.services.api.queries.LocalResultRecord;
+import org.inventory.communications.core.queries.LocalResultRecord;
 import org.openide.nodes.Children.Array;
 import org.openide.nodes.Node;
 
 /**
  * Children for a query result list
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
- * TODO: Wrong use of generics. The whole node class hierarchy should be reconsidered
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class QueryResultChildren<T extends LocalResultRecord> extends Array{
+public class QueryResultChildren<T extends LocalResultRecord> extends Array {
 
     private ArrayList<T> keys;
 

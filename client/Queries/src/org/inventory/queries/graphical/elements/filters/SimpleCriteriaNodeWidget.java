@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package org.inventory.queries.graphical.elements.filters;
 
 import javax.swing.JComboBox;
-import org.inventory.core.services.api.queries.LocalTransientQuery;
+import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.core.visual.decorators.ColorSchemeFactory;
 import org.inventory.queries.graphical.elements.QueryEditorNodeWidget;
 import org.inventory.queries.graphical.QueryEditorScene;
@@ -25,7 +25,7 @@ import org.inventory.queries.graphical.QueryEditorScene;
 /**
  * This class represents a simple searching criteria, this is, related to a simple data type.
  * Subclasses should provide proper filters depending on the data type (numeric, dates, booleans, etc)
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public abstract class SimpleCriteriaNodeWidget extends QueryEditorNodeWidget{
 

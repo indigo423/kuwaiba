@@ -21,18 +21,17 @@ package org.inventory.views.topology.scene.provider;
 
 import java.awt.Point;
 import java.util.Random;
-import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.views.topology.scene.ObjectNodeWidget;
 import org.inventory.views.topology.scene.TopologyViewScene;
 import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.action.ConnectorState;
 import org.netbeans.api.visual.widget.Scene;
 import org.netbeans.api.visual.widget.Widget;
-import org.netbeans.api.visual.widget.general.IconNodeWidget;
 
 /**
  * Action invoked when an element try to connect to other on the scene
- * @author Adrian Martinez <adrian.martinezkuwaiba.org>
+ * @author Adrian Martinez <adrian.martinez@kuwaiba.org>
  */
 public class SceneConnectProvider implements ConnectProvider{
 

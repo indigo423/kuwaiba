@@ -15,9 +15,9 @@
  */
 package org.inventory.navigation.applicationnodes.attributemetadatanodes;
 
-import org.inventory.core.services.api.LocalObjectLight;
-import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
-import org.inventory.core.services.utils.Constants;
+import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.navigation.applicationnodes.attributemetadatanodes.properties.AttributeMetadataProperty;
 import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataNode;
 import org.openide.nodes.AbstractNode;
@@ -27,7 +27,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents an attribute as a node within the data model manager
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
 public class AttributeMetadataNode extends AbstractNode  {
     
