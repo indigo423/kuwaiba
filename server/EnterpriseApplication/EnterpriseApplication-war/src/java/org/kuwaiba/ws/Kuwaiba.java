@@ -920,17 +920,46 @@ public class Kuwaiba {
     }
     
     /**
+     * Get a set of pools for a specific parent
+     * @param limit Maximum number of pool records to be returned
+     * @param parentId Pool's parent id
+     * @param className class type for the pools
+     * @param sessionId Session token
+     * @return The list of pools as RemoteObjectLight instances for an specific parent
+     * @throws Exception Generic exception encapsulating any possible error raised at runtime 
+     */
+    @WebMethod(operationName = "getPoolsForParentWithId")
+    public RemoteObjectLight[] getPoolsForParentWithId(@WebParam(name = "limit")
+            int limit, @WebParam(name = "parentId") 
+            long parentId, @WebParam(name = "className") 
+            String className, @WebParam(name = "sessionId") 
+            String sessionId) throws Exception{
+        try{
+            return wsBean.getPools(limit, parentId, className, getIPAddress(), sessionId);
+        }catch(Exception e){
+            Level level = Level.SEVERE;
+            if (e instanceof ServerSideException)
+                level = ((ServerSideException)e).getLevel();
+            Logger.getLogger(Kuwaiba.class.getName()).log(level,
+                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
+            throw e;
+        }
+    }
+    
+    /**
      * Get a set of pools
      * @param limit Maximum number of pool records to be returned
+     * @param className class type for the pools
      * @param sessionId Session identifier
      * @return The list of pools as RemoteObjectLight instances
      * @throws Exception Generic exception encapsulating any possible error raised at runtime
      */
     @WebMethod(operationName = "getPools")
     public RemoteObjectLight[] getPools(@WebParam(name = "limit")int limit,
-            @WebParam(name = "sessionId")String sessionId) throws Exception{
+            @WebParam(name = "className") String className,
+            @WebParam(name = "sessionId") String sessionId) throws Exception{
         try{
-            return wsBean.getPools(limit, getIPAddress(), sessionId);
+            return wsBean.getPools(limit, className, getIPAddress(), sessionId);
         }catch(Exception e){
             Level level = Level.SEVERE;
             if (e instanceof ServerSideException)
@@ -1980,7 +2009,8 @@ public class Kuwaiba {
         boolean inDesign, @WebParam(name = "parentClassName")
         String parentClassName, @WebParam(name = "icon")
         byte[] icon, @WebParam(name = "smallIcon")
-        byte[] smallIcon, @WebParam(name = "sessionId")
+        byte[] smallIcon, @WebParam(name = "color")
+        int color, @WebParam(name = "sessionId")
         String sessionId) throws Exception {
         
         try{
@@ -2000,6 +2030,7 @@ public class Kuwaiba {
             ci.setDescription(description);
             ci.setIcon(icon);
             ci.setSmallIcon(smallIcon);
+            ci.setColor(color);
             ci.setParentClassName(parentClassName);
             ci.setAbstract(_abstract);
             ci.setCountable(countable);
@@ -2037,7 +2068,8 @@ public class Kuwaiba {
         String displayName, @WebParam(name = "description")
         String description, @WebParam(name = "smallIcon")
         byte[] smallIcon,  @WebParam(name = "icon")
-        byte[] icon, @WebParam(name = "_abstract")
+        byte[] icon, @WebParam(name = "color")
+        int color,@WebParam(name = "_abstract")
         Boolean _abstract, @WebParam(name = "inDesign")
         Boolean inDesign, @WebParam(name = "custom")
         Boolean custom, @WebParam(name = "countable")
@@ -2060,6 +2092,7 @@ public class Kuwaiba {
             ci.setDescription(description);
             ci.setIcon(icon);
             ci.setSmallIcon(smallIcon);
+            ci.setColor(color);
             ci.setAbstract(_abstract);
             ci.setInDesign(inDesign);
             ci.setCountable(countable);
@@ -2737,58 +2770,40 @@ public class Kuwaiba {
     }
     // </editor-fold>
 
-    // <editor-fold defaultstate="collapsed" desc="Sync/Load methods. Click on the + sign on the left to edit the code.">/**
-//    @WebMethod(operationName = "bulkUpload")
-//    public String bulkUpload(@WebParam(name = "file")
-//        byte[] file, @WebParam(name = "sessionId")
-//            String sessionId) throws Exception {
-//        try{
-//            UserInfo user = wsBean.getUserInSession(sessionId);
-//            return wsBean.bulkUpload(file, user.getId());
-//        }catch(Exception e){
-//            Level level = Level.SEVERE;
-//            if (e instanceof ServerSideException)
-//                level = ((ServerSideException)e).getLevel();
-//            Logger.getLogger(Kuwaiba.class.getName()).log(level,
-//                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
-//            throw e;
-//        }
-//    }
+    // <editor-fold defaultstate="collapsed" desc="Sync/ bulk load methods. Click on the + sign on the left to edit the code.">/**
+    @WebMethod(operationName = "bulkUpload")
+    public String bulkUpload(@WebParam(name = "file")
+        byte[] file, @WebParam(name = "commitSize")
+        int commitSize, @WebParam(name = "dataType")
+        int dataType, @WebParam(name = "sessionId")
+        String sessionId) throws Exception {
+        try{
+            return wsBean.bulkUpload(file, commitSize, dataType, getIPAddress(), sessionId);
+        }catch(Exception e){
+            Level level = Level.SEVERE;
+            if (e instanceof ServerSideException)
+                level = ((ServerSideException)e).getLevel();
+            Logger.getLogger(Kuwaiba.class.getName()).log(level,
+                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
+            throw e;
+        }
+    }
     
-    
-//    @WebMethod(operationName = "downloadErrors")
-//    public byte[] downloadErrors(@WebParam(name = "fileName")
-//        String fileName, @WebParam(name = "sessionId")
-//            String sessionId) throws Exception {
-//        try{
-//            wsBean.validateCall("downloadErrors", getIPAddress(), sessionId);
-//            return wsBean.downloadErrors(fileName);
-//        }catch(Exception e){
-//            Level level = Level.SEVERE;
-//            if (e instanceof ServerSideException)
-//                level = ((ServerSideException)e).getLevel();
-//            Logger.getLogger(Kuwaiba.class.getName()).log(level,
-//                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
-//            throw e;
-//        }
-//    }
-     
-//    @WebMethod(operationName = "downloadLog")
-//    public byte[] downloadLog(@WebParam(name = "fileName")
-//        String fileName, @WebParam(name = "sessionId")
-//            String sessionId) throws Exception {
-//        try{
-//            wsBean.validateCall("downloadLog", getIPAddress(), sessionId);
-//            return wsBean.downloadLog(fileName);
-//        }catch(Exception e){
-//            Level level = Level.SEVERE;
-//            if (e instanceof ServerSideException)
-//                level = ((ServerSideException)e).getLevel();
-//            Logger.getLogger(Kuwaiba.class.getName()).log(level,
-//                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
-//            throw e;
-//        }
-//    }
+    @WebMethod(operationName = "downloadBulkLoadLog")
+    public byte[] downloadBulkLoadLog(@WebParam(name = "fileName")
+        String fileName, @WebParam(name = "sessionId")
+            String sessionId) throws Exception {
+        try{
+            return wsBean.downloadBulkLoadLog(fileName, getIPAddress(), sessionId);
+        }catch(Exception e){
+            Level level = Level.SEVERE;
+            if (e instanceof ServerSideException)
+                level = ((ServerSideException)e).getLevel();
+            Logger.getLogger(Kuwaiba.class.getName()).log(level,
+                    e.getClass().getSimpleName()+": {0}",e.getMessage()); //NOI18N
+            throw e;
+        }
+    }
     // </editor-fold>
     
     // <editor-fold defaultstate="collapsed" desc="Helpers. Click on the + sign on the left to edit the code.">/**

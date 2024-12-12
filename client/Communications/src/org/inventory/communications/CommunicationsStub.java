@@ -99,6 +99,10 @@ public class CommunicationsStub {
         serverURL = URL;
     }
     
+    public static URL getServerURL (){
+        return serverURL;
+    }
+    
     // <editor-fold defaultstate="collapsed" desc="Session methods. Click on the + sign on the left to edit the code.">
     public LocalSession getSession(){
         return session;
@@ -491,7 +495,8 @@ public class CommunicationsStub {
                                                 cil.getParentClassName(),
                                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                                 cil.isCustom(), cil.isInDesign(),
-                                                cil.getSmallIcon(), validators));
+                                                cil.getSmallIcon(), 
+                                                cil.getColor(), validators));
                 }
                 cache.addPossibleChildrenCached(className, resAsLocal);
             }
@@ -524,7 +529,8 @@ public class CommunicationsStub {
                                                 cil.getParentClassName(),
                                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                                 cil.isCustom(), cil.isInDesign(),
-                                                cil.getSmallIcon(), validators));
+                                                cil.getSmallIcon(), 
+                                                cil.getColor(), validators));
             }
             return resAsLocal;
         }catch(Exception ex){
@@ -549,7 +555,7 @@ public class CommunicationsStub {
                                                 cil.getParentClassName(),
                                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                                 cil.isCustom(), cil.isInDesign(),
-                                                cil.getSmallIcon(), validators));
+                                                cil.getSmallIcon(), cil.getColor(), validators));
             }
             return resAsLocal;
         }catch(Exception ex){
@@ -572,7 +578,7 @@ public class CommunicationsStub {
                                                 cil.getParentClassName(),
                                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                                 cil.isCustom(), cil.isInDesign(),
-                                                cil.getSmallIcon(), validators));
+                                                cil.getSmallIcon(), cil.getColor(), validators));
             }
             return res;
         }catch(Exception ex){
@@ -606,7 +612,7 @@ public class CommunicationsStub {
                                                 cil.getParentClassName(),
                                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                                 cil.isCustom(), cil.isInDesign(),
-                                                cil.getSmallIcon(), validators);
+                                                cil.getSmallIcon(), cil.getColor(), validators);
                 i++;
             }
 
@@ -645,7 +651,7 @@ public class CommunicationsStub {
                                                 ci.getParentClassName(),
                                                 ci.isAbstract(),ci.isViewable(), ci.isListType(),
                                                 ci.isCustom(), ci.isInDesign(),
-                                                ci.getSmallIcon(), validators, ci.getIcon(),
+                                                ci.getSmallIcon(), ci.getColor(), validators, ci.getIcon(),
                                                 ci.getDescription(), ci.getAttributeIds(), 
                                                 ci.getAttributeNames().toArray(new String[0]),
                                                 ci.getAttributeTypes().toArray(new String[0]),
@@ -686,7 +692,7 @@ public class CommunicationsStub {
                                             cm.getParentClassName(),
                                             cm.isAbstract(),cm.isViewable(), cm.isListType(),
                                             cm.isCustom(), cm.isInDesign(),
-                                            cm.getSmallIcon(), validators, cm.getIcon(),
+                                            cm.getSmallIcon(), cm.getColor(), validators, cm.getIcon(),
                                             cm.getDescription(), cm.getAttributeIds(), 
                                             cm.getAttributeNames().toArray(new String[0]),
                                             cm.getAttributeTypes().toArray(new String[0]),
@@ -726,7 +732,7 @@ public class CommunicationsStub {
                         cm.getParentClassName(),
                         cm.isAbstract(),cm.isViewable(), cm.isListType(),
                         cm.isCustom(), cm.isInDesign(),
-                        cm.getSmallIcon(), validators, cm.getIcon(),
+                        cm.getSmallIcon(), cm.getColor(), validators, cm.getIcon(),
                         cm.getDescription(), cm.getAttributeIds(), 
                         cm.getAttributeNames().toArray(new String[0]),
                         cm.getAttributeTypes().toArray(new String[0]),
@@ -816,7 +822,7 @@ public class CommunicationsStub {
                                 cil.getParentClassName(),
                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                 cil.isCustom(), cil.isInDesign(),
-                                cil.getSmallIcon(), validators);
+                                cil.getSmallIcon(), cil.getColor(), validators);
                 i++;
             }
             return res;
@@ -843,7 +849,7 @@ public class CommunicationsStub {
                                 cil.getParentClassName(),
                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                 cil.isCustom(), cil.isInDesign(),
-                                cil.getSmallIcon(), validators);
+                                cil.getSmallIcon(), cil.getColor(), validators);
                 i++;
             }
             return res;
@@ -859,10 +865,10 @@ public class CommunicationsStub {
      * @param className
      * @return
      */
-    public LocalObjectLight createListTypeItem(String className) {
+    public LocalObjectListItem createListTypeItem(String className) {
         try {
             long myObjectId = port.createListTypeItem(className, "", "", this.session.getSessionId());
-            return new LocalObjectLight(myObjectId, null, className);
+            return new LocalObjectListItem(myObjectId, className, null);
         } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
@@ -1409,7 +1415,7 @@ public class CommunicationsStub {
                             cm.getParentClassName(),
                             cm.isAbstract(),cm.isViewable(), cm.isListType(),
                             cm.isCustom(), cm.isInDesign(),
-                            cm.getSmallIcon(), validators, cm.getIcon(),
+                            cm.getSmallIcon(), cm.getColor(), validators, cm.getIcon(),
                             cm.getDescription(), cm.getAttributeIds(), 
                             cm.getAttributeNames().toArray(new String[0]),
                             cm.getAttributeTypes().toArray(new String[0]),
@@ -1460,7 +1466,7 @@ public class CommunicationsStub {
         
     public long createClassMetadata(String className, String displayName, String description, String parentClassName, boolean custom, boolean countable, int color, boolean _abstract, boolean inDesign){
         try{
-            return port.createClass(className, displayName, description, _abstract, custom, countable, inDesign, parentClassName, null, null, this.session.getSessionId());
+            return port.createClass(className, displayName, description, _abstract, custom, countable, inDesign, parentClassName, null, null, color, this.session.getSessionId());
         }catch(Exception ex){
             this.error = ex.getMessage();
             return -1;
@@ -1515,10 +1521,10 @@ public class CommunicationsStub {
     
     public boolean setClassMetadataProperties(long classId, String className, 
                                                  String displayName, String description, 
-                                                 byte[] smallIcon, byte[] icon, 
+                                                 byte[] smallIcon, byte[] icon, int color,
                                                  Boolean _abstract,Boolean inDesign, Boolean countable, Boolean custom){
         try{
-            port.setClassProperties(classId, className, displayName, description, smallIcon, icon,
+            port.setClassProperties(classId, className, displayName, description, smallIcon, icon, color,
                     _abstract, inDesign, countable, custom, this.session.getSessionId());
         }catch(Exception ex){
             this.error = ex.getMessage();
@@ -1549,7 +1555,7 @@ public class CommunicationsStub {
                                 cil.getParentClassName(),
                                 cil.isAbstract(),cil.isViewable(), cil.isListType(),
                                 cil.isCustom(), cil.isInDesign(), 
-                                cil.getSmallIcon(), validators);
+                                cil.getSmallIcon(), cil.getColor(), validators);
                 i++;
             }
             return res;
@@ -1958,12 +1964,34 @@ public class CommunicationsStub {
     }
     
     /**
+     * Returns the list of pools available for a specific parent
+     * @return The list of pools
+     */
+    public List<LocalObjectLight> getPools(long parentId, String className) {
+        try{
+            List <RemoteObjectLight> children = port.getPoolsForParentWithId(-1, parentId, className, this.session.getSessionId());
+            List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
+
+            for (RemoteObjectLight rol : children){
+                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                for (Validator validator : rol.getValidators())
+                    validators.put(validator.getLabel(), validator.getValue());
+                res.add(new LocalObjectLight(rol.getClassName(), rol.getName(), rol.getOid(), validators));
+            }
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
      * Returns the list of pools available
      * @return The list of pools
      */
-    public List<LocalObjectLight> getPools() {
+    public List<LocalObjectLight> getPools(String className) {
         try{
-            List <RemoteObjectLight> children = port.getPools(-1,this.session.getSessionId());
+            List <RemoteObjectLight> children = port.getPools(-1, className, this.session.getSessionId());
             List <LocalObjectLight> res = new ArrayList<LocalObjectLight>();
 
             for (RemoteObjectLight rol : children){
@@ -1979,36 +2007,30 @@ public class CommunicationsStub {
         }
     }// </editor-fold>
     
-    // <editor-fold defaultstate="collapsed" desc="Sync methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="Sync/bulk load data methods. Click on the + sign on the left to edit the code.">
     /**
-     * BulkUpload from a file
-     * @param choosenFile csv file with the data
-     * @return percent  of progress
+     * Load data from a file 
+     * @param file data with the information to be uploaded
+     * @param commitSize commit after n rows 
+     * @param classType if the file contains listTypes or Classes or any other kind of information
+     * @return 
      */
-//    public String loadDataFromFile(byte[] choosenFile){
-//        try{
-//            return port.loadDataFromFile(choosenFile, this.session.getSessionId());
-//        }catch(Exception ex){
-//            this.error =  ex.getMessage();
-//            return "";
-//        }
-//    }
-/*     public byte[] downloadErrors(String fileName){
+    public String loadDataFromFile(byte[] file, int commitSize, int classType){
         try{
-            return port.downloadErrors(fileName, this.session.getSessionId());
+            return  port.bulkUpload(file, commitSize, classType, this.session.getSessionId());
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
         }
-    }    
+    }  
     
     public byte[] downloadLog(String fileName){
         try{
-            return port.downloadLog(fileName, this.session.getSessionId());
+            return port.downloadBulkLoadLog(fileName, this.session.getSessionId());
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
         }
-    }*/
+    }
     // </editor-fold>    
 }

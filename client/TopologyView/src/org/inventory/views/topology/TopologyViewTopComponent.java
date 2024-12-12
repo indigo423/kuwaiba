@@ -23,7 +23,9 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.core.views.LocalObjectViewLight;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.visual.actions.ExportSceneAction;
+import org.inventory.core.visual.export.ExportScenePanel;
+import org.inventory.core.visual.export.filters.ImageFilter;
+import org.inventory.core.visual.export.filters.SceneExportFilter;
 import org.inventory.views.graphical.dialogs.CreateTopologyPanel;
 import org.inventory.views.graphical.dialogs.TopologyListPanel;
 import org.inventory.views.topology.scene.ObjectNodeWidget;
@@ -35,7 +37,6 @@ import org.openide.DialogDisplayer;
 import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerManager.Provider;
 import org.openide.util.ImageUtilities;
-import org.openide.util.Lookup;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -67,9 +68,7 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
      * Topology view service
      */
     private TopologyViewService tvsrv;
-
-    private NotificationUtil nu;
-    
+  
     private boolean isSaved = false;
 
     public TopologyViewTopComponent() {
@@ -265,22 +264,17 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSelectActionPerformed
-        scene.setActiveTool(ObjectNodeWidget.ACTION_SELECT);
         btnConnect.setSelected(false);
+        scene.setActiveTool(TopologyViewScene.ACTION_SELECT);
     }//GEN-LAST:event_btnSelectActionPerformed
 
     private void btnShowNodesLabelsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnShowNodesLabelsActionPerformed
-        for (Widget node : scene.getNodesLayer().getChildren())
-            ((ObjectNodeWidget)node).getLabelWidget().setVisible(!btnShowNodesLabels.isSelected());
-        scene.validate();
-        for (Widget node : scene.getIconLayer().getChildren())
-            ((ObjectNodeWidget)node).getLabelWidget().setVisible(!btnShowNodesLabels.isSelected());
-        scene.validate();
+        scene.toggleLabels(!btnShowNodesLabels.isSelected());
     }//GEN-LAST:event_btnShowNodesLabelsActionPerformed
 
     private void btnConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConnectActionPerformed
-        scene.setActiveTool(ObjectNodeWidget.ACTION_CONNECT);
         btnSelect.setSelected(false);
+        scene.setActiveTool(TopologyViewScene.ACTION_CONNECT);
     }//GEN-LAST:event_btnConnectActionPerformed
 
     private void btnCloudActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCloudActionPerformed
@@ -371,13 +365,16 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
                 "Delete saved view",JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION){
             tvsrv.deleteView();
             scene.clear();
-            tvsrv.setTvId(-1);
+            tvsrv.setTvId(0);
             toggleButtons(false);
+            btnSelectActionPerformed(evt);
         }
     }//GEN-LAST:event_btnDeleteActionPerformed
 
     private void btnExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportActionPerformed
-        new ExportSceneAction(scene).actionPerformed(evt);
+        ExportScenePanel exportPanel = new ExportScenePanel(new SceneExportFilter[]{ImageFilter.getInstance()}, scene);
+        DialogDescriptor dd = new DialogDescriptor(exportPanel, "Export options",true, exportPanel);
+        DialogDisplayer.getDefault().createDialog(dd).setVisible(true);
     }//GEN-LAST:event_btnExportActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -458,7 +455,7 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
     public void componentClosed() {
         scene.clear();
         tvsrv.setViewProperties(new Object[2]);
-        tvsrv.setTvId(-1);
+        tvsrv.setTvId(0);
     }
 
     void writeProperties(java.util.Properties p) {
@@ -510,9 +507,7 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
     }
 
     public NotificationUtil getNotifier(){
-        if (nu == null)
-            return Lookup.getDefault().lookup(NotificationUtil.class);
-        return null;
+        return NotificationUtil.getInstance();
     }
 
     public void toggleButtons(boolean enabled) {
@@ -533,7 +528,7 @@ public final class TopologyViewTopComponent extends TopComponent implements Acti
                 if(btnConnect.isSelected()){
                     btnConnect.setSelected(true);
                     btnSelect.setSelected(false);
-                }
+    }
                 break;
         }
     }

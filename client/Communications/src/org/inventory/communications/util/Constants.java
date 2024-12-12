@@ -22,51 +22,68 @@ package org.inventory.communications.util;
  */
 public class Constants {
     /**
+     * No debugging
+     */
+    public static final int DEBUG_LEVEL_DISABLED = 0;
+    public static final int DEBUG_LEVEL_INFO = 1;
+    public static final int DEBUG_LEVEL_FINE = 2;
+    public static int DEBUG_LEVEL = DEBUG_LEVEL_INFO;
+    //public static int DEBUG_LEVEL = DEBUG_LEVEL_DISABLED;
+    
+    /**
      * Name of the validator to indicate if a given class is a container
      */
-    public static String VALIDATOR_PHYSICAL_CONTAINER = "physicalContainer";
+    public static final String VALIDATOR_PHYSICAL_CONTAINER = "physicalContainer";
      /**
      * Name of the validator to indicate if a given class is a link
      */
-    public static String VALIDATOR_PHYSICAL_LINK = "physicalLink";
+    public static final String VALIDATOR_PHYSICAL_LINK = "physicalLink";
     /**
      * Name of the validator to indicate if a given class is the endpoint to a connection
      */
-    public static String VALIDATOR_PHYSICAL_NODE = "physicalNode";
+    public static final String VALIDATOR_PHYSICAL_NODE = "physicalNode";
     /**
      * Name of the validator to indicate if a given class is the endpoint to a link
      */
-    public static String VALIDATOR_PHYSICAL_ENDPOINT = "physicalEndpoint";
+    public static final String VALIDATOR_PHYSICAL_ENDPOINT = "physicalEndpoint";
+    /**
+     * All instances of classes tagged with this validator may be related to a software asset
+     */
+    public static final String VALIDATOR_APPLICATION_ELEMENT = "applicationElement";
     /**
      * Name for the class InventoryObject
      */
-    public static String CLASS_INVENTORYOBJECT = "InventoryObject";
+    public static final String CLASS_INVENTORYOBJECT = "InventoryObject";
     /**
      * Name for the class GenericObjectList
      */
-    public static String CLASS_GENERICOBJECTLIST = "GenericObjectList";
+    public static final String CLASS_GENERICOBJECTLIST = "GenericObjectList";
     /**
      * Name for the class GenericService
      */
-    public static String CLASS_GENERICSERVICE = "GenericService";
+    public static final String CLASS_GENERICSERVICE = "GenericService";
+    /**
+     * Name for the class GenericCustomer
+     */
+    public static final String CLASS_GENERICCUSTOMER = "GenericCustomer";
     /**
      * Root class to all ports
      */
-    public static String CLASS_GENERICPORT = "GenericPort";
+    public static final String CLASS_GENERICPORT = "GenericPort";
     /**
      * Root class to all physical links (cables, fibers, etc)
      */
-    public static String CLASS_GENERICPHYSICALLINK = "GenericPhysicalLink";
+    public static final String CLASS_GENERICPHYSICALLINK = "GenericPhysicalLink";
     /**
      * Class Rack
      */
-    public static String CLASS_RACK = "Rack";
+    public static final String CLASS_RACK = "Rack";
     /**
      * Name for the class User
      */
-    public static String CLASS_USER = "User";
+    public static final String CLASS_USER = "User";
     /**
-     * Defaul type for a new attribute
+     * Default type for a new attribute
      */
     public static final String DEFAULT_ATTRIBUTE_TYPE = "String";
     /**
@@ -93,6 +110,12 @@ public class Constants {
      * Many to Many relationship (such as accountable persons for a given equipment)
      */
     public static final int MAPPING_MANYTOMANY = 6;
+    
+    /**
+     * A fixed label to indicate a given node doesn't have a name set
+     */
+    public static final String LABEL_NONAME = "<No Name>";
+    
     /**
      * Possible attributes types
      */
@@ -125,6 +148,10 @@ public class Constants {
      * Property custom
      */
     public static final String PROPERTY_CUSTOM = "custom";
+    /**
+     * Property class color
+     */
+    public static final String PROPERTY_COLOR = "color";
     /**
      * Property small icon
      */
@@ -180,37 +207,37 @@ public class Constants {
     /**
      * Generic classes
      */
-    public static String CLASS_GENERICCONNECTION="GenericConnection";
+    public static final String CLASS_GENERICCONNECTION="GenericConnection";
 
     //TODO: Gotta send this to a config file
-    public static String CLASS_WIRECONTAINER="WireContainer";
-    public static String CLASS_WIRELESSCONTAINER="WirelessContainer";
+    public static final String CLASS_WIRECONTAINER="WireContainer";
+    public static final String CLASS_WIRELESSCONTAINER="WirelessContainer";
 
     /**
      * Physical connection classes
      */
-    public static String CLASS_ELECTRICALLINK = "ElectricalLink";
-    public static String CLASS_OPTICALLINK = "OpticalLink";
-    public static String CLASS_WIRELESSLINK = "RadioLink";
+    public static final String CLASS_ELECTRICALLINK = "ElectricalLink";
+    public static final String CLASS_OPTICALLINK = "OpticalLink";
+    public static final String CLASS_WIRELESSLINK = "RadioLink";
 
     /**
      * Physical connection type classes
      */
-    public static String CLASS_ELECTRICALLINKTYPE = "ElectricalLinkType";
-    public static String CLASS_OPTICALLINKTYPE = "OpticalLinkType";
-    public static String CLASS_WIRELESSLINKTYPE = "WirelessLinkType";
+    public static final String CLASS_ELECTRICALLINKTYPE = "ElectricalLinkType";
+    public static final String CLASS_OPTICALLINKTYPE = "OpticalLinkType";
+    public static final String CLASS_WIRELESSLINKTYPE = "WirelessLinkType";
 
     /**
      * Physical container type classes
      */
-    public static String CLASS_WIRECONTAINERTYPE = "WireContainerType";
-    public static String CLASS_WIRELESSCONTAINERTYPE = "WirelessContainerType";
+    public static final String CLASS_WIRECONTAINERTYPE = "WireContainerType";
+    public static final String CLASS_WIRELESSCONTAINERTYPE = "WirelessContainerType";
 
     //Misc versions
     /**
      * Version for the XML document to save views (see http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_Save_Object_Views for details)
      */
-     public static String VIEW_FORMAT_VERSION = "1.1";
+     public static final String VIEW_FORMAT_VERSION = "1.1";
 
     /**
      * Returns the connection type class for a given connection class

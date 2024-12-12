@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.inventory.communications.util.Constants;
 
 /**
  * This class is a simple representation of a business object with a very basic information
@@ -51,9 +52,11 @@ public class LocalObjectLight implements Transferable { //This class does not im
      */
     public LocalObjectLight(){
         this.oid = -1;
+        this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
     }
 
     public LocalObjectLight(long oid, String name, String className) {
+        this();
         this.oid = oid;
         this.name = name;
         this.className = className;
@@ -61,10 +64,7 @@ public class LocalObjectLight implements Transferable { //This class does not im
     }
 
     public LocalObjectLight(String className, String name, long id, HashMap<String, Integer> validators){
-        this.className = className;
-        this.name = name;
-        this.oid = id;
-        this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
+        this(id, name, className);        
         this.validators = validators;
     }
 
@@ -95,7 +95,9 @@ public class LocalObjectLight implements Transferable { //This class does not im
     }
 
     public void setName(String name) {
+        String oldName = name;
         this.name = name;
+        firePropertyChangeEvent(Constants.PROPERTY_NAME, oldName, name);
     }
 
     public void addPropertyChangeListener(PropertyChangeListener newListener){
@@ -130,7 +132,6 @@ public class LocalObjectLight implements Transferable { //This class does not im
     public int hashCode() {
         int hash = 5;
         hash = 47 * hash + (int) (this.oid ^ (this.oid >>> 32));
-        //hash = 47 * hash + (this.className != null ? this.className.hashCode() : 0);
         return hash;
     }
 
@@ -155,6 +156,6 @@ public class LocalObjectLight implements Transferable { //This class does not im
 
     @Override
     public String toString(){
-        return getName() +" ["+getClassName()+"]"; //NOI18N
+        return (getName() == null ? Constants.LABEL_NONAME : getName()) + " [" + getClassName() + "]"; //NOI18N
     }
 }

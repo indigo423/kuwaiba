@@ -15,6 +15,7 @@
  */
 package org.inventory.communications.core;
 
+import java.awt.Color;
 import java.awt.Image;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -75,6 +76,11 @@ public class LocalClassMetadataLight implements Transferable {
      */
     protected Image smallIcon;
     /**
+     * Color for the class. The class will show this color in maps 
+     */
+    private Color color;
+    
+    /**
      * Misc validators. Validators tell you states of this class related to business rules
      */
     protected HashMap<String, Integer> validators;
@@ -91,7 +97,7 @@ public class LocalClassMetadataLight implements Transferable {
 
     public LocalClassMetadataLight(long id, String className, String displayName, 
             String parentName, boolean _abstract, boolean viewable, boolean listType, 
-            boolean custom, boolean inDesign,byte[] smallIcon, HashMap<String, Integer> validators) {
+            boolean custom, boolean inDesign,byte[] smallIcon, int color, HashMap<String, Integer> validators) {
         this.id = id;
         this.className = className;
         this.displayName = displayName;
@@ -101,7 +107,9 @@ public class LocalClassMetadataLight implements Transferable {
         this.listType = listType;
         this.custom = custom;
         this.inDesign = inDesign;
-        this.smallIcon = Utils.getImageFromByteArray(smallIcon);
+        this.smallIcon = Utils.getIconFromByteArray(smallIcon, new Color(color),
+                Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT);
+        this.color = new Color(color);
         this.validators = validators;
     }
 
@@ -174,6 +182,14 @@ public class LocalClassMetadataLight implements Transferable {
 
     public void setSmallIcon(Image newIcon){
         this.smallIcon = newIcon;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public void setColor(Color color) {
+        this.color = color;
     }
 
     @Override

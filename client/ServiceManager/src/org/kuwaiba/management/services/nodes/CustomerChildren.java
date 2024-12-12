@@ -15,15 +15,11 @@
  */
 package org.kuwaiba.management.services.nodes;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.openide.nodes.Children;
-import org.openide.util.Lookup;
 
 /**
  * Node representing a customer
@@ -31,25 +27,35 @@ import org.openide.util.Lookup;
  */
 public class CustomerChildren extends Children.Array {
     private LocalObjectLight customer;
+    private boolean collapsed;
+    
     public CustomerChildren(LocalObjectLight customers) {
         this.customer = customers;
+        collapsed = true;
     }
 
     @Override
     protected void addNotify() {
-        NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
+        collapsed = false;
         LocalObjectLight[] services = CommunicationsStub.getInstance().getServices(customer.getClassName(), customer.getOid());
         
         if (services == null)
-            nu.showSimplePopup("Error", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
+            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else{
-            for (LocalObjectLight service : services){
-                ServiceNode[] node = new ServiceNode[] {new ServiceNode(service)};
-                remove(node);
-                add(node);
-            }
+            for (LocalObjectLight service : services)
+                add(new ServiceNode[] {new ServiceNode(service)});
+        }
+        
+        List<LocalObjectLight> servicesPools = CommunicationsStub.getInstance().getPools(customer.getOid(), "GenericService");
+        if (servicesPools == null)
+            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+        else{
+            for (LocalObjectLight servicePool : servicesPools) 
+                add(new ServicesPoolNode[]{new ServicesPoolNode(servicePool)});
         }
     }
-    
-        
+
+    public boolean isCollapsed() {
+        return collapsed;
+    }
 }

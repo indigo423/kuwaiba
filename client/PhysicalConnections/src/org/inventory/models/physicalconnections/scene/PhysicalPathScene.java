@@ -19,12 +19,11 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.visual.scene.AbstractScene;
+import org.inventory.core.visual.scene.PhysicalConnectionProvider;
 import org.netbeans.api.visual.action.ActionFactory;
-import org.netbeans.api.visual.graph.GraphScene;
 import org.netbeans.api.visual.layout.LayoutFactory;
 import org.netbeans.api.visual.router.Router;
 import org.netbeans.api.visual.router.RouterFactory;
@@ -35,9 +34,8 @@ import org.netbeans.api.visual.widget.Widget;
  * Service class for this module
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class PhysicalPathScene extends GraphScene<LocalObjectLight, LocalObjectLight> {
-    private LayerWidget nodesLayer;
-    private LayerWidget edgesLayer;
+public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalObjectLight>{
+    public static final int X_OFFSET = 50;
     private Router router;
 
     public PhysicalPathScene() {       
@@ -79,19 +77,6 @@ public class PhysicalPathScene extends GraphScene<LocalObjectLight, LocalObjectL
         nodesLayer.addChild(widget);
     }
 
-    public void clear() {
-        List<LocalObjectLight> clonedNodes = new ArrayList<LocalObjectLight>(getNodes());
-        List<LocalObjectLight> clonedEdges = new ArrayList<LocalObjectLight>(getEdges());
-        
-        for(LocalObjectLight lol : clonedNodes)
-            removeNode(lol);
-        for(LocalObjectLight lol : clonedEdges)
-            removeEdge(lol);
-
-        nodesLayer.removeChildren();
-        edgesLayer.removeChildren();
-    }
-
     public Router getRouter() {
         return router;
     }
@@ -101,7 +86,28 @@ public class PhysicalPathScene extends GraphScene<LocalObjectLight, LocalObjectL
         for (Widget child : nodesLayer.getChildren()){
             child.resolveBounds (new Point (x, 10), new Rectangle (child.getPreferredBounds().x, 
                     child.getPreferredBounds().y, child.getPreferredBounds().width, child.getPreferredBounds().height));
-            x += child.getPreferredBounds().width + 50;
+            x += child.getPreferredBounds().width + X_OFFSET;
         }
+    }
+
+    @Override
+    public byte[] getAsXML() {
+        //For now
+        return null;
+    }
+
+    @Override
+    public PhysicalConnectionProvider getConnectProvider() {
+        return null;
+    }
+
+    @Override
+    public boolean supportsConnections() {
+        return false;
+    }
+
+    @Override
+    public boolean supportsBackgrounds() {
+        return false;
     }
 }

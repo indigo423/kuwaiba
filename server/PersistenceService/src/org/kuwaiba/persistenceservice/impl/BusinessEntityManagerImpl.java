@@ -16,6 +16,10 @@
 
 package org.kuwaiba.persistenceservice.impl;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -77,7 +81,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
      */
     private Index<Node> objectIndex;
     /**
-     * Speial nodes index
+     * Special nodes index
      */
     private Index<Node> specialNodesIndex;
     /**
@@ -110,7 +114,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
         
         ClassMetadata myClass= cm.getClass(className);
         
-        Node classNode = classIndex.get(Constants.PROPERTY_NAME,className).getSingle();
+        Node classNode = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
         if (classNode == null)
             throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", className));
 
@@ -166,6 +170,45 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, "createObject: {0}", ex.getMessage()); //NOI18N
             tx.failure();
             tx.finish();
+            throw new RuntimeException(ex.getMessage());
+        }
+    }
+    
+    @Override
+    public long createObject(String className, String parentClassName, String criteria, HashMap<String,List<String>> attributes, long template, String ipAddress, String sessionId)
+            throws ObjectNotFoundException, OperationNotPermittedException, MetadataObjectNotFoundException, InvalidArgumentException, DatabaseException, ApplicationObjectNotFoundException, NotAuthorizedException {
+        try {
+                aem.validateCall("createObject", ipAddress, sessionId);
+                String[] splitCriteria = criteria.split(":");
+                if (splitCriteria.length < 2)
+                    throw new InvalidArgumentException("The criteria is not valid. It has to have at least two components", Level.INFO);
+                
+                if (splitCriteria[0].equals("oid"))
+                    return createObject(className, parentClassName, Long.parseLong(splitCriteria[1]), attributes, template, ipAddress, sessionId);
+                
+                if (splitCriteria[0].equals("name")) {
+                    Node classNode = classIndex.get(Constants.PROPERTY_NAME, parentClassName).getSingle();
+                    if (classNode == null)
+                        throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", parentClassName));
+                    long parentOid = -1;
+                    Iterator<Relationship> children = classNode.getRelationships(RelTypes.INSTANCE_OF).iterator();
+                    while (children.hasNext()){
+                        Node possibleParentNode = children.next().getStartNode();
+                        if (splitCriteria[1].equals(possibleParentNode.getProperty(Constants.PROPERTY_NAME))) {
+                            parentOid = possibleParentNode.getId();
+                            break;
+                        }
+                    }
+                    if (parentOid != -1)
+                        return createObject(className, parentClassName, parentOid, attributes, template, ipAddress, sessionId);
+                    
+                    throw new InvalidArgumentException(String.format("A parent with name %s of class %s could not be found", 
+                            splitCriteria[1], parentClassName), Level.INFO);
+                }
+                
+                throw new InvalidArgumentException("Wrong criteria identifier: " + splitCriteria[1], Level.INFO);
+            }catch(Exception ex){
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, "createObject: {0}", ex.getMessage()); //NOI18N
             throw new RuntimeException(ex.getMessage());
         }
     }
@@ -426,17 +469,15 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
             //TODO: Optimize so it can find all objects of a single class in one query
             for (String className : objects.keySet()){
                 for (long oid : objects.get(className)){
-                    if (!cm.isSubClass("InventoryObject", className))
+                    if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, className))
                         throw new OperationNotPermittedException(className, String.format("Class %s is not a business-related class", className));
 
                     Node instance = getInstanceOfClass(className, oid);
                     Util.deleteObject(instance, releaseRelationships);
-                    
                     //Creates an activity log entry
                     Util.createActivityLogEntry(null, specialNodesIndex.get(Constants.PROPERTY_NAME, Constants.NODE_GENERAL_ACTIVITY_LOG).getSingle(), 
                             aem.getSessions().get(sessionId).getUser().getUserName(), ActivityLogEntry.ACTIVITY_TYPE_DELETE_INVENTORY_OBJECT, 
                             Calendar.getInstance().getTimeInMillis(), null, null, null, String.valueOf(instance.getId()));
-            
                 }
             }
             tx.success();
@@ -488,7 +529,6 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
                             }
                         }
                     }else { //If the attribute is not a primitive type, then it's a relationship
-                        List<Long> listTypeItems = new ArrayList<Long>();
                         if (!cm.getClass(myClass.getType(attributeName)).isListType())
                             throw new InvalidArgumentException(String.format("Class %s is not a list type", myClass.getType(attributeName)), Level.WARNING);
 
@@ -501,15 +541,9 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
                             }
                         }
                         if (attributes.get(attributeName) != null){ //If the new value is different than null, then create the new relationships
-                            try{
-                                for (String value : attributes.get(attributeName))
-                                    listTypeItems.add(Long.valueOf(value));
-                            }catch(NumberFormatException ex){
-                                throw new InvalidArgumentException(ex.getMessage(), Level.WARNING);
-                            }
 
                             Node listTypeNode = classIndex.get(Constants.PROPERTY_NAME, myClass.getType(attributeName)).getSingle();
-                            List<Node> listTypeNodes = Util.getRealValue(listTypeItems, listTypeNode);
+                            List<Node> listTypeNodes = Util.getRealValue(attributes.get(attributeName), listTypeNode);
 
                             newValue = "";
                             //Create the new relationships
@@ -964,10 +998,13 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
         aem.validateCall("getSpecialAttribute", ipAddress, sessionId); 
         Node instance = getInstanceOfClass(objectClass, objectId);
         List<RemoteBusinessObjectLight> res = new ArrayList<RemoteBusinessObjectLight>();
-        for (Relationship rel : instance.getRelationships(RelTypes.RELATED_TO_SPECIAL))
-            if (rel.getProperty(Constants.PROPERTY_NAME).equals(specialAttributeName))
-                res.add(rel.getEndNode().getId() == objectId ? 
+        for (Relationship rel : instance.getRelationships(RelTypes.RELATED_TO_SPECIAL)){
+            if(rel.hasProperty(Constants.PROPERTY_NAME)){
+                if (rel.getProperty(Constants.PROPERTY_NAME).equals(specialAttributeName))
+                    res.add(rel.getEndNode().getId() == objectId ? 
                         Util.createRemoteObjectLightFromNode(rel.getStartNode()) : Util.createRemoteObjectLightFromNode(rel.getEndNode()));
+            }
+        }
         return res;
     }
     
@@ -995,8 +1032,13 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
         aem.validateCall("getObjectSpecialChildren", ipAddress, sessionId); 
         Node instance = getInstanceOfClass(objectClass, objectId);
         List<RemoteBusinessObjectLight> res = new ArrayList<RemoteBusinessObjectLight>();
-        for (Relationship rel : instance.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF_SPECIAL))
+        for (Relationship rel : instance.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF_SPECIAL)){
+            if(rel.hasProperty(Constants.PROPERTY_NAME)){
+                if(rel.getProperty(Constants.PROPERTY_NAME).equals(Constants.REL_PROPERTY_POOL))
+                    return res;
+            }
             res.add(Util.createRemoteObjectLightFromNode(rel.getStartNode()));
+        }
         return res;
     }
 
@@ -1080,17 +1122,15 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
      * @throws MetadataObjectNotFoundException id the class cannot be found
      */
     private Node getInstanceOfClass(String className, long oid) throws MetadataObjectNotFoundException, ObjectNotFoundException{
-
         //if any of the parameters is null, return the dummy root
         if (className == null)
             return graphDb.getReferenceNode().getSingleRelationship(RelTypes.DUMMY_ROOT, Direction.BOTH).getEndNode();
-
 
         Node classNode = classIndex.get(Constants.PROPERTY_NAME,className).getSingle();
 
         if (classNode == null)
             throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", className));
-
+        
         Iterable<Relationship> instances = classNode.getRelationships(RelTypes.INSTANCE_OF);
         while (instances.iterator().hasNext()){
             Node otherSide = instances.iterator().next().getStartNode();
@@ -1136,7 +1176,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
     }
     
     protected Node createObject(Node classNode, ClassMetadata classToMap, HashMap<String,List<String>> attributes, long template) 
-            throws InvalidArgumentException, MetadataObjectNotFoundException{
+            throws InvalidArgumentException, MetadataObjectNotFoundException {
  
         if (classToMap.isAbstract())
                 throw new InvalidArgumentException(String.format("Can not create objects from abstract classes (%s)", classToMap.getName()), Level.OFF);
@@ -1161,18 +1201,20 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
                                 newObject.setProperty(att.getName(), Util.getRealValue(attributes.get(att.getName()).get(0), classToMap.getType(att.getName())));
                         else{
                         //If it's not a primitive type, maybe it's a relationship
-                            List<Long> listTypeItems = new ArrayList<Long>();
+
                             if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, att.getType()))
                                 throw new InvalidArgumentException(String.format("Type %s is not a primitive nor a list type", att.getName()), Level.WARNING);
-                            try{
-                                for (String value : attributes.get(att.getName()))
-                                    listTypeItems.add(Long.valueOf(value));
-                            }catch(NumberFormatException ex){
-                                throw new InvalidArgumentException(ex.getMessage(), Level.WARNING);
-                            }
+                                                           
                             Node listTypeNode = classIndex.get(Constants.PROPERTY_NAME, att.getType()).getSingle();
-                            List<Node> listTypeNodes = Util.getRealValue(listTypeItems, listTypeNode);
-
+                            
+                            if (listTypeNode == null)
+                                throw new InvalidArgumentException(String.format("Class %s could not be found as list type", att.getType()), Level.INFO);
+                            
+                            List<Node> listTypeNodes = Util.getRealValue(attributes.get(att.getName()), listTypeNode);
+                            
+                            //if (listTypeNodes.isEmpty())
+                            //    throw new InvalidArgumentException(String.format("At least one of list type items could not be found. Check attribute definition for %s", att.getName()), Level.INFO);
+                      
                             //Create the new relationships
                             for (Node item : listTypeNodes){
                                 Relationship newRelationship = newObject.createRelationshipTo(item, RelTypes.RELATED_TO);
@@ -1211,5 +1253,49 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
             }
         }
         return newInstance;
+    }
+
+    @Override
+    public int[] executePatch() throws NotAuthorizedException {
+        int executedFiles = 0;
+        BufferedReader br = null;
+        File patchDirectory = new File(Constants.PACTHES_PATH);
+        int totalPatchFiles = patchDirectory.listFiles().length;
+
+        for (File patchFile : patchDirectory.listFiles()) {
+            if (!patchFile.getName().contains("~") && !patchFile.getName().endsWith(".ole")) {
+                try {
+                    br = new BufferedReader(new FileReader(patchFile));
+                    String line = br.readLine();
+                    while (line != null) {
+                        if (line.startsWith("#")) {
+                            System.out.println(line);
+                        }
+                        if (line.startsWith(Constants.DATABASE_SENTENCE)) {
+                            String cypherQuery = br.readLine();
+                            ExecutionEngine engine = new ExecutionEngine(graphDb);
+                            engine.execute(cypherQuery);
+                        }
+                        line = br.readLine();
+                    }
+                    File readFile = new File(patchFile.getPath()+".ole");
+                    patchFile.renameTo(readFile);
+                    executedFiles++;
+                } catch (IOException e) {
+                    Logger.getLogger(getClass().getName()).log(Level.INFO, "executePatch: {0}", e.getMessage()); //NOI18N
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex.getMessage());
+                } finally {
+                    try {
+                        if (br != null) {
+                            br.close();
+                        }
+                    } catch (IOException ex) {
+                        Logger.getLogger(getClass().getName()).log(Level.INFO, "executePatch: {0}", ex.getMessage()); //NOI18N
+                    }
+                }
+            }
+        }//end for
+        return new int[]{executedFiles, totalPatchFiles};
     }
 }

@@ -29,14 +29,15 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.views.LocalObjectView;
 import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.inventory.communications.util.Constants;
+import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.views.gis.scene.GISViewScene;
 import org.inventory.views.gis.scene.GeoPositionedConnectionWidget;
 import org.inventory.views.gis.scene.GeoPositionedNodeWidget;
-import org.inventory.views.gis.scene.providers.PhysicalConnectionProvider;
 import org.netbeans.api.visual.anchor.AnchorFactory;
 import org.netbeans.api.visual.widget.Widget;
-import org.openide.util.Lookup;
+import org.openstreetmap.gui.jmapviewer.Coordinate;
 
 /**
  * Logic associated to the corresponding TopComponent
@@ -47,7 +48,6 @@ public class GISViewService {
     private GISViewScene scene;
     private LocalObjectView currentView;
     private CommunicationsStub com = CommunicationsStub.getInstance();
-    private NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
     private GISViewTopComponent gvtc;
 
     public GISViewService(GISViewScene scene, GISViewTopComponent gvtc) {
@@ -64,15 +64,15 @@ public class GISViewService {
     }
 
     /**
-     * Updates the current view
+     * Load a previously saved view
      * @param viewId
      */
-    public void loadView(long viewId) {
+    public void loadView(long viewId) throws Exception {
         this.currentView = com.getGeneralView(viewId);
         if (this.currentView == null)
-            nu.showSimplePopup("Loading view", NotificationUtil.ERROR, com.getError());
-//        scene.clear();
+            throw new Exception(com.getError());
         buildView();
+        scene.validate();
     }
 
     private void buildView() throws IllegalArgumentException{
@@ -80,14 +80,13 @@ public class GISViewService {
             return;
 
         if (currentView.getStructure() != null){
-             /*Comment this out for debugging purpose
+            /* Comment this out for debugging purpose
             try{
-                FileOutputStream fos = new FileOutputStream("/home/zim/parsing_"+Calendar.getInstance().getTimeInMillis()+".xml");
+                FileOutputStream fos = new FileOutputStream(System.getProperty("user.home") + "/parsing_"+Calendar.getInstance().getTimeInMillis()+".xml");
                 fos.write(currentView.getStructure());
                 fos.close();
-            }catch(Exception e){}*/
-
-//            scene.activateMap();
+            }catch(Exception e){}
+            */
             try {
                 //Here is where we use Woodstox as StAX provider
                 XMLInputFactory inputFactory = XMLInputFactory.newInstance();
@@ -117,12 +116,11 @@ public class GISViewService {
                             if (lol != null){
                                 GeoPositionedNodeWidget widget = (GeoPositionedNodeWidget)scene.addNode(lol);
                                 widget.setCoordinates(latitude, longitude);
-//                                widget.setPreferredLocation(scene.coordinateToPixel(latitude, longitude, currentView.getZoom()));
-                                //Hack: a scene doesn't support negative locations, 
-                                //so when the widgets are painted, the coordinates are turned positive
-                                if (widget.getPreferredLocation().x < 0 || widget.getPreferredLocation().y < 0)
-                                    widget.setVisible(false);
-                                scene.validate();
+                                widget.setPreferredLocation(scene.getMap().getMapPosition(latitude, longitude, false));
+                                widget.setBackground(com.getMetaForClass(objectClass, false).getColor());
+                                if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                                    System.out.println(String.format("%s --> lon=%s lat=%s (x,y)=%s", 
+                                            lol, longitude, latitude, widget.getPreferredLocation()));
                             }
                             else
                                 currentView.setDirty(true);
@@ -145,11 +143,10 @@ public class GISViewService {
                                         currentView.setDirty(true);
                                     else{
                                         GeoPositionedConnectionWidget newEdge = (GeoPositionedConnectionWidget)scene.addEdge(container);
-                                        newEdge.setSourceAnchor(AnchorFactory.createRectangularAnchor(aSideWidget, true));
-                                        newEdge.setTargetAnchor(AnchorFactory.createRectangularAnchor(bSideWidget, true));
-                                        newEdge.setLineColor(PhysicalConnectionProvider.getConnectionColor(container.getClassName()));
+                                        newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
+                                        newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
+                                        newEdge.setLineColor(Utils.getConnectionColor(container.getClassName()));
 
-                                        boolean visible = true;
                                         List<Point> localControlPoints = new ArrayList<Point>();
                                         while(true){
                                             reader.nextTag();
@@ -158,15 +155,12 @@ public class GISViewService {
                                                     double longitude = Double.valueOf(reader.getAttributeValue(null,"x"));
                                                     double latitude = Double.valueOf(reader.getAttributeValue(null,"y"));
                                                     newEdge.getGeoPositionedControlPoints().add(new double[]{longitude, latitude});
-//                                                    Point newControlPoint = scene.coordinateToPixel(latitude, longitude, currentView.getZoom());
-//                                                    localControlPoints.add(newControlPoint);
-//                                                    if (newControlPoint.x <= 0 || newControlPoint.y <= 0)
-//                                                        visible = false;
+                                                    Point newControlPoint = scene.getMap().getMapPosition(latitude, longitude, false);
+                                                    localControlPoints.add(newControlPoint);
                                                 }
                                             }else{
                                                 if (!localControlPoints.isEmpty())
                                                     newEdge.setControlPoints(localControlPoints, false);
-                                                newEdge.setVisible(visible);
                                                 break;
                                             }
                                         }
@@ -181,14 +175,15 @@ public class GISViewService {
                                 else{
                                     if (reader.getName().equals(qZoom)){
                                         currentView.setZoom(Integer.valueOf(reader.getElementText()));
-//                                        scene.zoom(currentView.getZoom());
+                                        scene.getMap().setZoom(currentView.getZoom());
                                     }
                                     else{
                                         if (reader.getName().equals(qCenter)){
                                             double x = Double.valueOf(reader.getAttributeValue(null, "x"));
                                             double y = Double.valueOf(reader.getAttributeValue(null, "y"));
                                             currentView.setCenter(new double[]{x,y});
-//                                            scene.setCenterPosition(currentView.getCenter()[1], currentView.getCenter()[0]);
+                                            scene.getMap().setDisplayPosition(
+                                                    new Coordinate(y, x), currentView.getZoom());
                                         }else {
                                             //Place more tags
                                         }
@@ -199,61 +194,54 @@ public class GISViewService {
                     }
                 }
                 reader.close();
-                scene.validate();
+                scene.resetDefaultLastPositions();
                 gvtc.toggleButtons(true);
             } catch (XMLStreamException ex) {
-                gvtc.getNotifier().showSimplePopup("Object View", NotificationUtil.ERROR, "Error rendering view file (Corrupted File)");
-//                scene.clear();
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "Error rendering view file (Corrupted File)");
             } catch (IllegalStateException ise){
-                gvtc.getNotifier().showSimplePopup("Object View", NotificationUtil.ERROR, "Error rendering view file (Illegal State)");
-//                scene.clear();
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "Error rendering view file (Illegal State)");
             } catch (NumberFormatException nfe){
-                gvtc.getNotifier().showSimplePopup("Object View", NotificationUtil.ERROR, "Error rendering view file (Wrong Number Format)");
-//                scene.clear();
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "Error rendering view file (Wrong Number Format)");
             }
+            gvtc.setDisplayName(currentView.getName());
         }
     }
 
     void saveView(String nameInTxt, String descriptionInTxt) {
         if (currentView == null){
-//            byte[] structure = scene.getAsXML();
-//            long viewId = com.createGeneralView(LocalObjectViewLight.TYPE_GIS, nameInTxt, descriptionInTxt, structure, null);
-//            if (viewId != -1){
-//                currentView = new LocalObjectView(viewId, nameInTxt, descriptionInTxt, LocalObjectViewLight.TYPE_GIS, structure, null);
-//                nu.showSimplePopup("New View", NotificationUtil.INFO, "View created successfully");
-//            }else
-//                nu.showSimplePopup("New View", NotificationUtil.ERROR, com.getError());
+            byte[] structure = scene.getAsXML();
+            long viewId = com.createGeneralView(LocalObjectViewLight.TYPE_GIS, nameInTxt, descriptionInTxt, structure, null);
+            if (viewId != -1){
+                currentView = new LocalObjectView(viewId, nameInTxt, descriptionInTxt, LocalObjectViewLight.TYPE_GIS, structure, null);
+                gvtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "View created successfully");
+            }else
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         }
         else{
-//            if (com.updateGeneralView(currentView.getId(), nameInTxt, descriptionInTxt, scene.getAsXML(), null)){
+            if (com.updateGeneralView(currentView.getId(), nameInTxt, descriptionInTxt, scene.getAsXML(), null)){
                 currentView.setName(nameInTxt);
                 currentView.setDescription(descriptionInTxt);
-                nu.showSimplePopup("Save View", NotificationUtil.INFO, "View created successfully");
+                gvtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "View saved successfully");
             }
-//            else
-//                nu.showSimplePopup("Save View", NotificationUtil.ERROR, com.getError());
+            else
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         }
-//    }
+        gvtc.setDisplayName(currentView.getName() == null ? "No Name" : currentView.getName());
+    }
 
-//    void deleteCurrentView() {
-//        if (currentView == null)
-//            nu.showSimplePopup("Delete View", NotificationUtil.INFO, "This view has not been saved yet");
-//        else{
-//            if (com.deleteGeneralViews(new long[]{currentView.getId()})){
-//                scene.clear();
-//                currentView = null;
-//                gvtc.toggleButtons(false);
-//                nu.showSimplePopup("Delete View", NotificationUtil.INFO, "View deleted successfully");
-//            }
-//            else
-//                nu.showSimplePopup("Delete View", NotificationUtil.ERROR, com.getError());
-//        }
-//    }
-//
-//    void toggleLabels(boolean isVisible) {
-//        for (Widget aNode :scene.getNodesLayer().getChildren())
-//            ((GeoPositionedNodeWidget)aNode).getLabelWidget().setVisible(isVisible);
-//                
-//        scene.validate();
-//    }
+    public boolean deleteCurrentView() {
+        if (currentView == null)
+            scene.clear();
+        else{
+            if (com.deleteGeneralViews(new long[]{currentView.getId()})){
+                scene.clear();
+                currentView = null;
+                gvtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "View deleted successfully");
+            }else{
+                gvtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                return false;
+            }
+        }
+        return true;
+    }
 }

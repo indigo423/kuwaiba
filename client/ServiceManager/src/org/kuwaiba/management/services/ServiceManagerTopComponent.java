@@ -25,9 +25,9 @@ import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
 import org.openide.util.Lookup;
-import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 import org.openide.windows.Mode;
+import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
 /**
@@ -49,14 +49,14 @@ persistenceType = TopComponent.PERSISTENCE_NEVER)
     displayName = "#CTL_ServiceManagerAction",
 preferredID = "ServiceManagerTopComponent")
 @Messages({
-    "CTL_ServiceManagerAction=ServiceManager",
-    "CTL_ServiceManagerTopComponent=ServiceManager Window",
-    "HINT_ServiceManagerTopComponent=This is a ServiceManager window"
+    "CTL_ServiceManagerAction=Service Manager",
+    "CTL_ServiceManagerTopComponent=Service Manager",
+    "HINT_ServiceManagerTopComponent=Manage Customers and Services"
 })
 public final class ServiceManagerTopComponent extends TopComponent 
-implements ExplorerManager.Provider, Refreshable{
+    implements ExplorerManager.Provider, Refreshable {
 
-    private ExplorerManager em = new ExplorerManager();
+    private ExplorerManager em;
     private BeanTreeView tree;
     private NotificationUtil nu;
     private ServiceManagerService sms;
@@ -65,12 +65,12 @@ implements ExplorerManager.Provider, Refreshable{
         initComponents();
         setName(Bundle.CTL_ServiceManagerTopComponent());
         setToolTipText(Bundle.HINT_ServiceManagerTopComponent());
+        em = new ExplorerManager();
         associateLookup(ExplorerUtils.createLookup(em, getActionMap()));
         nu = Lookup.getDefault().lookup(NotificationUtil.class);
         sms = new ServiceManagerService(this);
         tree = new BeanTreeView();
-        pnlSrollMain.setViewportView(tree);
-        
+        pnlScrollMain.setViewportView(tree);
     }
 
     /**
@@ -81,14 +81,14 @@ implements ExplorerManager.Provider, Refreshable{
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        pnlSrollMain = new javax.swing.JScrollPane();
+        pnlScrollMain = new javax.swing.JScrollPane();
 
         setLayout(new java.awt.BorderLayout());
-        add(pnlSrollMain, java.awt.BorderLayout.CENTER);
+        add(pnlScrollMain, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane pnlSrollMain;
+    private javax.swing.JScrollPane pnlScrollMain;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {
@@ -129,7 +129,7 @@ implements ExplorerManager.Provider, Refreshable{
 
     @Override
     public void refresh() {
-        em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
+        //em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
         sms.setTreeRoot();
     }
 }

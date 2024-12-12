@@ -28,7 +28,7 @@ import org.kuwaiba.apis.persistence.application.Privilege;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PrivilegeInfo implements Serializable{
     /**
-     * Privilege id 
+     * 
      */
     private long id;
     /**
@@ -36,25 +36,25 @@ public class PrivilegeInfo implements Serializable{
      */
     private long code;
     /**
-     * Privilege group 
+     * 
      */
     private String methodGroup;
     /**
-     * Privilege name 
+     * 
      */
     private String methodName;
     /**
-     * Privilege manager 
+     * 
      */
     private String methodManager;
     /**
-     * A privilege could depend of other privileges
+     * 
      */
     private long [] dependsOf;
 
-    public PrivilegeInfo() {
-    }
-
+    //No-arg constructor required
+    public PrivilegeInfo() { }
+    
     public PrivilegeInfo(Privilege privilege) {
         id=privilege.getId();
         code=privilege.getCode();

@@ -37,7 +37,6 @@ import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.application.ViewObject;
 import org.kuwaiba.apis.persistence.application.ViewObjectLight;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
-import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.InventoryException;
 import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.CategoryMetadata;
@@ -48,7 +47,8 @@ import org.kuwaiba.exceptions.ServerSideException;
 import org.kuwaiba.psremoteinterfaces.ApplicationEntityManagerRemote;
 import org.kuwaiba.psremoteinterfaces.BusinessEntityManagerRemote;
 import org.kuwaiba.psremoteinterfaces.MetadataEntityManagerRemote;
-import org.kuwaiba.sync.SyncServicesManager;
+import org.kuwaiba.sync.LoadDataFromFile;
+import org.kuwaiba.sync.SyncManager;
 import org.kuwaiba.util.bre.TempBusinessRulesEngine;
 import org.kuwaiba.ws.todeserialize.TransientQuery;
 import org.kuwaiba.ws.toserialize.application.ApplicationLogEntry;
@@ -95,12 +95,12 @@ public class WebserviceBean implements WebserviceBeanRemote {
     /**
      * Sync/load data reference
      */
-    private SyncServicesManager ssm;
+    private SyncManager sync;
     
     public WebserviceBean() {
         super();
         bre = new TempBusinessRulesEngine();
-        ssm = new SyncServicesManager();
+        sync = new SyncManager();
         connect();
     }
 
@@ -117,7 +117,7 @@ public class WebserviceBean implements WebserviceBeanRemote {
             cm.setDescription(classDefinition.getDescription());
             cm.setParentClassName(classDefinition.getParentClassName());
             cm.setAbstract(classDefinition.isAbstract());
-            cm.setColor(0);
+            cm.setColor(classDefinition.getColor());
             cm.setCountable(classDefinition.isCountable());
             cm.setCreationDate(Calendar.getInstance().getTimeInMillis());
             cm.setIcon(classDefinition.getIcon());
@@ -396,7 +396,7 @@ public class WebserviceBean implements WebserviceBeanRemote {
             cm.setInDesign(newClassDefinition.isInDesign());
             cm.setIcon(newClassDefinition.getIcon());
             cm.setSmallIcon(newClassDefinition.getSmallIcon());
-            cm.setColor(cm.getColor());
+            cm.setColor(newClassDefinition.getColor());
             //cm.setCategory(classDefinition.getCategory());
             
             mem.setClassProperties(cm, ipAddress, sessionId);
@@ -803,15 +803,16 @@ public class WebserviceBean implements WebserviceBeanRemote {
     @Override
     public RemoteSession createSession(String user, String password, String IPAddress)
             throws ServerSideException {
-        if (aem == null)
+        if (aem == null){
             throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
+        }
         try {
             Session newSession = aem.createSession(user, password, IPAddress);
             return new RemoteSession(newSession.getToken(), newSession.getUser());
         } catch (Exception ex) {
-        Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
-            throw new ServerSideException(Level.SEVERE, ex.getMessage());
-        } 
+            Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
+            throw new ServerSideException(Level.SEVERE, ex.getMessage()); 
+        }
     }
 
     @Override
@@ -828,14 +829,6 @@ public class WebserviceBean implements WebserviceBeanRemote {
         }
     }
     
-    @Override
-    public UserInfo getUserInSession(String sessionId){
-//        Session aSession = sessions.get(sessionId);
-//        if (aSession == null){
-            return null;
-//        }
-//        return new UserInfo(aSession.getUser());
-    }
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Business methods. Click on the + sign on the left to edit the code.">
@@ -1841,13 +1834,25 @@ public class WebserviceBean implements WebserviceBeanRemote {
             throw new ServerSideException(Level.SEVERE, ex.getMessage());
         }
     }
-
+    
     @Override
-    public RemoteObjectLight[] getPools(int limit, String ipAddress, String sessionId) throws ServerSideException{
+    public RemoteObjectLight[] getPools(int limit, long parentId, String className, String ipAddress, String sessionId) throws ServerSideException{
         if (aem == null)
             throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
         try{
-            return RemoteObjectLight.toRemoteObjectLightArray(aem.getPools(limit, ipAddress, sessionId));
+            return RemoteObjectLight.toRemoteObjectLightArray(aem.getPools(limit, parentId, className, ipAddress, sessionId));
+        }catch (Exception ex){
+            Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
+            throw new ServerSideException(Level.SEVERE, ex.getMessage());
+        }
+    }
+    
+    @Override
+    public RemoteObjectLight[] getPools(int limit, String className, String ipAddress, String sessionId) throws ServerSideException{
+        if (aem == null)
+            throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
+        try{
+            return RemoteObjectLight.toRemoteObjectLightArray(aem.getPools(limit, className, ipAddress, sessionId));
         }catch (Exception ex){
             Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
             throw new ServerSideException(Level.SEVERE, ex.getMessage());
@@ -1907,13 +1912,13 @@ public class WebserviceBean implements WebserviceBeanRemote {
     
     // </editor-fold>
     
-    // <editor-fold defaultstate="collapsed" desc="Sync/Bulkupload data methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="Sync/Bulk load data methods. Click on the + sign on the left to edit the code.">
     @Override
-    public String bulkUpload(byte[] choosenFile, long userId) throws ServerSideException{
-        if (ssm == null)
+    public String bulkUpload(byte[] file, int commitSize, int dataType, String ipAddress, String sessionId) throws ServerSideException{
+        if (sync == null)
             throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
         try{
-            return ssm.loadDataFromFile(choosenFile, userId);
+            return sync.bulkUploadFromFile(file, commitSize, dataType, ipAddress, sessionId);
         }catch (Exception ex){
             Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
             throw new ServerSideException(Level.SEVERE, ex.getMessage());
@@ -1921,23 +1926,11 @@ public class WebserviceBean implements WebserviceBeanRemote {
     }
     
     @Override
-    public byte[] downloadLog(String fileName) throws ServerSideException{
-        if (ssm == null)
+    public byte[] downloadBulkLoadLog(String fileName, String ipAddress, String sessionId) throws ServerSideException{
+        if (sync == null)
             throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
         try{
-            return ssm.downloadLog(fileName);
-        }catch (Exception ex){
-            Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
-            throw new ServerSideException(Level.SEVERE, ex.getMessage());
-        }
-    }
-    
-    @Override
-    public byte[] downloadErrors(String fileName) throws ServerSideException{
-        if (ssm == null)
-            throw new ServerSideException(Level.SEVERE, "Can't reach the backend. Contact your administrator");
-        try{
-            return ssm.downloadErrors(fileName);
+            return sync.downloadBulkLoadLog(fileName, ipAddress, sessionId);
         }catch (Exception ex){
             Logger.getLogger(WebserviceBean.class.getName()).log(Level.SEVERE, ex.getMessage());
             throw new ServerSideException(Level.SEVERE, ex.getMessage());

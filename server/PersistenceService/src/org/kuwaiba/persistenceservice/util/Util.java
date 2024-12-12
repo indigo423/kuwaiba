@@ -104,17 +104,33 @@ public class Util {
 
     /**
      * Gets the requested nodes representing list type items
-     * @param values A list of Long objects containing the ids of the required list type items
+     * @param values This list may contain the id of the associated objects or their names
      * @param listType Node the list items are supposed to be instance of
      * @return A list of nodes representing the list type items
      */
-    public static List<Node> getRealValue(List<Long> values, Node listType) throws InvalidArgumentException{
+    public static List<Node> getRealValue(List<String> values, Node listType) throws InvalidArgumentException{
         Iterable<Relationship> listTypeItems = listType.getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING);
         List<Node> res = new ArrayList<Node>();
-        for (Relationship listTypeItem : listTypeItems){
-            Node instance = listTypeItem.getStartNode();
-            if (values.contains(new Long(instance.getId())))
-                res.add(instance);
+        
+        for (String value : values) {
+            try { //If the value provided is a number, match the node id, if not, the name
+                long valueAsLong = Long.valueOf(value);
+                for (Relationship listTypeItem : listTypeItems){
+                    Node instance = listTypeItem.getStartNode();
+                    if (instance.getId() == valueAsLong) {
+                        res.add(instance);
+                        break;
+                    }
+                }
+            }catch(NumberFormatException ex) {
+                for (Relationship listTypeItem : listTypeItems){
+                    Node instance = listTypeItem.getStartNode();
+                    if (instance.getProperty(Constants.PROPERTY_NAME).equals(value)) {
+                        res.add(instance);
+                        break;
+                    }
+                }
+            }
         }
         return res;
     }
@@ -278,6 +294,7 @@ public class Util {
         
         myClass.setAbstract((Boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT));
         myClass.setSmallIcon((byte[])classNode.getProperty(Constants.PROPERTY_SMALL_ICON));
+        myClass.setColor((Integer)classNode.getProperty(Constants.PROPERTY_COLOR));
         myClass.setCustom((Boolean)classNode.getProperty(Constants.PROPERTY_CUSTOM));
         myClass.setInDesign((Boolean)classNode.getProperty(Constants.PROPERTY_IN_DESIGN));
         myClass.setViewable((Boolean)isSubClass(Constants.CLASS_VIEWABLEOBJECT, classNode));
@@ -456,7 +473,7 @@ public class Util {
            //TODO get users
            groups.add(new GroupProfile(groupNode.getId(),
                         (String)groupNode.getProperty(Constants.PROPERTY_NAME),
-                        (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION),
+                        groupNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION) : "",
                         (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
                         null,groupPrivileges));
             
@@ -927,5 +944,5 @@ public class Util {
         }catch (NumberFormatException ex){} //Does nothing
         
         return null;
-    }
+    }  
 }

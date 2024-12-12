@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010 - 2014 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import javax.swing.JOptionPane;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.views.topology.scene.TopologyViewScene;
 import org.netbeans.api.visual.action.AcceptProvider;
 import org.netbeans.api.visual.action.ConnectorState;
@@ -45,9 +46,10 @@ public class AcceptActionProvider implements AcceptProvider{
 
     @Override
     public ConnectorState isAcceptable(Widget widget, Point point, Transferable transferable) {
-        if (transferable.isDataFlavorSupported(LocalObjectLight.DATA_FLAVOR)){
+        if (transferable.isDataFlavorSupported(LocalObjectLight.DATA_FLAVOR))
             return ConnectorState.ACCEPT;
-        }else return ConnectorState.REJECT_AND_STOP;
+        else 
+            return ConnectorState.REJECT_AND_STOP;
     }
 
     @Override
@@ -61,9 +63,11 @@ public class AcceptActionProvider implements AcceptProvider{
             }else
                 JOptionPane.showMessageDialog(null, "The view already contains this object","Error",JOptionPane.ERROR_MESSAGE);
         } catch (UnsupportedFlavorException ex) {
-            Exceptions.printStackTrace(ex);
+            if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_INFO || Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
-            Exceptions.printStackTrace(ex);
+            if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_INFO || Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                Exceptions.printStackTrace(ex);
         }
     }
 

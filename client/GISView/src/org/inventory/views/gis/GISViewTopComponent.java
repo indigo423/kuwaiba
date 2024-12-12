@@ -16,27 +16,33 @@
 package org.inventory.views.gis;
 
 import java.awt.BorderLayout;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
+import java.awt.Color;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.ButtonGroup;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.visual.export.ExportScenePanel;
+import org.inventory.core.visual.export.filters.ImageFilter;
+import org.inventory.core.visual.export.filters.SceneExportFilter;
+import org.inventory.core.visual.scene.AbstractScene;
+import org.inventory.core.visual.scene.PhysicalConnectionProvider;
 import org.inventory.views.gis.dialogs.OpenDialog;
 import org.inventory.views.gis.dialogs.SaveDialog;
 import org.inventory.views.gis.scene.GISViewScene;
-import org.inventory.views.gis.scene.ObjectNodeWidget;
-import org.inventory.views.gis.scene.providers.PhysicalConnectionProvider;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 import org.openide.util.ImageUtilities;
 import org.netbeans.api.settings.ConvertAsProperties;
+import org.openide.DialogDescriptor;
+import org.openide.DialogDisplayer;
 import org.openide.explorer.ExplorerManager;
-import org.openide.util.Lookup;
+import org.openide.util.Exceptions;
+import org.openstreetmap.gui.jmapviewer.JMapViewer;
 
 /**
  * Top component which displays something.
@@ -45,14 +51,22 @@ import org.openide.util.Lookup;
 autostore = false)
 public final class GISViewTopComponent extends TopComponent implements ExplorerManager.Provider{
 
+    /**
+     * Button group for links and container
+     */
     private ButtonGroup aButtonGroup;
+    /**
+     * Button group for actions
+     */
+    private ButtonGroup bButtonGroup; 
+    private JMapViewer pnlMap;
     private static GISViewTopComponent instance;
     /** path to the icon used by the component and its open action */
     static final String ICON_PATH = "org/inventory/views/gis/res/icon.png";
     private static final String PREFERRED_ID = "GISViewTopComponent";
     private GISViewService gvs;
     private boolean isSaved = false;
-    private NotificationUtil nu;
+
     /**
      * Main scene
      */
@@ -65,35 +79,24 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     public GISViewTopComponent() {
         initComponents();
         initCustomComponents();
-        setName(NbBundle.getMessage(GISViewTopComponent.class, "CTL_GISViewTopComponent"));
-        setToolTipText(NbBundle.getMessage(GISViewTopComponent.class, "HINT_GISViewTopComponent"));
-        scene = new GISViewScene();
         this.gvs = new GISViewService(scene, this);
-        add(scene.createView(), BorderLayout.CENTER);
+        setToolTipText(NbBundle.getMessage(GISViewTopComponent.class, "HINT_GISViewTopComponent"));
         setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         associateLookup(scene.getLookup());
-        addComponentListener(new ComponentListener() {
-
-            @Override
-            public void componentResized(ComponentEvent e) {
-//                scene.updateMapBounds();
-            }
-
-            @Override
-            public void componentMoved(ComponentEvent e) {
-            }
-
-            @Override
-            public void componentShown(ComponentEvent e) {
-            }
-
-            @Override
-            public void componentHidden(ComponentEvent e) {
-            }
-        });
     }
 
     private void initCustomComponents(){
+        pnlMap = new JMapViewer();
+        pnlMap.setZoomContolsVisible(false);
+        pnlMap.setDisplayPosition(GISViewScene.DEFAULT_CENTER_POSITION, GISViewScene.DEFAULT_ZOOM_LEVEL);
+        
+        scene = new GISViewScene(pnlMap);
+        scene.setEnabled(false);
+        pnlMap.setVisible(false);
+        add(scene.createView(), BorderLayout.CENTER);
+        bButtonGroup = new ButtonGroup();
+        bButtonGroup.add(btnSelect);
+        bButtonGroup.add(btnConnect);
         aButtonGroup = new ButtonGroup();
         aButtonGroup.add(btnWireContainer);
         aButtonGroup.add(btnWirelessContainer);
@@ -121,6 +124,7 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
         btnZoomIn = new javax.swing.JButton();
         btnZoomOut = new javax.swing.JButton();
         btnShowNodeLabels = new javax.swing.JToggleButton();
+        jButton1 = new javax.swing.JButton();
         sepMainSeparator = new javax.swing.JToolBar.Separator();
         btnWireContainer = new javax.swing.JToggleButton();
         btnWirelessContainer = new javax.swing.JToggleButton();
@@ -193,6 +197,11 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
         btnExport.setFocusable(false);
         btnExport.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         btnExport.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        btnExport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnExportActionPerformed(evt);
+            }
+        });
         barToolMain.add(btnExport);
 
         btnSelect.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/views/gis/res/select.png"))); // NOI18N
@@ -253,7 +262,6 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
         barToolMain.add(btnZoomOut);
 
         btnShowNodeLabels.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/views/gis/res/hide_node_labels.png"))); // NOI18N
-        btnShowNodeLabels.setSelected(true);
         org.openide.awt.Mnemonics.setLocalizedText(btnShowNodeLabels, org.openide.util.NbBundle.getMessage(GISViewTopComponent.class, "GISViewTopComponent.btnShowNodeLabels.text")); // NOI18N
         btnShowNodeLabels.setToolTipText(org.openide.util.NbBundle.getMessage(GISViewTopComponent.class, "GISViewTopComponent.btnShowNodeLabels.toolTipText")); // NOI18N
         btnShowNodeLabels.setEnabled(false);
@@ -266,6 +274,17 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
             }
         });
         barToolMain.add(btnShowNodeLabels);
+
+        org.openide.awt.Mnemonics.setLocalizedText(jButton1, org.openide.util.NbBundle.getMessage(GISViewTopComponent.class, "GISViewTopComponent.jButton1.text")); // NOI18N
+        jButton1.setFocusable(false);
+        jButton1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        jButton1.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+        barToolMain.add(jButton1);
         barToolMain.add(sepMainSeparator);
 
         btnWireContainer.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/views/gis/res/wire-container.png"))); // NOI18N
@@ -342,57 +361,71 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnZoomInActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnZoomInActionPerformed
-//        scene.zoomIn();
+        pnlMap.zoomIn();
     }//GEN-LAST:event_btnZoomInActionPerformed
 
     private void btnZoomOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnZoomOutActionPerformed
-//        scene.zoomOut();
+        pnlMap.zoomOut();
     }//GEN-LAST:event_btnZoomOutActionPerformed
 
     private void btnSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSelectActionPerformed
-        scene.setActiveTool(ObjectNodeWidget.ACTION_SELECT);
+        scene.setActiveTool(AbstractScene.ACTION_SELECT);
         btnConnect.setSelected(false);
     }//GEN-LAST:event_btnSelectActionPerformed
 
     private void btnConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConnectActionPerformed
-        scene.setActiveTool(ObjectNodeWidget.ACTION_CONNECT);
+        scene.setActiveTool(AbstractScene.ACTION_CONNECT);
         btnSelect.setSelected(false);
     }//GEN-LAST:event_btnConnectActionPerformed
 
     private void btnWireContainerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWireContainerActionPerformed
-//        scene.getConnectProvider().setCurrentConnectionSelection(PhysicalConnectionProvider.CONNECTION_WIRECONTAINER);
+        scene.setNewLineColor(Color.RED);
+        scene.getConnectProvider().setConnectionClass(Constants.CLASS_WIRECONTAINER);
+        scene.getConnectProvider().setWizardType(PhysicalConnectionProvider.WIZARD_CONTAINER);
         btnConnect.setSelected(true);
         btnConnectActionPerformed(evt);
     }//GEN-LAST:event_btnWireContainerActionPerformed
 
     private void btnWirelessContainerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWirelessContainerActionPerformed
-//        scene.getConnectProvider().setCurrentConnectionSelection(PhysicalConnectionProvider.CONNECTION_WIRELESSCONTAINER);
+        scene.setNewLineColor(Color.BLUE);
+        scene.getConnectProvider().setConnectionClass(Constants.CLASS_WIRELESSCONTAINER);
+        scene.getConnectProvider().setWizardType(PhysicalConnectionProvider.WIZARD_CONTAINER);
         btnConnect.setSelected(true);
         btnConnectActionPerformed(evt);
     }//GEN-LAST:event_btnWirelessContainerActionPerformed
 
     private void btnOpticalLinkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOpticalLinkActionPerformed
-//        scene.getConnectProvider().setCurrentConnectionSelection(PhysicalConnectionProvider.CONNECTION_OPTICALLINK);
+        scene.setNewLineColor(Color.GREEN);
+        scene.getConnectProvider().setConnectionClass(Constants.CLASS_OPTICALLINK);
+        scene.getConnectProvider().setWizardType(PhysicalConnectionProvider.WIZARD_LINK);
         btnConnect.setSelected(true);
         btnConnectActionPerformed(evt);
     }//GEN-LAST:event_btnOpticalLinkActionPerformed
 
     private void btnElectricalLinkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnElectricalLinkActionPerformed
-//        scene.getConnectProvider().setCurrentConnectionSelection(PhysicalConnectionProvider.CONNECTION_ELECTRICALLINK);
+        scene.setNewLineColor(Color.ORANGE);
+        scene.getConnectProvider().setConnectionClass(Constants.CLASS_ELECTRICALLINK);
+        scene.getConnectProvider().setWizardType(PhysicalConnectionProvider.WIZARD_LINK);
         btnConnect.setSelected(true);
         btnConnectActionPerformed(evt);
     }//GEN-LAST:event_btnElectricalLinkActionPerformed
 
     private void btnWirelessLinkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnWirelessLinkActionPerformed
-//        scene.getConnectProvider().setCurrentConnectionSelection(PhysicalConnectionProvider.CONNECTION_WIRELESSLINK);
+        scene.setNewLineColor(Color.MAGENTA);
+        scene.getConnectProvider().setConnectionClass(Constants.CLASS_WIRELESSLINK);
+        scene.getConnectProvider().setWizardType(PhysicalConnectionProvider.WIZARD_LINK);
         btnConnect.setSelected(true);
         btnConnectActionPerformed(evt);
     }//GEN-LAST:event_btnWirelessLinkActionPerformed
 
     private void btnNewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewActionPerformed
-//        scene.clear();
-//        scene.activateMap();
+        scene.clear();
+        scene.setEnabled(true);
+        pnlMap.setVisible(true);
+        pnlMap.setEnabled(false);
+        scene.revalidate();
         gvs.setCurrentView(null);
+        scene.updateMapInfo();
         toggleButtons(true);
     }//GEN-LAST:event_btnNewActionPerformed
 
@@ -412,24 +445,52 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     private void btnOpenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOpenActionPerformed
         List<LocalObjectViewLight> views = CommunicationsStub.getInstance().getGeneralViews(LocalObjectViewLight.TYPE_GIS);
         if (views == null)
-            JOptionPane.showMessageDialog(null, CommunicationsStub.getInstance().getError(), "Load View", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, CommunicationsStub.getInstance().getError(), "Error", JOptionPane.ERROR_MESSAGE);
         else{
             OpenDialog openDialog = new OpenDialog(views.toArray(new LocalObjectViewLight[0]));
 
             if (JOptionPane.showConfirmDialog(WindowManager.getDefault().getMainWindow(), openDialog,"Open GIS view", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION){
-                if (openDialog.getSelectedObject() !=  null)
-                    gvs.loadView(openDialog.getSelectedObject().getId());
+                if (openDialog.getSelectedObject() !=  null){
+                    try{
+                        gvs.loadView(openDialog.getSelectedObject().getId());
+                        scene.setEnabled(true);
+                        pnlMap.setVisible(true);
+                    }catch(Exception ex){
+                        if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_INFO || Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                            Exceptions.printStackTrace(ex);
+                        getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                    }
+                }
             }
         }
     }//GEN-LAST:event_btnOpenActionPerformed
 
     private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteActionPerformed
-//        gvs.deleteCurrentView();
+        if (gvs.deleteCurrentView()) {
+            toggleButtons(false);
+            scene.setEnabled(false);
+            scene.setPreferredBounds(getBounds());
+            pnlMap.setVisible(false);
+        }
     }//GEN-LAST:event_btnDeleteActionPerformed
 
     private void btnShowNodeLabelsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnShowNodeLabelsActionPerformed
-//        gvs.toggleLabels(!btnShowNodeLabels.isSelected());
+        scene.toggleLabels(!btnShowNodeLabels.isSelected());
     }//GEN-LAST:event_btnShowNodeLabelsActionPerformed
+
+    private void btnExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportActionPerformed
+        ExportScenePanel exportPanel = new ExportScenePanel(new SceneExportFilter[]{ImageFilter.getInstance()}, scene);
+        DialogDescriptor dd = new DialogDescriptor(exportPanel, "Export options",true, exportPanel);
+        DialogDisplayer.getDefault().createDialog(dd).setVisible(true);
+    }//GEN-LAST:event_btnExportActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        System.out.println("TC Bounds: " +  getBounds());
+        System.out.println("TC Size: " +  getSize());
+        System.out.println("TC PSize: " +  getPreferredSize());
+        System.out.println("Scene Bounds: " +  scene.getBounds());
+        System.out.println("Scene PSize: " +  scene.getPreferredSize());
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JToolBar barToolMain;
@@ -448,6 +509,7 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     private javax.swing.JToggleButton btnWirelessLink;
     private javax.swing.JButton btnZoomIn;
     private javax.swing.JButton btnZoomOut;
+    private javax.swing.JButton jButton1;
     private javax.swing.JToolBar.Separator sepMainSeparator;
     // End of variables declaration//GEN-END:variables
     /**
@@ -487,16 +549,16 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     }
 
     @Override
-    public void componentOpened() {
-        scene.paint();
-    }
-
-    @Override
     public void componentClosed() {
         toggleButtons(false);
-//        scene.clear();
+        scene.clear();
     }
-
+    
+    @Override
+    public void componentOpened() {
+        setName(NbBundle.getMessage(GISViewTopComponent.class, "CTL_GISViewTopComponent"));
+    }
+    
     /**
      * Enable or disable buttons massively
      * @param enabled
@@ -548,10 +610,6 @@ public final class GISViewTopComponent extends TopComponent implements ExplorerM
     }
 
     public NotificationUtil getNotifier(){
-        if (nu == null)
-            nu = Lookup.getDefault().lookup(NotificationUtil.class);
-
-        return nu;
+        return NotificationUtil.getInstance();
     }
-
 }

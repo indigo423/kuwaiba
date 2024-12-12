@@ -21,9 +21,10 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import javax.swing.JOptionPane;
+import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.util.Constants;
 import org.inventory.views.gis.scene.GISViewScene;
-import org.inventory.views.gis.scene.GeoPositionedNodeWidget;
 import org.netbeans.api.visual.action.AcceptProvider;
 import org.netbeans.api.visual.action.ConnectorState;
 import org.netbeans.api.visual.widget.Widget;
@@ -46,9 +47,9 @@ public class AcceptActionProvider implements AcceptProvider{
 
     @Override
     public ConnectorState isAcceptable(Widget widget, Point point, Transferable transferable) {
-//        if (transferable.isDataFlavorSupported(LocalObjectLight.DATA_FLAVOR)&& scene.hasView()){
+        if (scene.isEnabled()){
             return ConnectorState.ACCEPT;
-//        }else return ConnectorState.REJECT_AND_STOP;
+        }else return ConnectorState.REJECT_AND_STOP;
     }
 
     @Override
@@ -57,17 +58,19 @@ public class AcceptActionProvider implements AcceptProvider{
             LocalObjectLight droppedObject = (LocalObjectLight) transferable.getTransferData(LocalObjectLight.DATA_FLAVOR);
             if (!scene.isNode(droppedObject)){
                 Widget newNode = scene.addNode(droppedObject);
-//                double[] coordinates = scene.pixelToCoordinate(point);
-//                ((GeoPositionedNodeWidget)newNode).setCoordinates(coordinates[0], coordinates[1]);
+                point.x -= newNode.getBounds().width / 2;
+                point.y -= newNode.getBounds().height / 2;
                 newNode.setPreferredLocation(point);
-                scene.repaint();
+                newNode.setBackground(CommunicationsStub.getInstance().getMetaForClass(droppedObject.getClassName(), false).getColor());
+                scene.validate();
             }else
                 JOptionPane.showMessageDialog(null, "The view already contains this object","Error",JOptionPane.ERROR_MESSAGE);
         } catch (UnsupportedFlavorException ex) {
-            Exceptions.printStackTrace(ex);
+            if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_INFO || Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
-            Exceptions.printStackTrace(ex);
+            if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_INFO || Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
+                Exceptions.printStackTrace(ex);
         }
     }
-
 }

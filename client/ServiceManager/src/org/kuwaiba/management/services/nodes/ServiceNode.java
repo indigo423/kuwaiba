@@ -32,7 +32,7 @@ public class ServiceNode extends ObjectNode {
         setChildren(new ServiceChildren(service));
         this.object = service;
     }
-        
+
     @Override
     public Image getIcon(int i){
         return icon;

@@ -48,9 +48,9 @@ public class UserInfo extends UserInfoLight {
      * Group's privileges
      */
     private PrivilegeInfo[] privileges;
-
-    public UserInfo() {
-    }
+    
+    //No-arg constructor required
+    public UserInfo() { }
     
     public UserInfo(UserProfile user){
         super(user);
@@ -61,11 +61,11 @@ public class UserInfo extends UserInfoLight {
         if(user.getGroups() != null){
             this.groups = new GroupInfoLight[user.getGroups().size()];
             for(int i=0; i < user.getGroups().size(); i++)
-            groups[i] = new GroupInfoLight(user.getGroups().get(i));
+                this.groups[i] = new GroupInfoLight(user.getGroups().get(i));
         }
-        groups = null;
+        
         this.privileges = new PrivilegeInfo[user.getPrivileges().size()];
-        for(int i=0; i < user.getPrivileges().size(); i++)
+        for(int i = 0; i < user.getPrivileges().size(); i++)
                 privileges[i] = new PrivilegeInfo(user.getPrivileges().get(i));
     }
 

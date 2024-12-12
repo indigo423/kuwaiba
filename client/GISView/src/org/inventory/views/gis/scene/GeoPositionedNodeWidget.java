@@ -17,12 +17,14 @@
 package org.inventory.views.gis.scene;
 
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.visual.scene.AbstractNodeWidget;
+import org.netbeans.api.visual.widget.LayerWidget;
 
 /**
- * An ObjectNodeWidget with
+ * An ObjectNodeWidget with extra geo attributes
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class GeoPositionedNodeWidget extends ObjectNodeWidget{
+public class GeoPositionedNodeWidget extends AbstractNodeWidget {
     /**
      * Widget's longitude
      */
@@ -32,8 +34,9 @@ public class GeoPositionedNodeWidget extends ObjectNodeWidget{
      */
     private double latitude;
 
-    public GeoPositionedNodeWidget(GISViewScene scene, LocalObjectLight object, double latitude, double longitude) {
-        super(scene, object);
+    public GeoPositionedNodeWidget(GISViewScene scene, LocalObjectLight object, 
+            double latitude, double longitude, LayerWidget labelWidget) {
+        super(scene, object, labelWidget);
         this.longitude = longitude;
         this.latitude = latitude;
     }
@@ -55,22 +58,12 @@ public class GeoPositionedNodeWidget extends ObjectNodeWidget{
     }
 
     /**
-     * Convenience method to set both components of the widget coordinates
+     * Convenience method to set longitude and latitude in the same call
      * @param latitude new latitude
      * @param longitude new longitude
      */
     public void setCoordinates(double latitude, double longitude){
         this.longitude = longitude;
         this.latitude = latitude;
-    }
-
-    /**
-     * This method updates the widget geo-coordinates from the scene coordinates
-     */
-    public void updateCoordinates() {
-//        double[] coordinates = ((GISViewScene)getScene()).pixelToCoordinate(getPreferredLocation());
-//        this.latitude = coordinates[0];
-//        this.longitude = coordinates[1];
-        
     }
 }

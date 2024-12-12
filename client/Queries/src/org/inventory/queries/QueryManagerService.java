@@ -38,10 +38,10 @@ import org.inventory.communications.core.queries.LocalResultRecord;
 import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
-import org.inventory.queries.graphical.elements.QueryEditorNodeWidget;
-import org.inventory.queries.graphical.QueryEditorScene;
-import org.inventory.queries.graphical.elements.ClassNodeWidget;
-import org.inventory.queries.graphical.elements.filters.ListTypeFilter;
+import org.inventory.queries.scene.QueryEditorNodeWidget;
+import org.inventory.queries.scene.QueryEditorScene;
+import org.inventory.queries.scene.ClassNodeWidget;
+import org.inventory.queries.scene.filters.ListTypeFilter;
 
 /**
  * This class will replace the old QueryManagerService in next releases
@@ -72,9 +72,9 @@ public class QueryManagerService implements ActionListener {
     }
 
     public LocalClassMetadataLight[] getClassList(){
-        LocalClassMetadataLight[] items = com.getAllLightMeta(true);
+        LocalClassMetadataLight[] items = com.getAllLightMeta(false);
         if (items == null){
-            qbtc.getNotifier().showSimplePopup("Query Builder", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             return new LocalClassMetadataLight[0];
         }
         return items;
@@ -83,7 +83,7 @@ public class QueryManagerService implements ActionListener {
     public LocalClassMetadata getClassDetails(String className){
         LocalClassMetadata res= com.getMetaForClass(className, false);
         if (res == null)
-            qbtc.getNotifier().showSimplePopup("Query Builder", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         return res;
     }
 
@@ -93,14 +93,14 @@ public class QueryManagerService implements ActionListener {
                         Integer.valueOf(qbtc.getTxtResultLimit().getText()), page, false);
         LocalResultRecord[] res = com.executeQuery(currentTransientQuery);
         if (res == null)
-            qbtc.getNotifier().showSimplePopup("Query Execution", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         return res;
     }
 
     public LocalQueryLight[] getQueries(boolean showAll){
         LocalQueryLight[] res = com.getQueries(showAll);
         if (res == null){
-            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             return null;
         }
         else return res;
@@ -114,9 +114,9 @@ public class QueryManagerService implements ActionListener {
         if (localQuery == null){ //It's a new query
             
             if (com.createQuery((String)queryProperties[0], currentTransientQuery.toXML(), (String)queryProperties[1], (Boolean)queryProperties[2]) != -1)
-                qbtc.getNotifier().showSimplePopup("Sucess", NotificationUtil.INFO, "Query created successfully");
+                qbtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Query created successfully");
             else
-                qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.INFO, com.getError());
+                qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             /*
              * Only for debugging purposes
              try{
@@ -135,9 +135,9 @@ public class QueryManagerService implements ActionListener {
             localQuery.setPublic((Boolean)queryProperties[2]);
 
             if (com.saveQuery(localQuery))
-                qbtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO, "Query saved successfully");
+                qbtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Query saved successfully");
             else
-                qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+                qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         }
     }
 
@@ -148,9 +148,9 @@ public class QueryManagerService implements ActionListener {
             localQuery = null;
             qbtc.getQueryScene().validate();
             qbtc.getCmbClassList().setSelectedItem(null);
-            qbtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO, "Saved query deleted successfully");
+            qbtc.getNotifier().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Saved query deleted successfully");
         }else
-            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
     }
 
     public LocalTransientQuery getCurrentTransientQuery() {
@@ -182,7 +182,7 @@ public class QueryManagerService implements ActionListener {
                     if (lam.getName().equals("parent")){ //NOI18N
                         List<LocalClassMetadataLight> los = com.getUpstreamContainmentHierarchy(qbtc.getQueryScene().getCurrentSearchedClass().getClassName(), true);
                         if (los == null){
-                            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+                            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
                             return;
                         }
                         
@@ -225,7 +225,8 @@ public class QueryManagerService implements ActionListener {
                         myMetadataLight = new LocalClassMetadataLight(myMetadata.getOid(), 
                         myMetadata.getClassName(), myMetadata.getDisplayName(),
                         myMetadata.getParentName(), myMetadata.isAbstract(), 
-                        myMetadata.isViewable(), myMetadata.isListType(), myMetadata.isCustom(), false, null, null);
+                        myMetadata.isViewable(), myMetadata.isListType(), myMetadata.isCustom(), 
+                                myMetadata.isInDesign(), null, 0, null);
                     }
                     else 
                         myMetadataLight = myMetadata;
@@ -269,7 +270,7 @@ public class QueryManagerService implements ActionListener {
     public void renderQuery(LocalQueryLight selectedQuery) {
         localQuery = com.getQuery(selectedQuery.getId());
         if (localQuery == null){
-            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             return;
         }
         try {
@@ -280,7 +281,7 @@ public class QueryManagerService implements ActionListener {
             qbtc.getQueryScene().organizeNodes(rootNode.getWrappedClass(), QueryEditorScene.X_OFFSET, QueryEditorScene.Y_OFFSET);
             qbtc.getQueryScene().validate();
         } catch (XMLStreamException ex) {
-            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, "Error parsing XML file");
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "Error parsing XML file");
             return;
         }
         queryProperties[0] = localQuery.getName();
@@ -292,7 +293,7 @@ public class QueryManagerService implements ActionListener {
     private ClassNodeWidget renderClassNode(LocalTransientQuery subQuery){
         LocalClassMetadata classMetadata = com.getMetaForClass(subQuery.getClassName(), false);
         if (classMetadata == null){
-            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             return null;
         }
         ClassNodeWidget currentNode = ((ClassNodeWidget)qbtc.getQueryScene().addNode(classMetadata));

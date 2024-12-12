@@ -30,9 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.visual.export.ExportableScene;
+import org.inventory.core.visual.export.Layer;
+import org.inventory.core.visual.scene.AbstractNodeWidget;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.views.topology.scene.menus.ConnectionMenu;
 import org.inventory.views.topology.scene.menus.IconMenu;
@@ -52,27 +54,28 @@ import org.netbeans.api.visual.model.ObjectSceneListener;
 import org.netbeans.api.visual.model.ObjectState;
 import org.netbeans.api.visual.router.RouterFactory;
 import org.netbeans.api.visual.widget.LayerWidget;
+import org.netbeans.api.visual.widget.Scene;
 import org.netbeans.api.visual.widget.Widget;
-import org.openide.nodes.Node;
 import org.openide.util.ImageUtilities;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.Lookups;
 import org.openide.util.lookup.ProxyLookup;
 
 /**
- * Scene used by the GISView component
- * @author Adrian Martinez Molinar <adrian.martinez@kuwaiba.org>
+ * Scene used by the TopologyView component
+ * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
-public class TopologyViewScene extends GraphScene<Object, String> implements PropertyChangeListener, Lookup.Provider{
+public class TopologyViewScene extends GraphScene<Object, String> 
+        implements PropertyChangeListener, Lookup.Provider, ExportableScene {
 
-    /**
-     * Path to nodes default icon
+     /**
+     * String for Selection tool
      */
-    private final String GENERIC_ICON_PATH="org/inventory/views/topology/res/default.png"; //NOI18
+    public final static String ACTION_SELECT = "selection"; //NOI18
     /**
-     * Default icon
+     * String for Connect tool
      */
-    private final Image defaultIcon = ImageUtilities.loadImage(GENERIC_ICON_PATH);
+    public final static String ACTION_CONNECT = "connect"; //NOI18
     /**
      * Path to cloud icon
      */
@@ -112,6 +115,10 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
     /**
      * Layer to contain additional labels (free text)
      */
+    private LayerWidget freeLabelsLayer;
+    /**
+     * Layer to contain additional labels (free text)
+     */
     private LayerWidget labelsLayer;
     /**
      * A rectangle to delimit nodes, labels, connections (free frames)
@@ -147,7 +154,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
     private Random randomGenerator;
     /**
      * Action listeners
-     */
+     */    
     private List<ActionListener> listeners;
     public final static int SCENE_OBJECTADDED = 1;
     /**
@@ -160,6 +167,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
 
         nodesLayer = new LayerWidget(this);
         edgesLayer = new LayerWidget(this);
+        freeLabelsLayer = new LayerWidget(this);
         labelsLayer = new LayerWidget(this);
         framesLayer =  new LayerWidget(this);
         iconsLayer = new LayerWidget(this);
@@ -171,11 +179,14 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         iconMenu = new IconMenu(this);
         randomGenerator = new Random();
 
+        
         addChild(framesLayer);
         addChild(edgesLayer);
         addChild(nodesLayer);
-        addChild(iconsLayer);
+        addChild(freeLabelsLayer);
         addChild(labelsLayer);
+        addChild(iconsLayer);
+        
 
         this.lookup = new SceneLookup(Lookup.EMPTY);
 
@@ -201,7 +212,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         //Actions
         getActions().addAction(ActionFactory.createAcceptAction(new AcceptActionProvider(this)));
 
-        setActiveTool(ObjectNodeWidget.ACTION_SELECT);
+        setActiveTool(ACTION_SELECT);
         this.notifier = notifier;
     }
 
@@ -209,18 +220,14 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
     protected Widget attachNodeWidget(Object node) {
         if(node instanceof LocalObjectLight){
             if(((LocalObjectLight)node).getName() == null || !((LocalObjectLight)node).getName().contains(CLOUD_ICON)){
-                ObjectNodeWidget myWidget = new ObjectNodeWidget(this, (LocalObjectLight)node);
-                nodesLayer.addChild(myWidget);
-                Image myIcon = CommunicationsStub.getInstance().getMetaForClass(((LocalObjectLight)node).getClassName(), false).getIcon();
-                if(myIcon == null)
-                    myIcon = ImageUtilities.loadImage("org/inventory/views/topology/res/default.png");
-                myWidget.setImage(myIcon);
-                myWidget.setLabel(((LocalObjectLight)node).getName());
-                myWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(createSelectAction());
-                myWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createMoveAction());
-                myWidget.getActions(ObjectNodeWidget.ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
-                myWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createPopupMenuAction(nodeMenu));
+                AbstractNodeWidget myWidget = new AbstractNodeWidget(this, (LocalObjectLight)node, labelsLayer);
+                
+                myWidget.getActions(ACTION_SELECT).addAction(createSelectAction());
+                myWidget.getActions(ACTION_SELECT).addAction(ActionFactory.createMoveAction());
+                myWidget.getActions(ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
+                myWidget.getActions(ACTION_SELECT).addAction(ActionFactory.createPopupMenuAction(nodeMenu));
                 fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "lol-add-operation"));
+                nodesLayer.addChild(myWidget);
                 return myWidget;
             }
             else{
@@ -230,8 +237,8 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
                 cloudWidget.setImage(cloudIcon);
                 cloudWidget.setLabel(((LocalObjectLight)node).getName().substring(9));
                 cloudWidget.getActions().addAction (ActionFactory.createInplaceEditorAction (new LabelTextFieldEditor()));
-                cloudWidget.getActions(ObjectNodeWidget.ACTION_SELECT).addAction(ActionFactory.createMoveAction());
-                cloudWidget.getActions(ObjectNodeWidget.ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
+                cloudWidget.getActions(ACTION_SELECT).addAction(ActionFactory.createMoveAction());
+                cloudWidget.getActions(ACTION_CONNECT).addAction(ActionFactory.createConnectAction(edgesLayer, new SceneConnectProvider(this)));
                 cloudWidget.getActions().addAction(ActionFactory.createPopupMenuAction(iconMenu));
                 fireChangeEvent(new ActionEvent(node, SCENE_OBJECTADDED, "cloud-add-operation"));
                 return cloudWidget;
@@ -249,7 +256,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         }//labels
         if((node.toString().contains(FREE_LABEL))){
             ObjectLabelWidget myFreeLabel = new ObjectLabelWidget(this,node.toString().substring(node.toString().lastIndexOf(FREE_LABEL)+9));
-            labelsLayer.addChild(myFreeLabel);
+            freeLabelsLayer.addChild(myFreeLabel);
             myFreeLabel.getActions().addAction(ActionFactory.createMoveAction());
             myFreeLabel.getActions().addAction (ActionFactory.createInplaceEditorAction (new LabelTextFieldEditor()));
             myFreeLabel.getActions().addAction(ActionFactory.createPopupMenuAction(labelMenu));
@@ -264,7 +271,6 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
     protected Widget attachEdgeWidget(String edge) {
         ObjectConnectionWidget myWidget =  new ObjectConnectionWidget(this, edge);
         edgesLayer.addChild(myWidget);
-
         myWidget.getActions().addAction(ActionFactory.createPopupMenuAction(connectionMenu));
         myWidget.getActions().addAction(createSelectAction());
         myWidget.getActions().addAction(ActionFactory.createAddRemoveControlPointAction());
@@ -302,6 +308,16 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         return this.lookup;
     }
 
+    @Override
+    public Scene getExportable() {
+        return this;
+    }
+
+    @Override
+    public Layer[] getLayers() {
+        return null;
+    }
+
     /**
      * Helper class to let us launch a lookup event every time a widget is selected
      */
@@ -328,13 +344,13 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
 
     }
     public void addFreeLabel(){
-        Widget f = addNode(randomGenerator.nextInt(1000)+FREE_LABEL+"New Label");
+        Widget f = addNode(randomGenerator.nextInt(1000) + FREE_LABEL + "New Label");
         f.setPreferredLocation (new Point (100, 100));
         this.validate();
         this.repaint();
     }
     public void addFreeCloud(){
-        LocalObjectLight lol = new LocalObjectLight(randomGenerator.nextInt(1000), CLOUD_ICON + "New Icon", null);
+        LocalObjectLight lol = new LocalObjectLight(randomGenerator.nextInt(1000), CLOUD_ICON + "New Cloud", null);
         Widget f = addNode(lol);
         f.setPreferredLocation (new Point (100, 100));
         this.validate();
@@ -346,6 +362,8 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
             removeNode(getNodes().iterator().next());
         while (!getEdges().isEmpty())
             removeEdge(getEdges().iterator().next());
+        labelsLayer.removeChildren();
+        validate();
         
     }
 
@@ -372,11 +390,11 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         for (Widget nodeWidget : nodesLayer.getChildren())
             nodesTag.start("node").attr("x", nodeWidget.getPreferredLocation().getX()).
             attr("y", nodeWidget.getPreferredLocation().getY()).
-            attr("class", ((ObjectNodeWidget)nodeWidget).getObject().getClassName()).
-            text(Long.toString(((ObjectNodeWidget)nodeWidget).getObject().getOid())).end();
+            attr("class", ((AbstractNodeWidget)nodeWidget).getObject().getClassName()).
+            text(Long.toString(((AbstractNodeWidget)nodeWidget).getObject().getOid())).end();
         nodesTag.end();
         //free icons
-        StartTagWAX iconsTag = mainTag.start("icons");
+            StartTagWAX iconsTag = mainTag.start("icons");
         for (Widget icondWidget : iconsLayer.getChildren()){
              iconsTag.start("icon").attr("type", 1).
                      attr("id",((ObjectNodeWidget)icondWidget).getObject().getOid()).
@@ -392,8 +410,16 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
             edgeTag.attr("id", "");
             edgeTag.attr("class", "");
             edgeTag.attr("name", ((ObjectConnectionWidget)edgeWidget).getName());
-            edgeTag.attr("aside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
-            edgeTag.attr("bside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
+            
+            if(((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget() instanceof AbstractNodeWidget)
+                edgeTag.attr("aside", ((AbstractNodeWidget)((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
+            else
+                edgeTag.attr("aside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
+            
+            if(((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget() instanceof AbstractNodeWidget)
+                edgeTag.attr("bside", ((AbstractNodeWidget)((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
+            else
+                edgeTag.attr("bside", ((ObjectNodeWidget)((ObjectConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
 
             for (Point point : ((ObjectConnectionWidget)edgeWidget).getControlPoints())
                 edgeTag.start("controlpoint").attr("x", point.getX()).attr("y", point.getY()).end();
@@ -402,7 +428,7 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
         edgesTag.end();
         //free labels
         StartTagWAX labelsTag = mainTag.start("labels");
-        for (Widget labelWidget : labelsLayer.getChildren()){
+        for (Widget labelWidget : freeLabelsLayer.getChildren()){
              labelsTag.start("label").attr("x", labelWidget.getPreferredLocation().getX()).
              attr("y", labelWidget.getPreferredLocation().getY()).
              attr("orientation", ((ObjectLabelWidget)labelWidget).getOrientation()).
@@ -471,5 +497,11 @@ public class TopologyViewScene extends GraphScene<Object, String> implements Pro
     
     public NotificationUtil getNotifier() {
         return notifier;
+    }
+    
+    public void toggleLabels(boolean visible){
+        labelsLayer.setVisible(visible);
+        if (getView() != null)
+            getView().repaint();
     }
 }

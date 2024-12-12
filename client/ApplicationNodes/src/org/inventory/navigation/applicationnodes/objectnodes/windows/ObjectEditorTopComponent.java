@@ -16,11 +16,9 @@
 package org.inventory.navigation.applicationnodes.objectnodes.windows;
 
 import java.awt.BorderLayout;
-import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.explorer.propertysheet.PropertySheetView;
 import org.openide.nodes.Node;
 import org.openide.util.ImageUtilities;
-import org.openide.util.Lookup;
 import org.openide.windows.Mode;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -41,21 +39,12 @@ public class ObjectEditorTopComponent extends TopComponent{
         setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         editor = new PropertySheetView();
         this.node = node;
-
         this.setDisplayName(node.getDisplayName());
-
+        setLayout(new BorderLayout());
+        add(editor,BorderLayout.CENTER);
         //This requires that CoreUI to be enable in the project
         Mode myMode = WindowManager.getDefault().findMode("properties");
-        if (myMode != null)
-            myMode.dockInto(this);
-        else{
-            NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
-            nu.showSimplePopup("Error", NotificationUtil.WARNING, "\"Properties\" Window Mode not available");
-        }
-
-        setLayout(new BorderLayout());
-
-        add(editor,BorderLayout.CENTER);
+        myMode.dockInto(this);
     }
 
     @Override

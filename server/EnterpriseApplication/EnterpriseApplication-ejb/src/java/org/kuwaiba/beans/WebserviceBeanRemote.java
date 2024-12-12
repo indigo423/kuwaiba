@@ -58,12 +58,6 @@ public interface WebserviceBeanRemote {
      */
     public void closeSession(String sessionId, String remoteAddress) throws ServerSideException, NotAuthorizedException;
 
-    /**
-     * Returns the user related to the given session id
-     * @param sessionId The session id
-     * @return The user or null if none
-     */
-    public UserInfo getUserInSession(String sessionId);
     // </editor-fold>
 
     // <editor-fold defaultstate="collapsed" desc="Metadata methods. Click on the + sign on the left to edit the code.">
@@ -554,7 +548,9 @@ public interface WebserviceBeanRemote {
 
     public void deletePools(long[] ids, String ipAddress, String sessionId) throws ServerSideException;
     
-    public RemoteObjectLight[] getPools(int limit, String ipAddress, String sessionId) throws ServerSideException;
+    public RemoteObjectLight[] getPools(int limit, long parentId, String className, String ipAddress, String sessionId) throws ServerSideException;
+    
+    public RemoteObjectLight[] getPools(int limit, String className, String ipAddress, String sessionId) throws ServerSideException;
     
     public RemoteObjectLight[] getPoolItems(long poolId, int limit, String ipAddress, String sessionId) throws ServerSideException;
     
@@ -567,27 +563,24 @@ public interface WebserviceBeanRemote {
     
     // </editor-fold>
     
-    // <editor-fold defaultstate="collapsed" desc="Sync/Load data methods. Click on the + sign on the left to edit the code.">
+    // <editor-fold defaultstate="collapsed" desc="Sync/bulkupload methods. Click on the + sign on the left to edit the code.">
     /**
      * Loads data from a csv file
-     * @param choosenFile the csv file as a byte array
-     * @return 
+     * @param file a csv file as a byte array with the data
+     * @param commitSize commit after n rows  
+     * @param dataType what kind of data contains the file, listTypes, Objects, etc
+     * @param ipAddress
+     * @param sessionId
+     * @return
+     * @throws ServerSideException 
      */
-    public String bulkUpload(byte[] choosenFile, long userId) throws ServerSideException;
+    public String bulkUpload(byte[] file, int commitSize, int dataType, String ipAddress, String sessionId) throws ServerSideException;
     /**
      * Returns a file with the wrong lines of the load file
      * @param fileName
      * @return
      * @throws ServerSideException 
      */
-    public byte[] downloadLog(String fileName) throws ServerSideException;
-    
-    /**
-     * Returns a file with the errors in the lines of the load file
-     * @param fileName
-     * @return
-     * @throws ServerSideException 
-     */
-    public byte[] downloadErrors(String fileName) throws ServerSideException;
+    public byte[] downloadBulkLoadLog(String fileName, String ipAddress, String sessionId) throws ServerSideException;
     // </editor-fold>
 }

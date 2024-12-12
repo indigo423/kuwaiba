@@ -65,12 +65,15 @@ import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
+import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.kernel.Traversal;
 
 /**
  * Application Entity Manager reference implementation
@@ -164,33 +167,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         return sessions;
     }
 
-    @Override
-    public UserProfile login(String userName, String password) {
-        if (userName == null || password == null)
-            return null;
-        
-        Node userNode = userIndex.get(Constants.PROPERTY_NAME,userName).getSingle();
-        if (userNode == null)
-            return null;
-        
-        if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
-            return null;
-        
-        if (Util.getMD5Hash(password).equals(userNode.getProperty(Constants.PROPERTY_PASSWORD))){
-            UserProfile user = Util.createUserProfileFromNode(userNode);
-            cm.putUser(user);
-            return user;
-        }
-        else
-            return null;
-    }
-
     //TODO add ipAddress, sessionId
     @Override
     public long createUser(String userName, String password, String firstName,
             String lastName, boolean enabled, long[] privileges, long[] groups)
             throws InvalidArgumentException, NotAuthorizedException, NotAuthorizedException {
-        //validateCall("createUser", ipAddres, sessions.get(sessionId).getUser().getUserName());
+        //validateCall("createUser", ipAddres, sessionId);
         Transaction tx = null;
         
         if (userName == null){
@@ -199,6 +181,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         if (userName.trim().equals("")){
             throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
         }
+        if (!userName.matches("^[a-zA-Z0-9_]*$"))
+            throw new InvalidArgumentException(String.format("Class %s contains invalid characters", userName), Level.INFO);
         if (password == null){
             throw new InvalidArgumentException("Password can not be null", Level.INFO);
         }
@@ -281,6 +265,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         if(userName != null){
             if (userName.trim().equals(""))
                 throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
+        
+            if (!userName.matches("^[a-zA-Z0-9_]*$"))
+                throw new InvalidArgumentException(String.format("Class %s contains invalid characters", userName), Level.INFO);
 
             Node storedUser = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
             if (storedUser != null)
@@ -353,20 +340,23 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         if(userNode == null)
             throw new ApplicationObjectNotFoundException(String.format("Can not find a user with name %s", formerUsername));
         
-        Transaction tx = null;
         if(newUserName != null){
-            if (newUserName.trim().equals(""))
+            if (newUserName.isEmpty())
                 throw new InvalidArgumentException("User name can not be an empty string", Level.INFO);
 
             Node storedUser = userIndex.get(Constants.PROPERTY_NAME, newUserName).getSingle();
             if (storedUser != null)
                 throw new InvalidArgumentException(String.format("User name %s already exists", newUserName), Level.WARNING);
+            
+            if (!newUserName.matches("^[a-zA-Z0-9_]*$"))
+                throw new InvalidArgumentException(String.format("Class %s contains invalid characters", newUserName), Level.INFO);
         }
         if(password != null){
             if (password.trim().isEmpty())
                 throw new InvalidArgumentException("Password can't be an empty string", Level.INFO);
         }
-        
+
+        Transaction tx = null;
         try{
             tx =  graphDb.beginTx();
             if (newUserName != null){
@@ -411,7 +401,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             tx.finish();
             cm.putUser(Util.createUserProfileFromNode(userNode));
         }catch(Exception ex){
-            Logger.getLogger("setUserProperties: "+ex.getMessage()); //NOI18N
+            Logger.getLogger("setUserProperties: " + ex.getMessage()); //NOI18N
             tx.failure();
             tx.finish();
             throw new RuntimeException(ex.getMessage());
@@ -423,27 +413,27 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             long[] privileges, long[] users) 
             throws InvalidArgumentException, NotAuthorizedException {
         
-        //validateCall("createGroup", ipAddress, sessions.get(sessionId).getUser().getUserName());
+        //validateCall("createGroup", ipAddress, sessionId);
+               
+        if (groupName == null)
+            throw new InvalidArgumentException("Group name can not be null", Level.INFO);
+        if (groupName.isEmpty())
+            throw new InvalidArgumentException("Group name can not be an empty string", Level.INFO);
+        if (!groupName.matches("^[a-zA-Z0-9_]*$"))
+            throw new InvalidArgumentException(String.format("Class %s contains invalid characters", groupName), Level.INFO);
+        
+        Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME,groupName).getSingle();
+        if (storedGroup != null)
+            throw new InvalidArgumentException(String.format("Group %s already exists", groupName), Level.WARNING);
         
         Transaction tx = null;
-        if (groupName == null){
-            throw new InvalidArgumentException("Group name can not be null", Level.INFO);
-        }
-        if (groupName.trim().equals("")){
-            throw new InvalidArgumentException("Group name can not be an empty string", Level.INFO);
-        }
-        Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME,groupName).getSingle();
-        if (storedGroup != null){
-            throw new InvalidArgumentException(String.format("Group %s already exists", groupName), Level.WARNING);
-        }
         try{
             tx = graphDb.beginTx();
             Node newGroupNode = graphDb.createNode();
 
             newGroupNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
             newGroupNode.setProperty(Constants.PROPERTY_NAME, groupName);
-            if(description != null)
-                newGroupNode.setProperty(Constants.PROPERTY_DESCRIPTION, "");
+            newGroupNode.setProperty(Constants.PROPERTY_DESCRIPTION, description == null ? "" : description);
             if (users != null){
                 for (long userId : users) {
                     Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
@@ -479,15 +469,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             return newGroupNode.getId();
             
         }catch(Exception ex){
-            Logger.getLogger("createGroup: "+ex.getMessage()); //NOI18N
-            if (tx != null){
-                tx.failure();
-            }
-        throw new RuntimeException(ex.getMessage());
-        } finally {
-            if (tx != null){
-                tx.finish();
-            }
+            tx.failure();
+            tx.finish();
+            throw new RuntimeException(ex.getMessage());
         }
     }
 
@@ -531,22 +515,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             tx = graphDb.beginTx();
 
             Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
-            if(groupNode == null){
+            if(groupNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %1s",id));
-            }
+            
             if(groupName != null){
-                if (groupName.trim().equals(""))
+                if (groupName.isEmpty())
                     throw new InvalidArgumentException("Group name can not be an empty string", Level.INFO);
+                if (!groupName.matches("^[a-zA-Z0-9_]*$"))
+                    throw new InvalidArgumentException(String.format("Class %s contains invalid characters", groupName), Level.INFO);
+
                 Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME, groupName).getSingle();
                     if (storedGroup != null)
                         throw new InvalidArgumentException(String.format("The group name %1s is already in use", groupName), Level.WARNING);
                 groupIndex.remove(groupNode, Constants.PROPERTY_NAME, (String)groupNode.getProperty(Constants.PROPERTY_NAME));
                 cm.removeGroup((String)groupNode.getProperty(Constants.PROPERTY_NAME));
                 groupNode.setProperty(Constants.PROPERTY_NAME, groupName);
+                groupIndex.add(groupNode, Constants.PROPERTY_NAME, groupName);
             }
             if(description != null)
                 groupNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
-            if(users != null){
+            if(users != null && users.length != 0){
                 Iterable<Relationship> relationships = groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP);
                 for (Relationship relationship : relationships)
                     relationship.delete();
@@ -561,7 +549,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     }
                 }
             }
-            if (privileges != null){
+            if (privileges != null && privileges.length != 0){
                 Iterable<Relationship> privilegesRelationships = groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
                 for (Relationship relationship : privilegesRelationships)
                     relationship.delete();
@@ -576,12 +564,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     }
                 }
             }
-            groupIndex.putIfAbsent(groupNode, Constants.PROPERTY_NAME, groupName);
+            
             cm.putGroup(Util.createGroupProfileFromNode(groupNode));
             tx.success();
             tx.finish();
         }catch(Exception ex){
-            Logger.getLogger("setGroupProperties: "+ex.getMessage()); //NOI18N
+            Logger.getLogger("setGroupProperties: " + ex.getMessage()); //NOI18N
             tx.failure();
             tx.finish();
             throw new RuntimeException(ex.getMessage());
@@ -827,12 +815,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             if (background != null){
                 try{
                     Properties props = new Properties();
-                    String fileName = "view-" + oid + "-" + viewNode.getId() + "-" + viewNode.getProperty(Constants.PROPERTY_TYPE);
+                    String fileName = "view-" + oid + "-" + viewNode.getId() + "-" + viewType;
                     props.load(new FileInputStream("persistence.properties"));
                     Util.saveFile(props.getProperty("background_path"), fileName, background);
                     viewNode.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
                 }catch(Exception ex){
-                    throw new InvalidArgumentException(String.format("Background image for view %s could not be saved",oid), Level.SEVERE);
+                    throw new InvalidArgumentException(String.format("Background image for view %s could not be saved: %s",
+                            oid, ex.getMessage()), Level.SEVERE);
                 }
             }
 
@@ -876,21 +865,19 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     Util.saveFile(props.getProperty("background_path"), fileName, background);
                     newView.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
                 }catch(Exception ex){
-                    throw new InvalidArgumentException(String.format("Background image for view %1s couldn't be saved",newView.getId()), Level.SEVERE);
+                    throw new InvalidArgumentException(String.format("Background image for view %s couldn't be saved: %s", 
+                            newView.getId(), ex.getMessage()), Level.SEVERE);
                 }
             }
             generalViewsIndex.add(newView, Constants.PROPERTY_ID, newView.getId());
             tx.success();
-
+            tx.finish();
             return newView.getId();
         }catch (Exception ex){
-            Logger.getLogger("createGeneralView: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            Logger.getLogger("createGeneralView: "+ ex.getMessage()); //NOI18N
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
@@ -930,13 +917,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
 
             Properties props = new Properties();
             props.load(new FileInputStream("persistence.properties"));
-            String fileName = "view-" + oid + "-" + viewNode.getId() + "-" + viewNode.getProperty(Constants.PROPERTY_TYPE);
+            String fileName = "view-" + oid + "-" + viewId + "-" + viewNode.getProperty(Constants.PROPERTY_TYPE);
             if (background != null){
                 try{
                     Util.saveFile(props.getProperty("background_path"), fileName, background);
                     viewNode.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
                 }catch(Exception ex){
-                    throw new InvalidArgumentException(String.format("Background image for view %1s couldn't be saved",oid), Level.SEVERE);
+                    throw new InvalidArgumentException(String.format("Background image for view %s couldn't be saved: %s",
+                            oid, ex.getMessage()), Level.SEVERE);
                 }
             }
             else{
@@ -944,21 +932,19 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                     try{
                         new File(props.getProperty("background_path") + "/" + fileName).delete();
                     }catch(Exception ex){
-                        throw new InvalidArgumentException(String.format("View background %1s couldn't be deleted",props.getProperty("background_path") + "/" + fileName), Level.SEVERE);
+                        throw new InvalidArgumentException(String.format("View background %s couldn't be deleted: %s", 
+                                props.getProperty("background_path") + "/" + fileName, ex.getMessage()), Level.SEVERE);
                     }
                     viewNode.removeProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME);
                 }
             }
 
             tx.success();
+            tx.finish();
         }catch (Exception ex){
-            Logger.getLogger("updateObjectRelatedView: "+ex.getMessage()); //NOI18N
-            if (tx != null)
-                tx.failure();
+            tx.failure();
+            tx.finish();
             throw new RuntimeException(ex.getMessage());
-        }finally{
-            if (tx != null)
-                tx.finish();
         }
     }
 
@@ -989,7 +975,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                         Util.saveFile(props.getProperty("background_path"), fileName, background);
                         gView.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
                     }catch(Exception ex){
-                        throw new InvalidArgumentException(String.format("Background image for view %1s couldn't be saved",oid), Level.SEVERE);
+                        throw new InvalidArgumentException(String.format("Background image for view %s couldn't be saved: %s",
+                                oid, ex.getMessage()), Level.SEVERE);
                     }
                 }
             }else
@@ -999,7 +986,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             tx.finish();
             
         }catch (Exception ex){
-            Logger.getLogger("updateGeneralView: "+ex.getMessage()); //NOI18N
             tx.failure();
             tx.finish();
             throw new RuntimeException(ex.getMessage());
@@ -1022,7 +1008,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             tx.success();
             tx.finish();
         }catch (Exception ex){
-            Logger.getLogger("deleteGeneralView: "+ex.getMessage()); //NOI18N
             tx.failure();
             tx.finish();
             throw new RuntimeException(ex.getMessage());
@@ -1388,9 +1373,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
      */
     public long createPool(long parentId, String name, String description, String instancesOfClass, String ipAddress, String sessionId)
             throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
-        
         validateCall("createPool", ipAddress, sessionId);
-        
         Transaction tx = null;
         try{
             tx = graphDb.beginTx();
@@ -1398,11 +1381,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             Node parentNode = null;
             if (parentId != -1){
                 parentNode = objectIndex.get(Constants.PROPERTY_ID, parentId).getSingle();
-
                 if (parentNode == null)
                     throw new ObjectNotFoundException("N/A", parentId);
             }
-            
             Node poolNode =  graphDb.createNode();
             if (name != null)
                 poolNode.setProperty(Constants.PROPERTY_NAME, name);
@@ -1416,8 +1397,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             poolNode.setProperty(Constants.PROPERTY_CLASS_NAME, instancesOfClass);
             
             if (parentNode != null)
-                poolNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF_SPECIAL);
-            
+                poolNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF_SPECIAL).setProperty(Constants.PROPERTY_NAME, Constants.REL_PROPERTY_POOL);
+                        
             poolsIndex.putIfAbsent(poolNode, Constants.PROPERTY_ID, poolNode.getId());
             tx.success();
             tx.finish();
@@ -1429,7 +1410,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             throw new RuntimeException(ex.getMessage());
         }
     }
-
     /**
      * Creates an object inside a pool
      * @param poolId Parent pool id. 
@@ -1479,7 +1459,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             }
             
             Node newObject = bem.createObject(classNode, classMetadata, attributes, templateId);
-            newObject.createRelationshipTo(pool, RelTypes.CHILD_OF_SPECIAL);
+            newObject.createRelationshipTo(pool, RelTypes.CHILD_OF_SPECIAL).setProperty(Constants.PROPERTY_NAME, Constants.REL_PROPERTY_POOL);
             tx.success();
             return newObject.getId();
 
@@ -1505,23 +1485,45 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                 Node poolNode = poolsIndex.get(Constants.PROPERTY_ID, id).getSingle();
                 if (poolNode == null)
                     throw new InvalidArgumentException(String.format("A pool with id %s does not exist", id),Level.INFO);
-                
+
                 //Let's delete the objects inside, if possible
                 HashMap<String, long[]> toBeDeleted = new HashMap<String, long[]>();
-                for (Relationship rel : poolNode.getRelationships(RelTypes.CHILD_OF_SPECIAL)){
-                    Node objectNode = rel.getStartNode();
-                    String className = Util.getObjectClassName(objectNode);
-                    if (toBeDeleted.get(className) == null)
-                        toBeDeleted.put(className, new long[]{objectNode.getId()});
-                    //else
-                    //    toBeDeleted.put(className, Arrays.asList(toBeDeleted.get(className)). );
+                List<Long> poolsToBeDeleted = new ArrayList<Long>();
+                for (Path p : Traversal.description()
+                    .breadthFirst()
+                    .evaluator(Evaluators.atDepth(1))    
+                    .relationships(RelTypes.CHILD_OF_SPECIAL, Direction.INCOMING)
+                    .evaluator(Evaluators.excludeStartPosition())
+                    .traverse(poolNode)) {
+
+                    Node objectNode = p.endNode();
+                     
+                    if(objectNode.hasProperty(Constants.PROPERTY_CLASS_NAME) && objectNode.getProperty(Constants.PROPERTY_CLASS_NAME).equals(Constants.CLASS_GENERICSERVICE))
+                        poolsToBeDeleted.add(objectNode.getId());
+                    else{
+                        String className = Util.getObjectClassName(objectNode);
+                        if (toBeDeleted.get(className) == null) 
+                            toBeDeleted.put(className, new long[]{objectNode.getId()});
+                        else{
+                            long[] objectIds = toBeDeleted.get(className);
+                            long[] newObjectIds = new long[objectIds.length+1];
+                            System.arraycopy(objectIds, 0, newObjectIds, 0, objectIds.length);
+                            newObjectIds[objectIds.length]=objectNode.getId();
+                            toBeDeleted.put(className, newObjectIds);
+                        }
+                    }
                 }
-                
                 bem.deleteObjects(toBeDeleted, false, ipAddress, sessionId);
+
+                for (long pId : poolsToBeDeleted){
+                    Node servicePoolNode = poolsIndex.get(Constants.PROPERTY_ID, pId).getSingle();
+                    for (Relationship rel : servicePoolNode.getRelationships())
+                        rel.delete();
+                    poolsIndex.remove(servicePoolNode);
+                }
                 
                 for (Relationship rel : poolNode.getRelationships())
                     rel.delete();
-                
                 poolsIndex.remove(poolNode);
                 poolNode.delete();
             }
@@ -1538,7 +1540,42 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
     }
 
     @Override
-    public List<RemoteBusinessObjectLight> getPools(int limit, String ipAddress, String sessionId) throws NotAuthorizedException{
+    public List<RemoteBusinessObjectLight> getPools(int limit, long parentId, String className, String ipAddress, String sessionId) throws NotAuthorizedException, ObjectNotFoundException{
+        validateCall("getPools", ipAddress, sessionId);
+        
+        Node parentNode = null;
+        if (parentId != -1){
+            parentNode = objectIndex.get(Constants.PROPERTY_ID, parentId).getSingle();
+            if (parentNode == null)
+                throw new ObjectNotFoundException("N/A", parentId);
+        }
+        List<RemoteBusinessObjectLight> pools  = new ArrayList<RemoteBusinessObjectLight>();
+        int i = 0;
+        for(Relationship rel: parentNode.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF_SPECIAL)){
+            if (limit != -1){
+                if (i >= limit)
+                     break;
+                i++;
+            }
+            Node node = poolsIndex.get(Constants.PROPERTY_ID, rel.getStartNode().getId()).getSingle();
+            //or it could be use this if (rel.getProperty(Constants.PROPERTY_NAME).equals("Pools"))
+            if(node != null){
+                RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(node.getId(),
+                node.hasProperty(Constants.PROPERTY_NAME) ? (String)node.getProperty(Constants.PROPERTY_NAME) : null,
+                node.hasProperty(Constants.PROPERTY_CLASS_NAME) ? (String)node.getProperty(Constants.PROPERTY_CLASS_NAME) : null);
+                if(className != null && node.hasProperty(Constants.PROPERTY_CLASS_NAME)){
+                    if(className.equals(node.getProperty(Constants.PROPERTY_CLASS_NAME)))
+                        pools.add(rbol);
+                }
+                else
+                    pools.add(rbol);
+            }
+        }
+        return pools;
+    }
+        
+    @Override
+    public List<RemoteBusinessObjectLight> getPools(int limit, String className, String ipAddress, String sessionId) throws NotAuthorizedException{
         
         validateCall("getPools", ipAddress, sessionId);
         
@@ -1552,10 +1589,18 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
                      break;
                 i++;
             }
-            RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(node.getId(), 
-                                    node.hasProperty(Constants.PROPERTY_NAME) ? (String)node.getProperty(Constants.PROPERTY_NAME) : null,
-                                    node.hasProperty(Constants.PROPERTY_CLASS_NAME) ? (String)node.getProperty(Constants.PROPERTY_CLASS_NAME) : null);
-            pools.add(rbol);
+            RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(node.getId(),
+                    node.hasProperty(Constants.PROPERTY_NAME) ? (String)node.getProperty(Constants.PROPERTY_NAME) : null,
+                    node.hasProperty(Constants.PROPERTY_CLASS_NAME) ? (String)node.getProperty(Constants.PROPERTY_CLASS_NAME) : null);
+            if(className != null){
+                if(className.equals(node.getProperty(Constants.PROPERTY_CLASS_NAME)))
+                    pools.add(rbol);
+            }
+            else{
+                if(!Constants.CLASS_GENERICCUSTOMER.equals(node.getProperty(Constants.PROPERTY_CLASS_NAME)) &&
+                   !Constants.CLASS_GENERICSERVICE.equals(node.getProperty(Constants.PROPERTY_CLASS_NAME)))
+                    pools.add(rbol);
+            }
         }
             
         return pools;
@@ -1575,17 +1620,21 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         List<RemoteBusinessObjectLight> poolItems  = new ArrayList<RemoteBusinessObjectLight>();
         
         int i = 0;
-        for (Relationship rel : poolNode.getRelationships(RelTypes.CHILD_OF_SPECIAL)){
+        for (Relationship rel : poolNode.getRelationships(Direction.INCOMING, RelTypes.CHILD_OF_SPECIAL)){
             if (limit != -1){
                 if (i >= limit)
                      break;
                 i++;
             }
-            Node item = rel.getStartNode();
-            RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(item.getId(), 
-                                    item.hasProperty(Constants.PROPERTY_NAME) ? (String)item.getProperty(Constants.PROPERTY_NAME) : null,
-                                    Util.getClassName(item));
-            poolItems.add(rbol);
+            if(rel.hasProperty(Constants.PROPERTY_NAME)){
+                if(rel.getProperty(Constants.PROPERTY_NAME).equals(Constants.REL_PROPERTY_POOL)){
+                    Node item = rel.getStartNode();
+                    RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(item.getId(), 
+                                            item.hasProperty(Constants.PROPERTY_NAME) ? (String)item.getProperty(Constants.PROPERTY_NAME) : null,
+                                            Util.getClassName(item));
+                    poolItems.add(rbol);
+                }
+            }
         }
                    
         return poolItems;
@@ -1701,7 +1750,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
 //                if(methodName.equals((String)(userPrivilegesRel.getStartNode().getProperty(Constants.PROPERTY_NAME))))
 //                    return;
 //            }
-//            throw new NotAuthorizedException(methodName,sessions.get(sessionId).getUser().getUserName());
+//            throw new NotAuthorizedException(methodName,sessionId);
 //        }catch(Exception ex){
 //            throw new RuntimeException(ex.getMessage());
 //        }
@@ -1709,6 +1758,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
 
     @Override
     public Session createSession(String userName, String password, String IPAddress) throws ApplicationObjectNotFoundException {
+        
         if (userName == null || password == null)
             throw  new ApplicationObjectNotFoundException("User or Password can not be null");
         
@@ -1717,14 +1767,15 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
             throw new ApplicationObjectNotFoundException("User does not exist");
         
         if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
-            throw new ApplicationObjectNotFoundException("The user is not enable to peform operations");
+            throw new ApplicationObjectNotFoundException("This user is not enabled");
         
         if (Util.getMD5Hash(password).equals(userNode.getProperty(Constants.PROPERTY_PASSWORD))){
             UserProfile user = Util.createUserProfileFromNode(userNode);
             cm.putUser(user);
         }
         else
-            throw  new ApplicationObjectNotFoundException("Wrong Password");
+            throw new ApplicationObjectNotFoundException("User or password incorrect");
+        
         for (Session aSession : sessions.values()){
             if (aSession.getUser().getUserName().equals(userName)){
                 Logger.getLogger("createSession").log(Level.INFO, String.format("An existing session for user %1s has been dropped", aSession.getUser().getUserName()));
@@ -1735,6 +1786,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager, A
         Session newSession = new Session(Util.createUserProfileFromNode(userNode), IPAddress);
         sessions.put(newSession.getToken(), newSession);
         return newSession;
+    }
+    
+    @Override
+    public UserProfile getUserInSession(String IPAddress, String sessionId) throws NotAuthorizedException{
+        validateCall("getUserInSession", IPAddress, sessionId);
+        return sessions.get(sessionId).getUser();
     }
 
     @Override

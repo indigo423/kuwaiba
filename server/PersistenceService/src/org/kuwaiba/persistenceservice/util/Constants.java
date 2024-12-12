@@ -134,6 +134,10 @@ public class Constants {
      */
     public static final String PROPERTY_CLASS_NAME = "className";
     /**
+     * Property CHILD_OF_SPECIAL realtionship type
+     */
+    public static final String REL_PROPERTY_POOL = "pool";
+    /**
      * Property "structure" for views
      */
     public static final String PROPERTY_STRUCTURE = "structure"; //NOI18N
@@ -186,6 +190,14 @@ public class Constants {
      */
     public static final String CLASS_ROOTOBJECT = "RootObject"; //NOI18N
     /**
+     * Class Generic Service
+     */
+    public static final String CLASS_GENERICSERVICE = "GenericService"; //NOI18N
+    /**
+     * Class Generic Customer
+     */
+    public static final String CLASS_GENERICCUSTOMER = "GenericCustomer"; //NOI18N
+    /**
      * Dummy root node name
      */
     public static final String NODE_DUMMYROOT = "DummyRoot"; //NOI18N
@@ -213,4 +225,12 @@ public class Constants {
      * Date format for queries
      */
     public static final String DATE_FORMAT = "yyyy-MM-dd";
+    /**
+     * Path for patches files
+     */
+    public static final String PACTHES_PATH =  "patches/";
+    /**
+     * Hint in patch file for a cypher query
+     */
+    public static final String DATABASE_SENTENCE = "!db_sentence";
 }
