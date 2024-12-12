@@ -81,36 +81,41 @@ public interface ApplicationEntityManager {
     public HashMap<String, Session> getSessions();
     
     /**
-     * Creates a user
+     * Creates a user. System users ("hard-coded" kind of users used for internal tasks that can not be deleted nor modified byu the end users) can only be
+     * manipulated (that is, anything but created) by accessing directly to the database
      * @param userName New user's name. Mandatory.
      * @param password New user's password
      * @param firstName New user's first name
      * @param lastName New user's last name
      * @param enabled Shall the new user be enabled by default
      * @param type User type. See UserProfileLight.USER_TYPE_* for possible values
+     * @param email New user's email
      * @param privileges New user's privileges. Use null for none
      * @param defaultGroupId Default group this user will be associated to
      * @return The id of the newly created user
-     * @throws InvalidArgumentException Thrown if the username is null or empty or the username already exists
+     * @throws InvalidArgumentException If the username is null or empty or the username already exists, if the user type is invalid or if the password is an empty string.
      */
     public long createUser(String userName, String password, String firstName,
-            String lastName, boolean enabled, int type, List<Privilege> privileges, long defaultGroupId)
+            String lastName, boolean enabled, int type, String email, List<Privilege> privileges, long defaultGroupId)
             throws InvalidArgumentException;
     
     /**
      * Set the properties of a given user using the id to search for it
      * @param oid User id
-     * @param userName New user's name. User null to leave it unchanged.
+     * @param userName New user's name. Use null to leave it unchanged
      * @param password New user's password. Use null to leave it unchanged
      * @param firstName New user's first name. Use null to leave it unchanged
      * @param lastName New user's last name. Use null to leave it unchanged
      * @param enabled 0 for false, 1 for true, -1 to leave it unchanged
      * @param type User type. See UserProfile.USER_TYPE* for possible values. Use -1 to leave it unchanged
-     * @throws InvalidArgumentException Thrown if the username is null or empty or the username already exists
+     * @param email New user's email. Use null to leave it unchanged
+     * @throws InvalidArgumentException If the username is null or empty or the username already exists, 
+     * if the user type is invalid or if the password is an empty string, or if it is attempted to change 
+     * the user name of the admin user name, or if this operation is attempted on a system user. Also, if the new user type is invalid.
      * @throws ApplicationObjectNotFoundException If the user could not be found
      */
     public void setUserProperties(long oid, String userName, String password, String firstName,
-            String lastName, int enabled, int type)
+            String lastName, int enabled, int type, String email)
             throws InvalidArgumentException, ApplicationObjectNotFoundException;
     /**
      * Updates the attributes of a user, using its username as key to find it
@@ -121,11 +126,14 @@ public interface ApplicationEntityManager {
      * @param lastName User's last name. Null if unchanged
      * @param enabled 0 for false, 1 for true, -1 to leave it unchanged
      * @param type User type. See UserProfile.USER_TYPE* for possible values. -1 to leave it unchanged
-     * @throws InvalidArgumentException If the format of any of the parameters provided is erroneous
+     * @param email User's email. Null if unchanged
+     * @throws InvalidArgumentException If the username is null or empty or the username already exists, 
+     * if the user type is invalid or if the password is an empty string, or if it is attempted to change 
+     * the user name of the admin user name, or if this operation is attempted on a system user. Also, if the new user type is invalid.
      * @throws ApplicationObjectNotFoundException If the user could not be found
      */
     public void setUserProperties(String formerUsername, String newUserName, String password, String firstName,
-            String lastName, int enabled, int type)
+            String lastName, int enabled, int type, String email)
             throws InvalidArgumentException, ApplicationObjectNotFoundException;
     
     /**
@@ -390,9 +398,44 @@ public interface ApplicationEntityManager {
      * @throws InvalidArgumentException If any template does not have uuid
      */
     public List<BusinessObjectLight> getDeviceLayouts() throws InvalidArgumentException;
-    
+        
     /**
-     * Gets the device layout structure as an XML file
+     * Gets the device layout structure.
+     * <pre>
+     * {@code
+     *  <deviceLayoutStructure>
+     *      <device id="" className="" name=""/>
+     *      ...
+     *      .
+     *      .
+     *      <device id="" className="" name="" parentId="">
+     *          <model id="" className="" name="">
+     *              <view id="" className="">
+     *                  <structure>
+     *                      Base64                      
+     *                  </structure>
+     *              </view>
+     *          </model>
+     *      </device>
+     *      ...
+     *      .
+     *      .
+     *      <device id="" className="" name="" parentId=""/>
+     *      ...
+     *      .
+     *      .
+     *      <device id="" className="" name="" parentId="">
+     *          <model id="" className="" name="">
+     *              <view id="" className="">
+     *                  <structure>
+     *                      Base64                      
+     *                  </structure>
+     *              </view>
+     *          </model>
+     *      </device>
+     *  </deviceLayoutStructure>
+     * }
+     * </pre>
      * @param oid object id
      * @param className object class
      * @return The structure of the device layout
@@ -650,7 +693,7 @@ public interface ApplicationEntityManager {
     
     /**
      * Gets the name Of a special parent by scale up the SPECIAL_OF_CHILD hierarchy
-     * Use case: Use in reports to get the costumer of a service
+     * Use case: Use in reports to get the customer of a service
      * @param className className
      * @param id node id
      * @param targetLevel number of levels to scale up
@@ -689,14 +732,14 @@ public interface ApplicationEntityManager {
     public void validateWebServiceCall(String methodName, String ipAddress, String sessionId) throws NotAuthorizedException;
     
     /**
-     * Creates a session
+     * Creates a session. System users can not create sessions.
      * @param user User name
      * @param password Password
      * @param sessionType The type of session to be created. This type depends on what kind of client is trying to access (a desktop client, a web client, a web service user, etc. See Session.TYPE_XXX for possible session types
      * @param IPAddress IP address the session is created from
      * @return A session object with information about the session itself plus information about the user
      * @throws ApplicationObjectNotFoundException If the user does not exist
-     * @throws NotAuthorizedException If the password is incorrect or if the user is not enabled.
+     * @throws NotAuthorizedException If the password is incorrect or if the user is not enabled, or if a system user is used to create the session.
      */
     public Session createSession(String user, String password, int sessionType, String IPAddress) throws ApplicationObjectNotFoundException, NotAuthorizedException;
     
@@ -948,7 +991,7 @@ public interface ApplicationEntityManager {
      * Creates an object inside a template.
      * @param templateElementClass Class of the object you want to create.
      * @param templateElementParentClassName Class of the parent to the obejct you want to create.
-     * @param templateElementParentId Id of the parent to the obejct you want to create.
+     * @param templateElementParentId Id of the parent to the object you want to create.
      * @param templateElementName Name of the element.
      * @return The id of the new object.
      * @throws org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException If the object (or its parent) class could not be found
@@ -1586,6 +1629,112 @@ public interface ApplicationEntityManager {
      * @throws ApplicationObjectNotFoundException If the pool could not be found
      */
     public void deleteConfigurationVariablesPool(String poolId) throws ApplicationObjectNotFoundException;
+    
+    // <editor-fold desc="Proxies" defaultstate="collapsed">
+    /**
+     * Creates an inventory proxy. Inventory proxies are used to integrate third party-applications with Kuwaiba. Sometimes these applications must refer to 
+     * assets managed by Kuwaiba from another perspective (financial, for example). In these applications, multiple Kuwaiba inventory assets might be represented by
+     * a single entity (e.g. a router with slots, boards and ports might just be something like "standard network device"). Proxies are used to map multiple inventory 
+     * elements into a single entity. It's a sort of "impedance matching" between systems that refer to the same real world object from different perspectives.
+     * @param proxyPoolId The parent pool id.
+     * @param proxyClass The proxy class. Must be subclass of GenericProxy.
+     * @param attributes The set of initial attributes. If no attribute <code>name</code> is specified, an empty string will be used.
+     * @return The id of the newly created proxy.
+     * @throws ApplicationObjectNotFoundException If the parent pool could not be found.
+     * @throws InvalidArgumentException If any of the initial attributes could not be mapped.
+     * @throws MetadataObjectNotFoundException If the proxy class could not be found.
+     */
+    public String createProxy(String proxyPoolId, String proxyClass, HashMap<String, String> attributes) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, MetadataObjectNotFoundException;
+    /**
+     * Deletes a proxy and delete its association with the related inventory objects. These objects will remain untouched.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy
+     * @throws ApplicationObjectNotFoundException If the proxy could not be found.
+     * @throws MetadataObjectNotFoundException If the proxy class could not be found.
+     */
+    public void deleteProxy(String proxyClass, String proxyId) throws ApplicationObjectNotFoundException, MetadataObjectNotFoundException;
+    /**
+     * Updates one or many proxy attributes.
+     * @param proxyId The parent pool id,
+     * @param proxyClass The class of the proxy.
+     * @param attributes The set of initial attributes. If no attribute <code>name</code> is specified, an empty string will be used.
+     * @throws ApplicationObjectNotFoundException If the parent pool could not be found.
+     * @throws InvalidArgumentException If any of the initial attributes could not be mapped.
+     * @throws MetadataObjectNotFoundException If the proxy class could not be found.
+     */
+    public void updateProxy(String proxyClass, String proxyId, HashMap<String, String> attributes) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, MetadataObjectNotFoundException;
+    
+    /**
+     * Creates a proxy pool.
+     * @param name The name of the pool.
+     * @param description The description of the pool
+     * @return The id of the newly created proxy.
+     */
+    public String createProxyPool(String name, String description);
+    /**
+     * Updates an attribute of a proxy pool.
+     * @param proxyPoolId The id of the pool to be updated.
+     * @param attributeName The name of the pool attribute to be updated. Valid values are "name" and "description"
+     * @param attributeValue The value of the attribute. Null values will be ignored.
+     * @throws ApplicationObjectNotFoundException If the pool could not be found.
+     * @throws InvalidArgumentException If an unknown attribute name is provided.
+     */
+    public void updateProxyPool(String proxyPoolId, String attributeName, String attributeValue) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Deletes a proxy pool.
+     * @param proxyPoolId The id of the pool.
+     * @throws ApplicationObjectNotFoundException If the pool could not be found.
+     */
+    public void deleteProxyPool(String proxyPoolId) throws ApplicationObjectNotFoundException;
+    
+    /**
+     * Retrieves the list of pools of proxies.
+     * @return The available pools of inventory proxies.
+     */
+    public List<Pool> getProxyPools();
+    /**
+     * Gets the list of inventory proxies in a given pool.
+     * @param proxyPoolId The id of the parent pool.
+     * @return The proxies
+     * @throws ApplicationObjectNotFoundException If the parent pool could not be found. 
+     * @throws InvalidArgumentException If the object in the database can not be mapped into an InvetoryProxy instance.
+     */
+    public List<InventoryProxy> getProxiesInPool(String proxyPoolId) throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Gets all the inventory proxies in the database.
+     * @return The list of inventory proxy objects.
+     * @throws InvalidArgumentException If any proxy node could not be mapped into a Java object.
+     */
+    public List<InventoryProxy> getAllProxies() throws InvalidArgumentException;
+    /**
+     * Associates an inventory object to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @throws BusinessObjectNotFoundException If the inventory object could not be found.
+     * @throws ApplicationObjectNotFoundException If the proxy could not be found.
+     * @throws InvalidArgumentException If the two entities are already related.
+     */
+    public void associateObjectToProxy(String objectClass, String objectId, String proxyClass, String proxyId) 
+            throws BusinessObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Releases an inventory previously related to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @throws BusinessObjectNotFoundException If the inventory object could not be found.
+     * @throws ApplicationObjectNotFoundException If the proxy could not be found.
+     */
+    public void releaseObjectFromProxy(String objectClass, String objectId, String proxyClass, String proxyId)
+            throws BusinessObjectNotFoundException, ApplicationObjectNotFoundException;
+// </editor-fold>
     //<editor-fold desc="Validators" defaultstate="collapsed">
     /**
      * Creates a validator definition. 

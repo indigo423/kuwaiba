@@ -20,12 +20,16 @@ import com.neotropic.kuwaiba.sync.model.SyncResult;
 import com.neotropic.kuwaiba.sync.model.SyncUtil;
 import com.neotropic.kuwaiba.sync.model.TableData;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.json.Json;
-import javax.json.JsonObject;
 import org.kuwaiba.apis.persistence.PersistenceService;
 import org.kuwaiba.apis.persistence.application.ApplicationEntityManager;
 import org.kuwaiba.apis.persistence.application.Pool;
@@ -43,11 +47,12 @@ import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.apis.persistence.metadata.MetadataEntityManager;
-import org.kuwaiba.apis.persistence.util.StringPair;
 import org.kuwaiba.beans.WebserviceBean;
 import org.kuwaiba.exceptions.ServerSideException;
 import org.kuwaiba.services.persistence.util.Constants;
+import org.kuwaiba.services.persistence.util.Util;
 import org.kuwaiba.util.i18n.I18N;
+import org.openide.util.Exceptions;
 
 /**
  * Loads data from a SNMP file to replace/update an existing element in the
@@ -56,57 +61,9 @@ import org.kuwaiba.util.i18n.I18N;
  */
 public class EntPhysicalSynchronizer {
     /**
-     * The class name of the object
-     */
-    private final String className;
-    /**
-     * Device id
-     */
-    private final String id;
-    /**
      * Device Data Source Configuration id
      */
     private final long dsConfigId;
-    /**
-     * Current structure of the device
-     */
-    private final HashMap<Long, List<BusinessObjectLight>> currentObjectStructure;
-    /**
-     * To load the structure of the actual device
-     */
-    private final List<BusinessObjectLight> currentVirtualPorts;
-    /**
-     * To load the structure of the actual device
-     */
-    private final List<BusinessObjectLight> currentServiceInstances;
-    /**
-     * To load the structure of the actual device
-     */
-    private final List<BusinessObjectLight> foundVirtualPorts;
-    /**
-     * The current first level children of the actual device
-     */
-    private List<BusinessObjectLight> currentFirstLevelChildren;
-    /**
-     * The current ports in the device
-     */
-    private final List<BusinessObjectLight> currentPorts;
-    /**
-     * Current MPLS tunnels
-     */
-    private final List<BusinessObjectLight> currentMplsTunnels;
-    /**
-     * To load the structure of the actual device
-     */
-    private final List<BusinessObjectLight> foundMplsTunnels;
-    /**
-     * To keep a trace of the new ports created during synchronization
-     */
-    private final List<BusinessObject> newPorts;
-    /**
-     * The ports of the device before the synchronization
-     */
-    private final List<BusinessObjectLight> notMatchedPorts;
     /**
      * To keep a trace of the list types evaluated, to not create them twice
      */
@@ -115,35 +72,52 @@ public class EntPhysicalSynchronizer {
      * An aux variable, used to store the branch of the old object structure
      * while the objects are checked, before the creations of the branch
      */
-    private List<BusinessObjectLight> tempAuxOldBranch = new ArrayList<>();
+    private HashMap<String, String> syncedInstances = new HashMap<>();
     /**
-     * a map of the file to create the objects
+     * A list of the all the paths to sync, each path contains a list of instance(ids)
+     * e g
+     * [
+     *  [0,1001,1002],
+     *  [0,1001,1003],
+     *  [0,1001,1004],
+     *  ::
+     * ] 
+     * every path goes from the root/chassis until a last leaf(child with no children) of that path
+     * there are as much paths as leafs
      */
-    private HashMap<String, List<String>> mapOfFile = new HashMap<>();
-    /**
-     * a map of the file to create the classes in the containment hierarchy
-     */
-    private HashMap<String, List<String>> mapOfClasses = new HashMap<>();
+    private List<List<String>> snmpBranches = new ArrayList<>();
+    private ArrayList<ArrayList<BusinessObjectLight>> kuwaibaPathsLigth = new ArrayList<>();
+    private List<List<BusinessObject>> kuwaibaPaths = new ArrayList<>();
+    
+    
+    List<BusinessObjectLight> kuwaibaServices;
+    
+    
+    private List<BusinessObjectLight> kuwaibaPorts = new ArrayList<>();
     /**
      * the result finding list
      */
     private List<SyncResult> results = new ArrayList<>();
     /**
-     * The entity table loaded into the memory
+     * The entity table loaded into the memory [mibName, [list of values]]
+     * e.g
+     * [
+     * entPhysicalName => [1, WS-C2960C-8TC-L - Fixed Module 0, WS-C2960C-8TC-L - Power Supply 0, WS-C2960C-8TC-L - Sensor 0, FastEthernet0/1, FastEthernet0/2, ...]
+     * instance => [1001, 1002, 1003, 1004, ....]
+     * entPhysicalContainedIn => [0, 1001, 1001, 1001, 1002, 1002..]
+     * ]
      */
     private final HashMap<String, List<String>> entityData;
     /**
      * The if-mib table loaded into the memory
+     * e.g [
+
      */
     private final HashMap<String, List<String>> ifXTable;
     /**
      * Default initial ParentId in the SNMP table data
      */
     private String INITAL_ID;
-    /**
-     * To keep the objects during synchronization
-     */
-    private List<BusinessObject> branch;
     /**
      * reference to the bem
      */
@@ -157,22 +131,14 @@ public class EntPhysicalSynchronizer {
      */
     private MetadataEntityManager mem;
     
-    private HashMap<String, String> createdIdsToMap;
+    private BusinessObjectLight objSync;
+    
     private final HashMap<String, List<BusinessObject>> newCreatedPortsToCreate;
-    private final List<StringPair> nameOfCreatedPorts;
-    /**
-     * Helper used to read the actual structure recursively
-     */
-    private long k = 0;
-    /**
-    * debugMode
-    */
-    private boolean debugMode;
     
     public EntPhysicalSynchronizer(long dsConfigId, BusinessObjectLight obj, List<TableData> data) {
-        
         try {
             PersistenceService persistenceService = PersistenceService.getInstance();
+            objSync = obj;
             bem = persistenceService.getBusinessEntityManager();
             aem = persistenceService.getApplicationEntityManager();
             mem = persistenceService.getMetadataEntityManager();
@@ -183,178 +149,82 @@ public class EntPhysicalSynchronizer {
             aem = null;
             mem = null;
         }
-        this.className = obj.getClassName();
-        this.id = obj.getId();
         this.dsConfigId = dsConfigId;
         entityData = (HashMap<String, List<String>>)data.get(0).getValue();
         ifXTable = (HashMap<String, List<String>>)data.get(1).getValue();
-        currentObjectStructure = new HashMap<>();
-        newPorts = new ArrayList<>();
-        currentPorts = new ArrayList<>();
         listTypeEvaluated = new ArrayList<>();
-        branch = new ArrayList<>();
-        notMatchedPorts = new ArrayList<>();
-        currentFirstLevelChildren = new ArrayList<>();
-        currentVirtualPorts = new ArrayList<>();
-        currentMplsTunnels = new ArrayList<>();
-        currentServiceInstances = new ArrayList<>();
-        createdIdsToMap = new HashMap<>();
-        newCreatedPortsToCreate = new HashMap<>();
-        nameOfCreatedPorts = new ArrayList<>();
-        debugMode = (boolean)aem.getConfiguration().get("debugMode");
-        foundMplsTunnels = new ArrayList<>();
-        foundVirtualPorts = new ArrayList<>();
+        newCreatedPortsToCreate = new HashMap<>();      
+        kuwaibaServices = new ArrayList<>();
     }
 
-    public List<SyncResult> sync() throws MetadataObjectNotFoundException,
-            BusinessObjectNotFoundException, InvalidArgumentException,
-            OperationNotPermittedException, ApplicationObjectNotFoundException, ArraySizeMismatchException, NotAuthorizedException, ServerSideException {
-        readData();
-        loadClassHierarchy();
-        readCurrentFirstLevelChildren();
-        readCurrentDeviceStructure(bem.getObjectChildren(className, id, -1));
-        readCurrentSpecialStructure(bem.getObjectSpecialChildren(className, id));
-        //printData(); //<- for debuging 
-        checkObjects(id, "", "");
-        checkPortsToMigrate();
-        checkDataToBeDeleted();
-        checkPortsWithNoMatch();
+    public List<SyncResult> sync() throws MetadataObjectNotFoundException
+            , BusinessObjectNotFoundException, InvalidArgumentException
+            , OperationNotPermittedException, ApplicationObjectNotFoundException
+            , ArraySizeMismatchException, NotAuthorizedException, ServerSideException 
+    {
+        readSnmpData();
+        synchronizeHierarchy();
+        
+        readCurrentStructure(objSync
+                , bem.getObjectChildren(objSync.getClassName()
+                        , objSync.getId()
+                        , -1)
+                , new ArrayList<>());
+        parseToBusinessObject();
+        synchronize();
         syncIfMibData();
         return results;
     }
 
     //<editor-fold desc="Methods to read the data and load it into memory" defaultstate="collapsed">
     /**
-     * Reads the data loaded into memory
+     * Reads the snmp data loaded into memory
      * @throws InvalidArgumentException if the table info load is corrupted and
      * has no chassis
      */
-    public void readData() throws InvalidArgumentException {
+    public void readSnmpData() throws InvalidArgumentException {
         //The initial id is the id of the chassis in most of cases is 0, except in the model SG500 
         INITAL_ID = entityData.get("entPhysicalContainedIn").get(entityData.get("entPhysicalClass").indexOf("3"));
         if (entityData.get("entPhysicalContainedIn").contains(INITAL_ID))
-            createTreeFromFile(INITAL_ID);
+            createSnmpPathsMap(INITAL_ID, "");
         else 
-            results.add(new SyncResult(dsConfigId, SyncFinding.EVENT_ERROR,
-                                            I18N.gm("no_inital_id_was_found"),
-                                            I18N.gm("check_initial_id_in_snmp_data")));
-        removeChildrenless();
-        createMapOfClasses();
+            results.add(new SyncResult(dsConfigId, SyncFinding.EVENT_ERROR
+                    , I18N.gm("no_inital_id_was_found")
+                    , I18N.gm("check_initial_id_in_snmp_data")));
     }
 
-//<editor-fold desc="for debuging" defaultstate="collapsed">
-//    private void printData(){
-//        for(String key : mapOfFile.keySet()){
-//            String parsedClass;
-//            List<String> children = mapOfFile.get(key);
-//            if(!key.equals("0")){
-//                int i = allData.get("instance").indexOf(key);
-//                parsedClass = parseClass(allData.get("entPhysicalClass").get(i), 
-//                        allData.get("entPhysicalName").get(i),
-//                        allData.get("entPhysicalDescr").get(i));
-//                System.out.println("id: " + key + " " + allData.get("entPhysicalName").get(i) + "["+parsedClass+"]");
-//            }
-//            else
-//                System.out.println("R A C K -> ");
-//            
-//            for (String child : children) {
-//                int childIndex = allData.get("instance").indexOf(child);
-//                parsedClass = parseClass(allData.get("entPhysicalClass").get(childIndex), 
-//                    allData.get("entPhysicalName").get(childIndex),
-//                    allData.get("entPhysicalDescr").get(childIndex));
-//                System.out.println("P:" + allData.get("entPhysicalContainedIn").get(childIndex) + " -id: " + child + " " + allData.get("entPhysicalName").get(childIndex) + "["+parsedClass+"]");
-//            }
-//        }
-//    }
-//</editor-fold>
-    
     /**
-     * Translate the Hash map lists into a map with parentsIds and his
-     * childrenIds
-     *
-     * @param parentId alleged parent Id
+     * Translates the snmp map (entityData) into a map with all possible paths 
+     * to sync.  It reads the instance (the id) of each object and creates the 
+     * children path searching that id in entPhysicalContainedIn this is the 
+     * contency map, it shows who is the father of whom.
+     * 
+     * e.g. 
+     * instance => 1001
+     * entPhysicalContainedIn => 0
+     * 
+     * instance: 0 (the chassis/initial_id) is the parent of the instance: 1001 
+     * 
+     * Please refer to syncSourcePaths declaration to check the data result format
+     * @param parentId the start/chassis/root of the device that is being sync
+     * most of time is 0
      */
-    private void createTreeFromFile(String parentId) {
+    private void createSnmpPathsMap(String parentId, String path){
+        path += parentId + ", ";
+        boolean hasChildren = false;
         for (int i = 0; i < entityData.get("entPhysicalContainedIn").size(); i++) {
             if (entityData.get("entPhysicalContainedIn").get(i).equals(parentId)) {
-                if (isClassUsed(entityData.get("entPhysicalClass").get(i),
+                 if (isClassUsed(entityData.get("entPhysicalClass").get(i),
                         entityData.get("entPhysicalDescr").get(i))) {
-                    saveInTreeMap(parentId, entityData.get("instance").get(i));
-                    createTreeFromFile(entityData.get("instance").get(i));
+                    createSnmpPathsMap(entityData.get("instance").get(i), path);
+                    hasChildren = true;
                 }
             }
         }
-    }
-
-    /**
-     * Puts the data into a HashMap
-     *
-     * @param parent the parent's class
-     * @param child the child's classes
-     */
-    private void saveInTreeMap(String parent, String child) {
-        List<String> childrenLines = mapOfFile.get(parent);
-        if (childrenLines == null) {
-            childrenLines = new ArrayList<>();
-            childrenLines.add(child);
-            mapOfFile.put(parent, childrenLines);
-        } else {
-            mapOfFile.get(parent).add(child);
-        }
-    }
-
-    /**
-     * Removes keys without children
-     */
-    private void removeChildrenless() {
-        List<String> keysToremove = new ArrayList<>();
-        for (String key : mapOfFile.keySet()) {
-            List<String> children = mapOfFile.get(key);
-            if (children.isEmpty()) {
-                keysToremove.add(key);
-            }
-        }
-        keysToremove.forEach((key) -> {
-            mapOfFile.remove(key);
-        });
-    }
-
-    /**
-     * Creates the Hash map of classes to create the hierarchy containment
-     */
-    private void createMapOfClasses() {
-        mapOfClasses = new HashMap<>();
-        for (String key : mapOfFile.keySet()) {
-            if (!key.equals("0")) {
-                List<String> childrenId = mapOfFile.get(key);
-                int w = entityData.get("instance").indexOf(key);
-                String patentClassParsed = parseClass(
-                        entityData.get("entPhysicalModelName").get(w),
-                        entityData.get("entPhysicalClass").get(w),
-                        entityData.get("entPhysicalName").get(w),
-                        entityData.get("entPhysicalDescr").get(w)//NOI18N
-                );
-
-                if(patentClassParsed != null){
-                    List<String> childrenParsed = mapOfClasses.get(patentClassParsed);
-                    if (childrenParsed == null) 
-                        childrenParsed = new ArrayList<>();
-
-                    for (String child : childrenId) {
-                        int indexOfChild = entityData.get("instance").indexOf(child);
-                        String childParsedClass = parseClass(
-                                entityData.get("entPhysicalModelName").get(w),
-                                entityData.get("entPhysicalClass").get(indexOfChild),
-                                entityData.get("entPhysicalName").get(indexOfChild),
-                                entityData.get("entPhysicalDescr").get(indexOfChild)//NOI18N
-                        );
-
-                        if(childParsedClass != null && !childrenParsed.contains(childParsedClass))
-                            childrenParsed.add(childParsedClass);
-                    }
-                    mapOfClasses.put(patentClassParsed, childrenParsed);
-                }
-            }
+        
+        if(!hasChildren){
+            snmpBranches .add(Arrays.asList(path.split(", ")));
+            path = "";
         }
     }
 
@@ -372,7 +242,7 @@ public class EntPhysicalSynchronizer {
         
         int classId = Integer.valueOf(className_);
         if (classId == 3 && (!name.isEmpty() && !descr.isEmpty())) //chassis
-            return className;
+            return objSync.getClassName();
         else if (deviceModel != null && classId == 10 && deviceModel.contains("2960")) 
             return "ElectricalPort";
         else if (classId == 10){ //port
@@ -390,17 +260,24 @@ public class EntPhysicalSynchronizer {
             if (!descr.contains("Disk")) //NOI18N
                 return "Slot";//NOI18N
             
-        } else if (classId == 6 && name.toLowerCase().contains("power") && !name.toLowerCase().contains("module") || classId == 6 && descr.toLowerCase().contains("power")) 
+        } else if (classId == 6 && name.toLowerCase().contains("power") && !name.toLowerCase().contains("module") || classId == 6 && descr.toLowerCase().contains("power") || classId == 6 && descr.toLowerCase().contains("psu")) 
             return "PowerPort";//NOI18N
         else if (classId == 6 && name.contains("Module")) //NOI18N
             return "HybridBoard"; //NOI18N
         else if (classId == 9) { //module
             //In Routers ASR9001 the Transceivers, some times have an empty desc
-            if ((name.split("/").length > 3 || name.toLowerCase().contains("transceiver") || descr.toLowerCase().contains("transceiver") || (descr.toLowerCase().contains("sfp") 
-                    || descr.toLowerCase().contains("xfp") || descr.toLowerCase().contains("cpak") || descr.toLowerCase().equals("ge t"))) && !name.toLowerCase().contains("spa") && !descr.toLowerCase().contains("spa"))
+                if ((name.matches("[A-Za-z]+([0-9]+\\/)+[0-9]+") 
+                        || name.toLowerCase().contains("transceiver") 
+                        || descr.toLowerCase().contains("transceiver") 
+                        || ((descr.toLowerCase().contains("sfp") && !name.toLowerCase().contains("card") && !name.matches("[A-Za-z]+([0-9]+\\/)+[0-9]+-[A-Za-z]+"))
+                            || descr.toLowerCase().contains("xfp") 
+                            || descr.toLowerCase().contains("cpak") || descr.toLowerCase().equals("ge t")
+                            )) 
+                        && !name.toLowerCase().contains("spa") && !descr.toLowerCase().contains("spa"))
                 return "Transceiver"; //NOI18N
-
-            return "IPBoard"; //NOI18N
+//0/RP0/CPU0-GigabitEthernet0/0/0/1
+            return name.matches("[A-Za-z]+([0-9]+\\/)+[0-9]+-[A-Za-z]+") ? null : "IPBoard"; 
+//ASR540 extra transceivers, we keep only the main transceiver with the 0/0/ 
         }
         else if(classId == 1 && descr.contains("switch processor"))
             return "SwitchProcessor"; //NOI18N
@@ -432,1019 +309,768 @@ public class EntPhysicalSynchronizer {
         return false;
     }
     //</editor-fold>
+   
+    //recorremos la rama snmp y la mandamosa  mapear
+    private List<BusinessObject> parseSnmpBranch(List<String> snmpBranch){
+        List<BusinessObject> syncBranch = new ArrayList<>();
+        //we translate each branch from snmp id instances into kuwaiba objects
+        for(String snmpInstance : snmpBranch){
+            if(!snmpInstance.equals(INITAL_ID)){
+                BusinessObject syncObj = businessObjectFrom(snmpInstance);
+                if(syncObj != null){
+                    syncObj.getAttributes().put("sync", "to_sync");
+                    syncBranch.add(syncObj);
+                }
+            }
+        }
+        return syncBranch;
+    }
     
     /**
-     * Updates the hierarchy containment in Kuwaiba
+     * Creates an object with snmp instance data
      */
-    private void loadClassHierarchy() {
-        try {
-            for (String parentClass : mapOfClasses.keySet()) {
+    private BusinessObject businessObjectFrom(String snpmInstance){
+        int i = entityData.get("instance").indexOf(snpmInstance);
+        String name = entityData.get("entPhysicalName").get(i); //NOI18N
+        String kuwaibaClass = parseClass(
+                    entityData.get("entPhysicalModelName").get(i),//NOI18N
+                    entityData.get("entPhysicalClass").get(i), //NOI18N
+                    name, entityData.get("entPhysicalDescr").get(i)); //NOI18N
+        if(kuwaibaClass != null){ //TODO improve this, parse class and isclassUsed should avoid extra info like transceiver in 540    
+            HashMap<String, String> attributes = snmpAttributes(kuwaibaClass, i);
+            //with the class (from the id) we create a kuwaiba object
+            return new BusinessObject(kuwaibaClass, 
+                    snpmInstance, 
+                    attributes.get(Constants.PROPERTY_NAME), 
+                    attributes);
+        }
+        return null;
+    }
+
+    /**
+     * Search in every branch by the port (it should be unique)
+     * @return a branch with a port as leaf
+     */
+    private List<BusinessObject> findBranchByPort(BusinessObject syncChassis, BusinessObject syncEndPort){
+        for (List<BusinessObject> kuwaibaBranch : kuwaibaPaths) {
+
+            if(!kuwaibaBranch.isEmpty()){ 
+                List<BusinessObjectLight> kuwBranch = new ArrayList<>(kuwaibaBranch);
+                BusinessObjectLight chassis = kuwBranch.get(0);
+                BusinessObjectLight kuwEndPort = kuwBranch.get(kuwBranch.size() -1);
+
+                if(syncChassis.getClassName().equals(chassis.getClassName())
+                        && syncEndPort.getClassName().contains("Port") 
+                        && kuwEndPort.getClassName().contains("Port")
+                        && syncEndPort.getClassName().equals(kuwEndPort.getClassName())
+                        && syncEndPort.getName().equals(kuwEndPort.getName()))
+
+                    return kuwaibaBranch;
+            }//end if empty
+        }
             
-                List<String> possibleChildrenToAdd = new ArrayList<>();
+        return new ArrayList<>();
+    }
+    
+    /**
+     * Parse from business object light to business object
+     */
+    private void parseToBusinessObject(){
+        try {
+            for (List<BusinessObjectLight> pathLigth : kuwaibaPathsLigth) {
+                List<BusinessObject> path = new ArrayList<>();
+                for (BusinessObjectLight objLigth : pathLigth) {
+                    BusinessObject obj = bem.getObject(objLigth.getClassName(), objLigth.getId());
+                    path.add(obj);
+                }
+                kuwaibaPaths.add(path);
+            }
+        } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | InvalidArgumentException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+    }
+    
+    /**
+     * Updates containment hierarchy
+     */
+    private void synchronizeHierarchy(){
+        HashMap<String, List<String>> syncHierarchy = new HashMap<>();
+
+        for (List<String> snmpBranch : snmpBranches ) {
+            List<BusinessObject> syncBranch = parseSnmpBranch(snmpBranch);
+
+            for(int i = 0; syncBranch.size() > i; i ++){
+                BusinessObject parent = syncBranch.remove(i);
+                if(!syncHierarchy.containsKey(parent.getClassName()))
+                    syncHierarchy.put(parent.getClassName(), new ArrayList());
+
+                for (BusinessObject obj : syncBranch) {
+                    if(!syncHierarchy.get(parent.getClassName()).contains(obj.getClassName()))
+                        syncHierarchy.get(parent.getClassName()).add(obj.getClassName());
+                }
+            }
+        }
+        
+        try {
+            for (String parentClass : syncHierarchy.keySet()) {
+            
                 List<ClassMetadataLight> currentPossibleChildren = mem.getPossibleChildren(parentClass);
-                List<String> possibleChildren = mapOfClasses.get(parentClass);
+                List<String> syncPossibleChildren = syncHierarchy.get(parentClass);
                 
-                if (possibleChildren != null) {
-                    //JsonArray children = Json.createArrayBuilder().build();
-                    for (String possibleChildToAdd : possibleChildren){
+                if (syncPossibleChildren != null) {
+                    List<String> possibleChildrenToAdd = new ArrayList<>();
+                    for (String syncPossibleChild : syncPossibleChildren){
                         boolean isPossibleChild = false;
-                        for(ClassMetadataLight currentPossibleClassName : currentPossibleChildren){
-                            if(possibleChildToAdd.equals(currentPossibleClassName.getName())){
+                        for(ClassMetadataLight currentPossibleChild : currentPossibleChildren){
+                            if(syncPossibleChild.equals(currentPossibleChild.getName())){
                                 isPossibleChild = true;
                                 break;
                             }
                         }
         
                         if(!isPossibleChild)
-                            possibleChildrenToAdd.add(possibleChildToAdd);
+                            possibleChildrenToAdd.add(syncPossibleChild);
                     }
                     if(!possibleChildrenToAdd.isEmpty()){
                         mem.addPossibleChildren(parentClass, possibleChildrenToAdd.toArray(new String[possibleChildrenToAdd.size()]));
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
-                                String.format("%s are now children of class %s ", possibleChildrenToAdd, parentClass), 
-                                "The class hierarchy was updated"));
+                        results.add(new SyncResult(dsConfigId
+                                , SyncResult.TYPE_SUCCESS
+                                , String.format("%s possible child of %s"
+                                        , possibleChildrenToAdd
+                                        , parentClass)
+                                , "Contaiment Hierarchy updated"));
                     }
                 }
             } //end for
         }catch (MetadataObjectNotFoundException | InvalidArgumentException ex) {
-            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, ex.getLocalizedMessage(), 
-                            "The class Hieararchy was not updated"));
+            results.add(new SyncResult(dsConfigId
+                    , SyncResult.TYPE_ERROR
+                    , ex.getLocalizedMessage()
+                    , "Contaiment Hieararchy not updated"));
         }
-    }
-
-    /**
-     * Create into kuwaiba's objects the lines read it from the SNMP
-     * it creates a branch every time it finds a port or an element with 
-     * no children
-     * e.g. branch 1)
-     *               slot0/0[Slot]+
-     *                            |_board0/0[Board]+
-     *                                             |_ port0/0/0[Port] 
-     *                                             (end of branch)
-     * -------------------------------------------------------------------------
-     *      branch 2)                              |_0/0/1[Port] 
-     *                                             (end of branch)
-     * -------------------------------------------------------------------------
-     *      branch 3)                              |_0/0/2[Port]
-     *                                             (end of branch)
-     * -------------------------------------------------------------------------     
-     *      branch 4) 
-     *               slot0/1[Slot]+
-     *                            |_board0/1[Board]
-     *                               (end of branch) 
-     * -------------------------------------------------------------------------                           
-     * @param parentId
-     * @param parentName
-     * @param parentClassName
-     * @throws MetadataObjectNotFoundException
-     * @throws BusinessObjectNotFoundException
-     * @throws OperationNotPermittedException
-     * @throws InvalidArgumentException
-     * @throws ApplicationObjectNotFoundException
-     */
-    private void checkObjects(String parentId, String parentName, String parentClassName)
-            throws MetadataObjectNotFoundException,
-            BusinessObjectNotFoundException, OperationNotPermittedException,
-            InvalidArgumentException, ApplicationObjectNotFoundException 
-    {
-        if(mapOfFile.isEmpty())
-            throw new InvalidArgumentException("The router model you are trying to synchronize is not yet supported. Contact your administrator");
         
-        if (parentId != null && parentId.equals(id))//If is the first element
-            parentId = INITAL_ID;
-
-        List<String> childrenIds = mapOfFile.get(parentId);
-        if (childrenIds != null) {
-            for (String childId : childrenIds) {
-                
-                int i = entityData.get("instance").indexOf(childId); //NOI18N
-                parentId = entityData.get("entPhysicalContainedIn").get(i); //NOI18N
-                if (parentClassName.equals(className)) //if is the chassis we must keep the id
-                    parentId = id;
-
-                String objectName = entityData.get("entPhysicalName").get(i); //NOI18N
-                //We parse the class Id from SNMP into kuwaiba's class name
-                String mappedClass = parseClass(
-                        entityData.get("entPhysicalModelName").get(i),
-                        entityData.get("entPhysicalClass").get(i), 
-                        objectName, entityData.get("entPhysicalDescr").get(i)); //NOI18N
-                //We standarized the port names
-                if(!className.equals(mappedClass) && SyncUtil.isSynchronizable(objectName) && mappedClass.toLowerCase().contains("port") && !objectName.contains("Power") && !mappedClass.contains("Power"))
-                    objectName = SyncUtil.wrapPortName(objectName);
-                                
-                if(mappedClass == null) //it was impossible to parse the SNMP class into kuwaiba's class
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                String.format("The data has empty fields. Kuwaiba can not map entry: %s", entityData.get("entPhysicalClass").get(i)),
-                                "the entry will not be synchronized")
-                    );
+    }
+    
+    /**
+     * Starts the synchronization
+     */
+    private void synchronize(){
+        boolean upateChassis = true;
+        for (List<String> snmpBranch : snmpBranches ) {
+            List<BusinessObject> syncBranch = parseSnmpBranch(snmpBranch);
+            if(!syncBranch.isEmpty()){
+                BusinessObject syncChassis = syncBranch.get(0);
+                if(upateChassis 
+                        && syncChassis.getClassName()
+                                .equals(objSync.getClassName()))
+                {
+                    updateAttributes(syncChassis);
+                    upateChassis = false;
+                }
+                //First (EMPTY ROUTER) if the router is empty only the chassis
+                if(kuwaibaPaths.size() == 1 && kuwaibaPaths.get(0).size() == 1){
+                    kuwaibaPaths.add(new ArrayList<>(syncBranch));
+                    syncBranch.remove(0);
+                    processBranch(syncBranch); 
+                }
                 else{
-                    HashMap<String, String> newAttributes = createNewAttributes(mappedClass, i);
-                    //This applies only for the chassis
-                    if (className.contains(mappedClass)) {
-                        newAttributes.remove("name"); //NOI18N the router name won't be changed
-                        HashMap<String, String> comparedAttributes = SyncUtil.compareAttributes(bem.getObject(className, id).getAttributes(), newAttributes);
-                        if (!comparedAttributes.isEmpty()) {
-                            comparedAttributes.put("name", bem.getObject(className, id).getAttributes().get("name"));//we need to add the name as atribute again to show the name in the results
-                            updateObjectAttributes(id, mappedClass, comparedAttributes);
-                        }
-                    //all the data except the chassis
-                    } else { 
-
-                        newAttributes.put("parentId", parentId);
-                        newAttributes.put("parentName", parentName);
-                        newAttributes.put("parentClassName", parentClassName);
-                        
-                        BusinessObject newObj = new BusinessObject(mappedClass, 
-                                childId, 
-                                newAttributes.get(Constants.PROPERTY_NAME), 
-                                newAttributes);
-                        
-                        if (mappedClass.contains("Port") && !objectName.contains("Power") && !mappedClass.contains("Power"))
-                            newPorts.add(newObj);
-
-                        //check if is already created
-                        isDeviceAlreadyCreated(newObj);
-                        branch.add(newObj);
-
-                    }
-                    checkObjects(childId, objectName, mappedClass);
-
-                    //End of a branch
-                    if (((mapOfFile.get(childId) == null) || mappedClass.contains("Port")) && !branch.isEmpty()) {
-                        //The is first time is tryng to sync from SNMP
-                        if (!isBranchAlreadyCreated(branch)) {
-                            //Loaded from snmp first time
-                           createBranch(branch);
-                        }
-                        branch = new ArrayList<>();
-                    }
-                }//end of each
-            }
-        }
-    }
-    
-     /**
-     * if is the second time that you are running the sync with the SNMP, this
-     * method check the structure of the object and search for a given branch of elements.
-     *
-     * @param name objName
-     * @param className objClassName
-     * @param serialNumber the attribute serial number of the given object
-     * @return a RemoteBusinessObjectLight with the object if exists otherwise
-     * returns null
-     * @throws InvalidArgumentException
-     * @throws MetadataObjectNotFoundException
-     * @throws BusinessObjectNotFoundException
-     */
-    private boolean isBranchAlreadyCreated(List<BusinessObject> newBranchToEvalueate) throws InvalidArgumentException, 
-            MetadataObjectNotFoundException, BusinessObjectNotFoundException 
-    {
-        List<List<BusinessObjectLight>> oldBranchesWithMatches = searchInOldStructure(newBranchToEvalueate);
-        if(oldBranchesWithMatches == null)//we found the branch in the current structure, nothing else to do
-            return true;
-        else if(!oldBranchesWithMatches.isEmpty()){//at least a part of the branch its already created
-            int indexOfTheLargestsize = 0; //first we find the the longest path, if there are more than one
-            int sizeOfThelargestPath = oldBranchesWithMatches.get(0).size(); 
-            for (int i=1; i < oldBranchesWithMatches.size(); i++) {
-                if(sizeOfThelargestPath < oldBranchesWithMatches.get(1).size()){
-                    sizeOfThelargestPath = oldBranchesWithMatches.get(1).size();
-                    indexOfTheLargestsize = i;
-                }
-            }
-            List<BusinessObjectLight> oldBranch = oldBranchesWithMatches.get(indexOfTheLargestsize);
-            return  partOfTheBranchMustBeCreated(oldBranch, newBranchToEvalueate);
-        }
-        return false; //if is empty all the branch should by created
-    }
-    
-    private boolean partOfTheBranchMustBeCreated(List<BusinessObjectLight> oldBranch, 
-            List<BusinessObject> newBranchToEvalueate) throws InvalidArgumentException, 
-            BusinessObjectNotFoundException, MetadataObjectNotFoundException
-    {
-        //A new element to add we look for the parent id of the new element
-        if(oldBranch.size() < newBranchToEvalueate.size()){ 
-            List<BusinessObject> newPartOfTheBranch = newBranchToEvalueate.subList(oldBranch.size(), newBranchToEvalueate.size());
-            if(!newPartOfTheBranch.isEmpty()){//lets search if the part exists
-                List<List<BusinessObjectLight>> oldBranchesWithMatches = searchInOldStructure(newPartOfTheBranch);
-                if(oldBranchesWithMatches != null && !oldBranchesWithMatches.isEmpty()){//we found something
-                    oldBranch.addAll(oldBranchesWithMatches.get(0));
-                    return partOfTheBranchMustBeCreated(oldBranch, newBranchToEvalueate);
-                }
-                if(oldBranchesWithMatches == null)//we find the other part, the branch exists
-                    return true; 
-                else if(oldBranchesWithMatches.isEmpty()){ //the new part of the branch doesn't exists, so we are going to create it an remove the part that exists 
-                    BusinessObjectLight oldObj = oldBranch.get(oldBranch.size() -1);
-                    //The last object found in the current structure and the new evaluated branch
-                    BusinessObject currentObj = branch.get(oldBranch.size()-1);
-                    String currentObjClassName = currentObj.getClassName();
-                    String currentObjName = branch.get(oldBranch.size()-1).getAttributes().get("name");
-                     //new object
-                    BusinessObject newObj = branch.get(oldBranch.size());
-                    String objParentName = newObj.getAttributes().get("parentName");
-                    String objParentClassName = newObj.getAttributes().get("parentClassName");
-                    //We check again if the parenst match
-                    if(currentObjName.equals(oldObj.getName()) && currentObjClassName.equals(oldObj.getClassName()) &&
-                            oldObj.getName().equals(objParentName) && oldObj.getClassName().equals(objParentClassName))
-                    {
-                        newObj.getAttributes().put("deviceParentId", oldObj.getId());
-                        if(newObj.getClassName().contains("Port"))
-                            editNewPortWithDeviceParentId(newObj);
-                        branch.set(oldBranch.size(), newObj);  
-                    }
-                    //we remove the part of the branch that already exists, and update the attributes if is necessary
-                    int matchesToDelete = 0;
-                    for (int i = 0; i < oldBranch.size(); i++) {
-                        oldObj = oldBranch.get(i);
-                        BusinessObjectLight oldParent = bem.getParent(oldObj.getClassName(), oldObj.getId());
-                        oldParent = SyncUtil.wrapPortName(oldParent);
-                        
-                        HashMap<String, String> oldAttributes = bem.getObject(oldObj.getClassName(), oldObj.getId()).getAttributes();
-
-                        currentObj = branch.get(i);
-                        currentObjClassName = currentObj.getClassName();
-                        currentObjName = branch.get(i).getAttributes().get("name");
-                        objParentName = currentObj.getAttributes().get("parentName");
-                        objParentClassName = currentObj.getAttributes().get("parentClassName");
-                        if(oldParent.getClassName().equals(className) && objParentClassName.equals(className))
-                            objParentName = oldParent.getName();
-                        
-                        if(currentObjName.equals(oldObj.getName()) && currentObjClassName.equals(oldObj.getClassName()) &&
-                            oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName))
-                        {
-                            updateAttributesInBranch(oldObj, oldAttributes, currentObj);
-                            matchesToDelete++;
+                    syncBranch.remove(0);
+                    BusinessObject syncEndPort = null;
+                    //Second, we search by port in sync(snmp branch)!, form now on everything is based on the synch branch having port
+                    //we search that port in the current kuwaiba's branches and we found something 
+                    //we search in the sync branch, THE PORT IS NOT ALWAYS THE BRANCH LEAF!!!!! e.g ASR90001
+                    for (BusinessObject syncObj : syncBranch) {
+                        if(syncObj.getClassName().contains("Port")){
+                            syncEndPort = syncObj;
+                            break;
                         }
                     }
-                    for (int m = 0; m < matchesToDelete; m++)
-                        branch.remove(0);
-                    
-                    return false;
-                }
-            }
-        }else{//something has been removed
-            List<BusinessObjectLight> subOldBranchToRemove = oldBranch.subList(branch.size(), oldBranch.size()-1);
-            for (BusinessObjectLight removedObj : subOldBranchToRemove) {
-                System.out.println("check this");
+                    boolean synced = false;
+                    if(syncEndPort != null){ //There is a port to sync
+//We search if there is a Kuwaiba's branch with that port
+                        List<BusinessObject> kuwaibaBranchWithPort = findBranchByPort(syncChassis, syncEndPort);
+                        
+                        if(!kuwaibaBranchWithPort.isEmpty()){
+                            syncBranchByPort(syncEndPort, syncBranch, kuwaibaBranchWithPort);
+                            synced = true;
+                        }
+                    }
+                    if(!synced)
+                        syncBranch(syncChassis, syncBranch);
 
-//                findings.add(new SyncFinding(dsConfigId, SyncFinding.EVENT_DELETE,
-//                        String.format("The object %s WILL BE DELETED, perhaps it was removed physically from the device. If you are not sure, SKIP this action", 
-//                                removedObj.toString()),
-//                        jdevice.toString()));
+                    //end if search by port    
+                    //else logic when sync has no port?
+                }//end else 
             }
-            return true;
         }
-        return true;
+        usyncBranches();
     }
     
     /**
-     * Search a new branch in the current structure if finds a part of the new 
-     * branch in the o
-     * @param newBranchToEvalueate
-     * @return
-     * @throws InvalidArgumentException
-     * @throws MetadataObjectNotFoundException
-     * @throws BusinessObjectNotFoundException 
+     * Sync a found branch with a matched port
+     * @param syncEndPort found port
+     * @param syncBranch the whole sync branch
+     * @param kuBranch  the current kuwaiba branch
      */
-    private List<List<BusinessObjectLight>> searchInOldStructure(List<BusinessObject> newBranchToEvalueate) throws InvalidArgumentException, 
-            MetadataObjectNotFoundException, BusinessObjectNotFoundException
+    private void syncBranchByPort(BusinessObject syncEndPort
+            , List<BusinessObject> syncBranch
+            , List<BusinessObject> kuBranch)
     {
-        List <List<BusinessObjectLight>> oldBranchesWithMatches = new ArrayList<>();
-        List<BusinessObjectLight> foundPath = new ArrayList<>();
-        boolean hasBeenFound = false; //This is usded because some branch are in disorder
+        List<BusinessObject> branchToSync = new ArrayList<>();
+        BusinessObjectLight kuwEndPort = null;
         
-        for (long i : currentObjectStructure.keySet()) {
-            foundPath = new ArrayList<>();
-            List<BusinessObjectLight> oldBranch = currentObjectStructure.get(i);
-            int end = oldBranch.size() > newBranchToEvalueate.size() ? newBranchToEvalueate.size() : oldBranch.size();
-            for (int w=0; w < end; w++) {
-                String objClassName = newBranchToEvalueate.get(w).getClassName();
-                String objParentName = newBranchToEvalueate.get(w).getAttributes().get("parentName");
-                String objParentClassName = newBranchToEvalueate.get(w).getAttributes().get("parentClassName");
-                String newObjName = newBranchToEvalueate.get(w).getAttributes().get("name");
-               
-                if (!className.equals(objClassName)) {
-                    BusinessObjectLight oldObj = oldBranch.get(w);
-                    BusinessObjectLight oldParent = bem.getParent(oldObj.getClassName(), oldObj.getId());
-                    oldParent = SyncUtil.wrapPortName(oldParent); //we standardize if the parent object is a port, important in ASR9001 hwere ports are not leafs in the structure
-                    
-                    //The name of the Router will be diferent in most of the cases so we must avoid the name in this case..
-                    if(oldParent.getClassName().equals(className) && objParentClassName.equals(className))
-                        objParentName = oldParent.getName();
-                    if (oldObj.getName().equals(newObjName) && oldObj.getClassName().equals(objClassName)){
-                        if(oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName))
-                            foundPath.add(oldObj);
-                    }
-                }//end if not router
-            }//we find the whole path
-            if(foundPath.size() == newBranchToEvalueate.size()){
-                for (int j=0; j<foundPath.size(); j++) { 
-                    BusinessObjectLight oldObj = foundPath.get(j);
-                    HashMap<String, String> oldAttributes = bem.getObject(oldObj.getClassName(), oldObj.getId()).getAttributes();
-                    BusinessObject newObj = newBranchToEvalueate.get(j); //this is the new object from SNMP
-                                        
-                    updateAttributesInBranch(oldObj, oldAttributes, newObj);//we check if some attributes need to be updated
+        List<BusinessObject> kuwaibaBranch = new ArrayList<>(kuBranch);
+        if(!kuwaibaBranch.isEmpty())
+            kuwaibaBranch.remove(0);
+        
+        for(int i = 0; i < syncBranch.size(); i++){
+            BusinessObject sync = syncBranch.get(i);
+            boolean noMatch = true;
+
+            for (BusinessObjectLight kuwObj : kuwaibaBranch) {
+                if(kuwObj.getClassName().contains("Port")){
+                    kuwEndPort = kuwObj;
+                    break;
                 }
-                return null; //we find the whole path, we return null
-            }
-            //Some paths exists but in order to find them we should look for them backwards in the branch, because the SNMP doesn't order the 
-            //first son in the same way of kuwaiba
-            //e.g. from kuwaiba:                  form SNMP:
-            //          Board0/2                   Board0/2
-            //                 |_Gi0/0/2/0[Port]          |_Gi0/0/2/16[Port]<---the first son from SNMP is not in the same
-            //current branch in kuwaiba:
-            //slot0/2, Board0/2, Gi0/0/2/0[Port]
-            //from SNMP:
-            //slot0/2, Board0/2, Gi0/0/2/16[Port] <-- this branch exists (the first branch will always bring the parents)
-            //                   Gi0/0/2/00[Port] <-- this too, but is not in the same order  (the other children don't bring the parents)
-            if(foundPath.isEmpty()){
-                for (int n=newBranchToEvalueate.size(), o= oldBranch.size(); (n*o)>0; n--, o--) {
-                    String objClassName = newBranchToEvalueate.get(n-1).getClassName();
-                    String objParentName = newBranchToEvalueate.get(n-1).getAttributes().get("parentName");
-                    String objParentClassName = newBranchToEvalueate.get(n-1).getAttributes().get("parentClassName");
-                    String newObjName = newBranchToEvalueate.get(n-1).getAttributes().get("name");
-                    
-                    if (!className.equals(objClassName)) {
-                        BusinessObjectLight oldObj = oldBranch.get(o-1);
-                        BusinessObjectLight oldParent = bem.getParent(oldObj.getClassName(), oldObj.getId());
-                        oldParent = SyncUtil.wrapPortName(oldParent); //we standardize if the parent object is a port, important in ASR9001 hwere ports are not leafs in the structure
-                                
-                        //The name of the Router will be diferent in most of the cases so we must avoid the name in this case..
-                        if(oldParent.getClassName().equals(className) && objParentClassName.equals(className))
-                            objParentName = oldParent.getName();
-                        if (oldObj.getName().equals(newObjName) && oldObj.getClassName().equals(objClassName) && (oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName))){
-                            foundPath.add(oldObj);
-                            hasBeenFound = true;
-                        }
-                    }//end if not router
-                } 
-                //we find the whole path, if the path si found backwards, the comparation of the attributes should be do it backwards too
-                if(foundPath.size() == newBranchToEvalueate.size()){
-                    for (int j = foundPath.size() - 1, r = 0; j > -1; j--, r++) { 
-                        BusinessObjectLight oldObj = foundPath.get(j);
-                        HashMap<String, String> oldAttributes = bem.getObject(oldObj.getClassName(), oldObj.getId()).getAttributes();
-                        BusinessObject newObj = newBranchToEvalueate.get(r); //this is the new object from SNMP
-                        updateAttributesInBranch(oldObj, oldAttributes, newObj);//we check if some attributes need to be updated
+            }    
+            if(kuwEndPort != null)
+                syncEndPort.setId(kuwEndPort.getId());
+
+            for(int j = i; j < kuwaibaBranch.size(); j++){
+                BusinessObject kuw = kuwaibaBranch.get(j);
+
+                if(sync.getClassName().equals(kuw.getClassName()) 
+                    && kuw.getName().equals(sync.getName()))
+                {
+                    sync.setId(kuw.getId()); //don't forget to keep the id
+                    if(kuw.getAttributes().containsKey("sync")
+                            && kuw.getAttributes().get("sync").contains("synced-"))
+                    {
+                        sync.getAttributes().put("sync", "to_sync_found");
+                        syncedInstances.put(sync.getAttributes().get("syncSnmpInstance"), kuw.getId());
                     }
-                    return null;
+                    noMatch = false; //si al almenos una coincidencia paila
+                    branchToSync.add(sync);
+                    break; //se econtró, siguiente en el branch sync
                 }
+                else{
+                    sync.getAttributes().put("sync", "not_sync");
+                    branchToSync.add(kuw); 
+                }
+            }//end for kuwaiba
+// if we achive the end of the kuwaiba's branch and there is no more coincidences, we add everything let over from sync to be created(synced)
+            if(noMatch && !kuwaibaBranch.contains(sync)){
+                sync.getAttributes().put("sync", "to_sync_not_found");
+                branchToSync.add(sync);
             }
-            else if(!foundPath.isEmpty())
-                oldBranchesWithMatches.add(foundPath);
-        }//end for
-        if(foundPath.isEmpty()){
-            //we must search again to check if there are is a match between the last element of the old structure and the first element of the new branch
-            for (long i : currentObjectStructure.keySet()) {
-                List<BusinessObjectLight> oldBranch = currentObjectStructure.get(i);
-                String objClassName = newBranchToEvalueate.get(0).getClassName();
-                String objParentName = newBranchToEvalueate.get(0).getAttributes().get("parentName");
-                String objParentClassName = newBranchToEvalueate.get(0).getAttributes().get("parentClassName");
-                String newObjName = newBranchToEvalueate.get(0).getAttributes().get("name");
+        }
+        processBranch(branchToSync);
+    }
+
+    /**
+     * We didn't found a branch created in kuwaiba with a searched port, so we search in EVERY branch of kuwaiba 
+     * @param syncChassis
+     * @param syncBranch 
+     */
+    private void syncBranch(BusinessObject syncChassis, List<BusinessObject> syncBranch)
+    {
+        int found = 0;
+        for (List<BusinessObject> kuwaibaBranch : kuwaibaPaths) {
+            if(!kuwaibaBranch.isEmpty()){ 
+                List<BusinessObject> kuwBranch = new ArrayList<>(kuwaibaBranch);
+                //buscamos el puerto  ¿pa'qué? aún no sé
+                if(syncChassis.getClassName().equals(kuwBranch.remove(0).getClassName())){
+                    for(int i = found; i < syncBranch.size(); i++){
+                        BusinessObject sync = syncBranch.get(i);
+                        
+                        for(int j = 0; j < kuwBranch.size(); j++){
+                            BusinessObject kuw = kuwBranch.get(j);
+                            if(sync.getClassName().equals(kuw.getClassName()) 
+                                    && kuw.getName().equals(sync.getName()))
+                            {
+                                sync.setId(kuw.getId()); //OJO!! ! guardamos el id
+                                if(kuw.getAttributes().containsKey("sync")
+                                        && kuw.getAttributes().get("sync").contains("synced-"))
+                                {
+                                    sync.getAttributes().put("sync", "to_sync_found");
+                                    syncedInstances.put(sync.getAttributes().get("syncSnmpInstance"), kuw.getId());
+                                }
+                            //If is a port without coincidence but the left over of the branch had a coincidence 
+                            //we keep it because aybe in other branch could exists.
+                                found++;
+                                break;
+                            } 
+                        }//end for one branch
+                    }
+                }
+            }//end if empty branch
+        }//end for branchs
+        
+        
+        processBranch(syncBranch);
+        
+        syncBranch.add(0, syncChassis);
+        kuwaibaPaths.add(syncBranch);
+        
+    }
+    
+    /**
+     * we check the branch to marked some elements for deletion using the 
+     * attribute 
+     */
+    private void usyncBranches(){
+        for (List<BusinessObject> kuwaibaBranch : kuwaibaPaths) {
+            
+            List<BusinessObject> branchToSync = new ArrayList<>();
+            
+            if(!kuwaibaBranch.isEmpty()){ 
+                List<BusinessObject> kuwBranch = new ArrayList<>(kuwaibaBranch);
+                BusinessObject chassis = kuwBranch.remove(0);
                 
-                if (!className.equals(objClassName)) {
-                    BusinessObjectLight oldObj = oldBranch.get(oldBranch.size()-1);
-                    BusinessObjectLight oldParent = bem.getParent(oldObj.getClassName(), oldObj.getId());
-                    oldParent = SyncUtil.wrapPortName(oldParent);//we standardize if the parent object is a port, important in ASR9001 hwere ports are not leafs in the structure
-                    
-                    //The name of the Router will be diferent in most of the cases so we must avoid the name in this case..
-                    if(oldParent.getClassName().equals(className) && objParentClassName.equals(className))
-                        objParentName = oldParent.getName();
-                    if (oldObj.getName().equals(newObjName) && oldObj.getClassName().equals(objClassName) && oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName)){
-                        foundPath.add(oldObj);
-                        break;
+                for (List<String> snmpBranch : snmpBranches ) {
+                    //Parse from snmp to kuwaiba
+                    List<BusinessObject> syncBranch = parseSnmpBranch(snmpBranch);
+                    if(!syncBranch.isEmpty() 
+                            && syncBranch.remove(0).getClassName()
+                                    .equals(chassis.getClassName()))
+                    {
+                        for(int i = 0; i < syncBranch.size(); i++){
+                            BusinessObject sync = syncBranch.get(i);
+                            for(int j = i; j < kuwBranch.size(); j++){
+                                BusinessObject kuw = kuwBranch.get(j);
+                                if(sync.getClassName().equals(kuw.getClassName()) 
+                                        && kuw.getName().equals(sync.getName()))
+                                    break;
+                                else{
+                                    sync.getAttributes().put("sync", "not_sync");
+                                    if(!branchToSync.contains(kuw))
+                                        branchToSync.add(kuw);
+                                }
+                            }//end for one branch
+                        }
                     }
-                }//end if not router
+                }//end for sync branch
             }
+            deleteBranch(branchToSync);
         }
-        if(!foundPath.isEmpty() && !oldBranchesWithMatches.contains(foundPath))
-            oldBranchesWithMatches.add(foundPath);
-        //we check if the branch starts in the first level, direct child of the chassis
-        else if(!hasBeenFound && oldBranchesWithMatches.isEmpty()){
-            if(newBranchToEvalueate.get(0).getAttributes().get("parentClassName").equals(className)){
-                BusinessObject obj = newBranchToEvalueate.get(0);
-                obj.getAttributes().put("deviceParentId", id);
-                branch.set(0, obj);
-                return new ArrayList<>();
-            }
-            //This is the less accurate method 
-            //we only check for the parent name of the first element of the new 
-            //branch with the last element of the old branch.
-            for (long i : currentObjectStructure.keySet()) {
-                List<BusinessObjectLight> oldBranch = currentObjectStructure.get(i);
-                String objParentName = newBranchToEvalueate.get(0).getAttributes().get("parentName");
-                String objParentClassName = newBranchToEvalueate.get(0).getAttributes().get("parentClassName");
-                if(oldBranch.size() > 2){ //we only check old branches with more than one element, otherwise they are ports
-                    BusinessObjectLight oldParent = oldBranch.get(oldBranch.size() - 2);
-                    if (oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName)){
-                        BusinessObject obj = branch.get(0);
-                        obj.getAttributes().put("deviceParentId", oldParent.getId());
-                        if(obj.getClassName().contains("Port"))
-                            editNewPortWithDeviceParentId(obj);
-                        branch.set(0, obj);
-                        break;
+    }
+    
+    /**
+     * We process the branch and create the object in the branch
+     * using the attribute sync to know if it should be created, updated, or do nothing
+     * @param syncBranch the branch to sync
+     */
+    private void processBranch (List<BusinessObject> syncBranch){
+        
+        BusinessObjectLight parent;
+        
+        for (int i = 0; i < syncBranch.size(); i++) {
+            BusinessObject sync = syncBranch.get(i);
+            boolean createObj = true;
+            try{
+                if(sync.getAttributes().containsKey("sync")
+                    && sync.getAttributes().get("sync").contains("to_sync"))
+                {
+                    ListIterator<BusinessObject> it = syncBranch.listIterator(i);
+                    parent = it.hasPrevious() ? it.previous() : null;
+
+                    if(syncedInstances.containsKey(sync.getAttributes().get("syncSnmpInstance"))
+                            && sync.getAttributes().get("sync").contains("to_sync_found"))
+                    {
+                        updateAttributes(sync);
+                    } else{ 
+                        if((sync.getClassName().contains("Port") 
+                                && sync.getAttributes().get("sync").contains("to_sync_found")) 
+                                || sync.getAttributes().get("sync").contains("to_sync_found"))
+                            createObj = false;
+
+                        if(createObj){//create object
+                            sync.getAttributes().put("sync", "synced-" + new Date().getTime());   
+                            String newObjId = bem.createObject(sync.getClassName()
+                                    , parent == null ? objSync.getClassName() : parent.getClassName()
+                                    , parent == null ? objSync.getId() : parent.getId()
+                                    , sync.getAttributes()
+                                    , null);
+
+                            results.add(new SyncResult(dsConfigId
+                                    , SyncResult.TYPE_SUCCESS
+                                    , String.format("%s [%s] created in -> %s [%s]"
+                                            , sync.getName()
+                                            , sync.getClassName() 
+                                            , parent == null ? objSync.getName() : parent.getName()
+                                            , parent == null ? objSync.getClassName() : parent.getClassName())
+                                    , "Object created"));
+
+                            //we keep record of sync objects to not create them again, a map of snmp instance  = obj id
+                            syncedInstances.put(sync.getAttributes().get("syncSnmpInstance"), newObjId);
+                            sync.setId(newObjId);
+                        }
+                        //if the child is a port already created we need to move it under the new created parent
+                        //aquíe fijate si toca mober esta maricada no solo pal puerto
+                        //y el padre no es kuwiaba pa borrar
+                        else if(sync.getClassName().contains("Port") 
+                                && sync.getAttributes().get("sync").contains("to_sync_found"))
+                        {
+                            HashMap<String, String[]> objToMove = new HashMap<>();
+                            objToMove.put(sync.getClassName(), new String[]{sync.getId()});
+                            bem.moveObjects(parent == null ? objSync.getClassName() : parent.getClassName()
+                                    , parent == null ? objSync.getId() : parent.getId()
+                                    , objToMove);
+                            //update attribute sync
+                            results.add(new SyncResult(dsConfigId
+                                    , SyncResult.TYPE_SUCCESS
+                                    , String.format("%s [%s]"
+                                            , sync.getName()
+                                            , sync.getClassName())
+                                    , "Object moved"));
+                        }
                     }
                 }
-            }
-            //if the branch could not be found still its necessary to check again 
-            //in the old branch for the second element (an IPboard)
-            for (long i : currentObjectStructure.keySet()) {
-                List<BusinessObjectLight> oldBranch = currentObjectStructure.get(i);
-                String objParentName = newBranchToEvalueate.get(0).getAttributes().get("parentName");
-                String objParentClassName = newBranchToEvalueate.get(0).getAttributes().get("parentClassName");
-                if(oldBranch.size()>1){
-                    BusinessObjectLight oldParent = oldBranch.get(1);
-                    if (oldParent.getName().equals(objParentName) && oldParent.getClassName().equals(objParentClassName)){
-                        BusinessObject obj = branch.get(0);
-                        obj.getAttributes().put("deviceParentId", oldParent.getId());
-                        if(obj.getClassName().contains("Port"))
-                            editNewPortWithDeviceParentId(obj);
-                        branch.set(0, obj);
-                        break;
-                    }
-                }
+            } catch (MetadataObjectNotFoundException
+                    | BusinessObjectNotFoundException 
+                    | InvalidArgumentException 
+                    | OperationNotPermittedException 
+                    | ApplicationObjectNotFoundException ex)
+            {
+                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                        , ex.getLocalizedMessage()
+                        , String.format("%s [%s] not created",
+                                sync.getName(),
+                                sync.getClassName())));
             }
         }
-        return oldBranchesWithMatches;
+        deleteBranch(syncBranch);
+    }
+    
+    /**
+     * Deletes the objects marked for deletion 
+     */
+    private void deleteBranch(List<BusinessObject> branch){
+        List<BusinessObject> branchToDelete = new ArrayList<>(branch);
+        Collections.reverse(branchToDelete); //we reverse because if we delete the father first, all its children will be deleted at same time.
+        branchToDelete.forEach(kuwObj -> {
+            try {
+                if(kuwObj.getAttributes().get("sync") == null 
+                        || kuwObj.getAttributes().get("sync").contains("not_sync"))
+                {
+                    bem.deleteObject(kuwObj.getClassName(), kuwObj.getId(), false);
+                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
+                            String.format("%s [%s]"
+                                    , kuwObj.getName()
+                                    , kuwObj.getClassName())
+                            , "Deleted"));
+                }
+            } catch (InvalidArgumentException 
+                    | BusinessObjectNotFoundException 
+                    | MetadataObjectNotFoundException 
+                    | OperationNotPermittedException ex) 
+            {
+                results.add(new SyncResult(dsConfigId
+                        , SyncResult.TYPE_ERROR
+                        , ex.getLocalizedMessage()
+                        , String.format("%s [%s] not deleted"
+                                , kuwObj.getName()
+                                , kuwObj.getClassName())));
+            }
+        });
     }
    
-    private void updateAttributesInBranch(BusinessObjectLight oldObj, HashMap<String, String> oldAttributes, 
-            BusinessObject newObj) throws BusinessObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException
-    {
-        try {
-         
-            HashMap<String, String> attributes = newObj.getAttributes();
-            
-            HashMap<String, String> attributeChanges = SyncUtil.compareAttributes(oldAttributes, attributes);
-            attributeChanges.remove("parentName");
-            attributeChanges.remove("parentClassName");
-            attributeChanges.remove("parentId");
-            attributeChanges.remove("deviceParentId");
-            if(!attributeChanges.isEmpty()){
-                bem.updateObject(oldObj.getClassName(), oldObj.getId(), attributeChanges);
-
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                        String.format(I18N.gm("object_attributes_changed"), oldObj.toString()),
-                        newObj.toString()));
-            }
-        } catch (OperationNotPermittedException ex) {
-            
-            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                    String.format(I18N.gm("object_attributes_changed"), oldObj.toString()),
-                    ex.getLocalizedMessage()));
-        }
-    }
-    
     /**
-     * checks if the first level of children has changes
-     * @param json the new object
-     * @return true if is already created
+     * Updates/crates the attributes, also add a sync attribute, so kuwaiba 
+     * will not update again the attributes again if no more than 5 minutes have passed 
+     * @param sync object
      */
-    private boolean isDeviceAlreadyCreated(BusinessObject newObj){
-        BusinessObjectLight objFound = null;
-        
-        for (BusinessObjectLight currentFirstLevelChild : currentFirstLevelChildren) {
-            if(currentFirstLevelChild.getClassName().equals(newObj.getClassName()) && 
-                    currentFirstLevelChild.getName().equals(newObj.getAttributes().get("name"))){
-                objFound = currentFirstLevelChild;
-                break;
-            }
-        }   
-        if(objFound != null)
-            currentFirstLevelChildren.remove(objFound);
-        return false;
-    }
+    private void updateAttributes(BusinessObject sync)    {
+        HashMap<String, String> newAttributes = new HashMap<>();
 
-    /**
-     * Reads the device's special children 
-     * @param children special children
-     * @throws MetadataObjectNotFoundException If the class could not be found
-     * @throws BusinessObjectNotFoundException If the object could not be found
-     */
-    private void readCurrentSpecialStructure(List<BusinessObjectLight> children) 
-            throws BusinessObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException
-    {
-        for (BusinessObjectLight child : children) {
-            if (child.getClassName().equals(Constants.CLASS_MPLSTUNNEL))
-                currentMplsTunnels.add(child);
-            else if (child.getClassName().equals(Constants.CLASS_VIRTUALPORT))
-                currentVirtualPorts.add(child);
-            else if (child.getClassName().equals("ServiceInstance"))
-                currentServiceInstances.add(child);
-            readCurrentSpecialStructure(bem.getObjectSpecialChildren(child.getClassName(), child.getId()));
-        }
-    }
-    
-    /**
-     * Reads the current object and make a copy of the structure, from this
-     * structure the ports can be updated and moved to the new created tree in
-     * order to keep the special relationships.
-     * @param objects the list of elements of a level
-     * @throws MetadataObjectNotFoundException if something goes wrong with the class metadata
-     * @throws BusinessObjectNotFoundException if some object can not be find
-     */
-    private void readCurrentDeviceStructure(List<BusinessObjectLight> objects)
-            throws MetadataObjectNotFoundException, BusinessObjectNotFoundException, InvalidArgumentException {
-        for (BusinessObjectLight object : objects) {
-            if (!mem.isSubclassOf("GenericLogicalPort", object.getClassName()) && !mem.isSubclassOf("Pseudowire", object.getClassName())){ 
-                //We standarized the port names
-                //object = SyncUtil.wrapPortName(object);
-                tempAuxOldBranch.add(object);
-            }
-            
-            if (object.getClassName().contains("Port") && !object.getClassName().contains("Channel") && !object.getClassName().contains("Virtual") && !object.getClassName().contains("Power")) 
-                currentPorts.add(object);
-            
-            else if (object.getClassName().contains("Virtual") || object.getClassName().equals(Constants.CLASS_PORTCHANNEL)) 
-                currentVirtualPorts.add(object);
-            
-            List<BusinessObjectLight> children = bem.getObjectChildren(object.getClassName(), object.getId(), -1);
-            if (!children.isEmpty()) 
-                readCurrentDeviceStructure(children);
-            else {
-                if(!tempAuxOldBranch.isEmpty())
-                    currentObjectStructure.put(k, tempAuxOldBranch);
-                tempAuxOldBranch = new ArrayList<>();
-                k++;
-            }
-        }
-    }
+        String kuwaibaId = syncedInstances.get(sync.getAttributes().get("syncSnmpInstance"));
+        HashMap<String, String> attributes = new HashMap<>();
 
-    private void readCurrentFirstLevelChildren() throws InvalidArgumentException {
-        try {
-            currentFirstLevelChildren = bem.getObjectChildren(className, id, -1);
-        } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException ex) {
-            Logger.getLogger(EntPhysicalSynchronizer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    
-
-    private void createBranch(List<BusinessObject> branch) {
-        boolean segmentDependsOfPort = false; 
-        List<BusinessObject> extraBranch = new ArrayList<>();
-        for (BusinessObject businessObject : branch) {
-            String parentId = null;
-            
-            String tempParentId = businessObject.getAttributes().get("parentId");
-            if(businessObject.getAttributes().get("deviceParentId") != null)
-                parentId = businessObject.getAttributes().get("deviceParentId");
-            //for transcivers        
-            if(segmentDependsOfPort || businessObject.getClassName().equals("OpticalPort")){
-                segmentDependsOfPort = true;
-                extraBranch.add(businessObject);
-                newCreatedPortsToCreate.put(businessObject.getId(), extraBranch);
-            }
-            else {
-                if(businessObject.getAttributes().get("deviceParentId") == null)
-                    parentId = createdIdsToMap.get(tempParentId) != null ? createdIdsToMap.get(tempParentId) : tempParentId;
-                
-                else//if we are updating a branch
-                    createdIdsToMap.put(tempParentId, parentId);
-                
-                if(!businessObject.getClassName().contains("Port") || businessObject.getAttributes().get("name").contains("Power") || businessObject.getClassName().contains("PowerPort")){
-                    try {
-                        businessObject.getAttributes().remove("parentId");
-                        businessObject.getAttributes().remove("parentName");
-                        String parentClassName = businessObject.getAttributes().remove("parentClassName");
-                        businessObject.getAttributes().remove("deviceParentId");
-                        
-                        String createdObjectId = bem.createObject(businessObject.getClassName(), parentClassName, parentId, 
-                                businessObject.getAttributes(), null);
-                        createdIdsToMap.put(businessObject.getId(), createdObjectId);
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                                String.format("%s [%s]", businessObject.getName(), businessObject.getClassName()), 
-                                "Created successfully"));
-                    
-                    } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | InvalidArgumentException | OperationNotPermittedException | ApplicationObjectNotFoundException ex) {
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                String.format("%s [%s]", businessObject.getName(), businessObject.getClassName()), 
-                                ex.getLocalizedMessage()));
+        if(kuwaibaId != null){
+            for(List<BusinessObject> kuwibaBranch : kuwaibaPaths){
+                for (BusinessObject obj : kuwibaBranch){
+                    if(obj.getId().equals(kuwaibaId)){
+                        attributes = obj.getAttributes();
+                        break;
                     }
                 }
             }
         }
-    }
+        //syncronizamos si han pasado mas de 5 minutos
+        long minutes = 0; 
+        if(attributes.containsKey("sync") 
+                && attributes.get("sync").contains("synced-"))
+        {
+            String[] syncAttr = attributes.get("sync").split("-");
 
-    private void updateObjectAttributes(String deviceId, String deviceClassName, 
-            HashMap<String, String> newAttributes){
-        try {
-            bem.updateObject(deviceClassName, deviceId, newAttributes);
+            if(syncAttr.length == 2){
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeInMillis(Long.valueOf(syncAttr[1]));
+
+                long diff = new Date().getTime() - cal.getTimeInMillis();
+                minutes = TimeUnit.MILLISECONDS.toMinutes(diff);    
+            }
+        }
             
-            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                    String.format("This %s attributes were updated in the chassis", newAttributes),
-                    "The attributes were updated"));
-        
-        } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException ex) {
-            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                    ex.getLocalizedMessage(), "The attributes were not updated"));
+        if(minutes > 3){
+            
+            for(String syncAttrName : sync.getAttributes().keySet()) {
+                String syncValue = sync.getAttributes().get(syncAttrName);
+                if (!attributes.containsKey(syncAttrName))
+                    newAttributes.put(syncAttrName, syncValue);
+                else{
+                    String value = attributes.get(syncAttrName);
+                    if (value != null && syncValue != null 
+                            && !value.equals(syncValue)) 
+                        newAttributes.put(syncAttrName, value);
+                }
+            }
+            
+            try{
+                newAttributes.put("sync", String.format("synced-%s", new Date().getTime())); 
+
+                if(!newAttributes.isEmpty()){
+                    bem.updateObject(sync.getClassName(), sync.getId(), newAttributes);
+
+                    results.add(new SyncResult(dsConfigId
+                            , SyncResult.TYPE_SUCCESS
+                            , String.format("%s: %s"
+                                   , sync.toString()
+                                   , newAttributes.toString())
+                            , "Attributes updated"));
+                }
+            } catch (MetadataObjectNotFoundException 
+                    | BusinessObjectNotFoundException 
+                    | InvalidArgumentException 
+                    | OperationNotPermittedException ex) 
+            {
+                results.add(new SyncResult(dsConfigId
+                        , SyncResult.TYPE_ERROR
+                        , "Attributes not updated"
+                        , ex.getLocalizedMessage()));
+            }
         }
     }
     
     /**
-     * Create a hash map for the attributes of the given index encathc of the data read it from SNMP
-     * @param index the index of the entry
-     * @return a HashMap with attribute name(key) attribute value (value)
-     * @throws MetadataObjectNotFoundException if the attributes we are trying to sync doesn't exists in the classmetadata
+     * Read all the transceivers in a router, (used to double check interface 
+     * creation in some routers like 540)
+     * @param children router first level children
+     * @return list of all transceivers in device
+     */
+    private List<BusinessObject> readTransceiver (List<BusinessObjectLight> children)
+    {
+        List<BusinessObject> interfaces = new ArrayList<>();
+        try {    
+            for (BusinessObjectLight child : children) {
+                if (child.getClassName().equals(Constants.CLASS_TRANSCEIVER))
+                    interfaces.add(bem.getObject(child.getClassName(), child.getId()));
+                
+                interfaces.addAll(readTransceiver(bem.getObjectChildren(child.getClassName(), child.getId(), -1)));
+            }
+        } catch (MetadataObjectNotFoundException 
+                | BusinessObjectNotFoundException 
+                | InvalidArgumentException ex)
+        {
+            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                        , ex.getMessage()
+                        , "Structure not read"));
+        }
+        return interfaces;
+    }
+    
+    /**
+     * All the interfaces in a device 
+     * @param children first level of the device
+     * @return all the existing interfaces in device
+     */
+    private List<BusinessObject> readInterfaces (List<BusinessObjectLight> children)
+    {
+        List<BusinessObject> interfaces = new ArrayList<>();
+        try {    
+            for (BusinessObjectLight child : children) {
+                if ((child.getClassName().equals(Constants.CLASS_MPLSTUNNEL)
+                        || mem.isSubclassOf("GenericCommunicationsPort", child.getClassName())
+                        || mem.isSubclassOf("GenericLogicalPort", child.getClassName())
+                        || mem.isSubclassOf("Pseudowire", child.getClassName())
+                        || child.getClassName().equals(Constants.CLASS_VIRTUALPORT)
+                        || child.getClassName().equals("ServiceInstance")
+                        || child.getClassName().contains("Channel"))
+                        && !child.getClassName().contains("PowerPort"))
+                {
+                    interfaces.add(bem.getObject(child.getClassName(), child.getId()));
+                }
+                interfaces.addAll(readInterfaces(bem.getObjectSpecialChildren(child.getClassName(), child.getId())));
+                interfaces.addAll(readInterfaces(bem.getObjectChildren(child.getClassName(), child.getId(), -1)));
+            }
+        } catch (MetadataObjectNotFoundException 
+                | BusinessObjectNotFoundException 
+                | InvalidArgumentException ex)
+        {
+            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                        , ex.getMessage()
+                        , "Structure not read"));
+        }
+        return interfaces;
+    }
+    
+    /** 
+     * Reads the current device/object structure from kuwaiba and make list of 
+     * all its branches, and creates a branch from device/chassis until every 
+     * leaf(device child with no children), every branch is a list of kuwaiba's 
+     * objects there will be as much branches as leafs
+     */
+    private boolean readCurrentStructure(BusinessObjectLight parent, 
+            List<BusinessObjectLight> children
+            , ArrayList<BusinessObjectLight> path)
+    {
+        path.add(parent);
+        
+        if(parent.getClassName().contains("Ports"))
+            kuwaibaPorts.add(parent);
+        
+        boolean removeIdFromBranch = false;
+        if(!children.isEmpty()){
+            for(BusinessObjectLight child : children)   
+                try {
+                    removeIdFromBranch = readCurrentStructure(child
+                            , bem.getObjectChildren(child.getClassName()
+                                    , child.getId()
+                                    , -1)
+                            , path);
+                } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | InvalidArgumentException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            if(removeIdFromBranch)
+                path.remove(parent);
+        }
+        else{
+            kuwaibaPathsLigth.add(new ArrayList<>(path));
+            path.remove(parent);
+            return true;
+        }
+            
+        return false;
+    }
+    
+    /**
+     * Create a hash map for the attributes of the given index of the data read it from SNMP
+     * @param index the index of the instance entry from snmp data
+     * @return a HashMap of attributes key:attribute name, value: attribute value 
+     * @throws MetadataObjectNotFoundException if the attributes we are trying to sync doesn't exists in the class-metadata
      * @throws InvalidArgumentException
      * @throws OperationNotPermittedException 
      */
-    private HashMap<String, String> createNewAttributes(String mappedClass, int index) 
-            throws MetadataObjectNotFoundException, InvalidArgumentException, OperationNotPermittedException
-    {
+    private HashMap<String, String> snmpAttributes(String syncClass, int index){
         HashMap<String, String> attributes = new HashMap<>();
-        ClassMetadata mappedClassMetadata = mem.getClass(mappedClass);
-               
-        String objectName = entityData.get("entPhysicalName").get(index);//NOI18N
-        //We standarized the port names
-        if(!className.equals(mappedClass) && SyncUtil.isSynchronizable(objectName) && mappedClass.toLowerCase().contains("port") && !objectName.contains("Power") && !mappedClass.contains("Power"))
-            objectName = SyncUtil.wrapPortName(objectName);
-        
-        attributes.put("name", objectName);//NOI18N
-        String description = entityData.get("entPhysicalDescr").get(index).trim();
-        if(!description.isEmpty()){
-            if(mappedClassMetadata.getAttribute("description") == null)
-                createAttributeError(mappedClass, "description", "String");
+        try {
+            ClassMetadata mappedClass = mem.getClass(syncClass);
+
+            String syncName = entityData.get("entPhysicalName").get(index);//NOI18N
             
-            attributes.put("description", description);
-        }
-        if (!entityData.get("entPhysicalMfgName").get(index).isEmpty()) {
-            if(mappedClassMetadata.getAttribute("vendor") != null){
-                String vendor = findingListTypeId(index, "EquipmentVendor");//NOI18N
-                if (vendor != null) 
-                    attributes.put("vendor", vendor); //NOI18N
+//We standarized the port names
+            if(!objSync.getClassName().equals(syncClass) && 
+                    SyncUtil.isSynchronizable(syncName) && 
+                    syncClass.toLowerCase().contains("port") && 
+                    !syncName.contains("Power") && 
+                    !syncClass.contains("Power"))
+            //TODO improve this    
+                syncName = SyncUtil.normalizePortName(syncName);
+
+            attributes.put("syncSnmpName", entityData.get("entPhysicalName").get(index));
+            attributes.put("syncSnmpInstance", Integer.toString(index));//NOI18N
+            attributes.put("sync", "none");//NOI18N
+            attributes.put("name", syncName);//NOI18N
+            
+            String syncDescription = entityData.get("entPhysicalDescr").get(index).trim();
+            if(!syncDescription.isEmpty() 
+                    && mappedClass.getAttribute("description") != null)
+            {
+                attributes.put("description", syncDescription);
             }
-            else
-                 createAttributeError(mappedClass, "vendor", "EquipmentVendor");    
-        }
-        if (!entityData.get("entPhysicalSerialNum").get(index).isEmpty()){
-            if(mappedClassMetadata.getAttribute("serialNumber") == null)
-                createAttributeError(mappedClass, "serialNumber", "String");
-        
-            attributes.put("serialNumber", entityData.get("entPhysicalSerialNum").get(index).trim());//NOI18N
-        }
-        if (!entityData.get("entPhysicalModelName").get(index).isEmpty()){ 
-            if(mappedClass != null){
-                AttributeMetadata modelAttribute = mappedClassMetadata.getAttribute("model");
+            if (!entityData.get("entPhysicalMfgName").get(index).isEmpty() 
+                    && mappedClass.getAttribute("vendor") != null){
+                
+                String syncVendor = findingListTypeId(index
+                        , syncName, syncClass
+                        , "EquipmentVendor");//NOI18N
+                if (syncVendor != null) 
+                    attributes.put("vendor", syncVendor); //NOI18N
+                
+            }
+            if (!entityData.get("entPhysicalSerialNum").get(index).isEmpty()){
+                if(mappedClass.getAttribute("serialNumber") == null)
+                    System.out.println("crear atributo serial en class");
+
+                attributes.put("serialNumber", entityData.get("entPhysicalSerialNum").get(index).trim());//NOI18N
+            }
+            if (!entityData.get("entPhysicalModelName").get(index).isEmpty()
+                    && syncClass != null)
+            {
+                AttributeMetadata modelAttribute = mappedClass.getAttribute("model");
                 if(modelAttribute != null){
-                    String model = findingListTypeId(index, modelAttribute.getType());//NOI18N
-                    if(model != null)
-                        attributes.put("model", model);//NOI18N
+                    String syncModel = findingListTypeId(index
+                            , syncName, syncClass
+                            , modelAttribute.getType());//NOI18N
+                    if(syncModel != null)
+                        attributes.put("model", syncModel);//NOI18N
                 }
-                else
-                    createAttributeError(mappedClass, "model", "EquipmentModel or any list type");
+                else{
+                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_INFORMATION
+                        , String.format("Create attribute model in %s [%s]"
+                                , syncName, syncClass)
+                        , "Attribute required"));
+                }
             }
+        } catch (MetadataObjectNotFoundException ex) {
+            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                        , ex.getMessage()
+                        , "Attributes not updated"));
         }
+        
         return attributes;
     }
-    
-    public void createAttributeError(String aClass, String attributeName, String type){
-       results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                    String.format(I18N.gm("attribute_does_not_exist_in_class"), attributeName, type, aClass),
-                                    Json.createObjectBuilder().add("type","error")
-                                            .add("className", aClass)
-                                            .add("attributeType", type)  
-                                            .add("attributeName", attributeName).build().toString()));
-    }
-    
-
-    //Things to be deleted
-    public void removeObjectFromDelete(BusinessObjectLight obj) {
-        for (long branchId : currentObjectStructure.keySet()) 
-            currentObjectStructure.get(branchId).remove(obj);
-    }
-    
-    public void checkDataToBeDeleted() throws MetadataObjectNotFoundException, InvalidArgumentException {
-        for (BusinessObjectLight currentChildFirstLevel : currentFirstLevelChildren) {
-            if (!mem.isSubclassOf("Pseudowire", currentChildFirstLevel.getClassName()) &&
-                    !currentChildFirstLevel.getName().toLowerCase().equals("gi0") &&
-                    !currentChildFirstLevel.getClassName().equals(Constants.CLASS_PORTCHANNEL)) 
-            {
-                try {
-                    bem.deleteObject(currentChildFirstLevel.getClassName(), currentChildFirstLevel.getId(), false);
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
-                            String.format("%s [%s]", currentChildFirstLevel.getName(), currentChildFirstLevel.getClassName()),
-                            "Deleted successfully"));
-
-                } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | OperationNotPermittedException ex) {
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                            String.format("%s [%s] not deleted", currentChildFirstLevel.getName(), currentChildFirstLevel.getClassName()),
-                            ex.getLocalizedMessage()));
-                }
-            }
-        }
-            
-        for (long key : currentObjectStructure.keySet()) {
-            List<BusinessObjectLight> branchToDelete = currentObjectStructure.get(key);
-            for (BusinessObjectLight deviceToDelete : branchToDelete) {
-                JsonObject jsont = Json.createObjectBuilder().add("type", "old_object_to_delete").build();
-                if (deviceToDelete.getClassName().contains("Transceiver")){
-                    try {
-                        BusinessObjectLight tParent = bem.getParent(deviceToDelete.getClassName(), deviceToDelete.getId());
-
-                        if(tParent.getClassName().contains("Port")){
-                            bem.deleteObject(deviceToDelete.getClassName(), deviceToDelete.getId(), false);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
-                                String.format("%s [%s]", deviceToDelete.getName(), deviceToDelete.getClassName()),
-                                "Deleted successfully"));
-                        }
-                    
-                    } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | InvalidArgumentException | OperationNotPermittedException ex ) {
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                            String.format("%s [%s] not deleted", deviceToDelete.getName(), deviceToDelete.getClassName()),
-                            ex.getLocalizedMessage()));
-                    }
-               }
-            }
-        }
-    }
-
-    //<editor-fold desc="Ports" defaultstate="collapsed">
-    /**
-     * Create findings with the ports with no match
-     */
-    public void checkPortsWithNoMatch() {
-        for (BusinessObjectLight oldPort : notMatchedPorts) {
-            try {
-                bem.deleteObject(oldPort.getClassName(), oldPort.getId(), false);
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                        String.format("%s [%s]", oldPort.getName(), oldPort.getClassName()),
-                        "Deleted successfully"));
-            } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException ex) {
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                            String.format("%s [%s] not deleted", oldPort.getName(), oldPort.getClassName()),
-                            ex.getLocalizedMessage()));
-            }
-        }
-
-        for (BusinessObject newPort : newPorts) {
-            String parentId;
-            if(newPort.getAttributes().get("deviceParentId") != null)
-                parentId = newPort.getAttributes().get("deviceParentId");
-
-
-            else
-                parentId = createdIdsToMap.get(newPort.getAttributes().get("parentId"));
-            
-            
-            if(parentId == null)
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                    String.format("%s" , newPort),
-                   "Can not determinate the parent id"));
-            else{
-                newPort.getAttributes().remove("deviceParentId");
-                newPort.getAttributes().remove("parentId");
-                String parentClassName = newPort.getAttributes().remove("parentClassName");
-                newPort.getAttributes().remove("parentName");
-                
-                try {
-                    
-                    parentId = bem.createObject(newPort.getClassName(), parentClassName, parentId, newPort.getAttributes(), null);
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                                String.format("%s" , newPort),
-                                "Port created"));
-                    createdIdsToMap.put(newPort.getId(), parentId);
-                    //this only applies for ASR9001 here you define the creation order of the ports-transceivers
-                    List<BusinessObject> extraBranch = newCreatedPortsToCreate.get(newPort.getId());
-                    if(extraBranch != null && extraBranch.size() > 1){
-                        for (int i = 1; i<extraBranch.size(); i++){
-                            String tempParentId = extraBranch.get(i).getAttributes().get("parentId");
-
-                            if(extraBranch.get(i).getAttributes().remove("deviceParentId") == null);
-                                parentId = createdIdsToMap.get(tempParentId);
-                                
-                            parentClassName = extraBranch.get(i).getAttributes().remove("parentClassName");
-                            extraBranch.get(i).getAttributes().remove("parentName");
-
-                            parentId = bem.createObject(extraBranch.get(i).getClassName(), 
-                                    parentClassName, parentId, extraBranch.get(i).getAttributes(), null);
-
-                            createdIdsToMap.put(extraBranch.get(i).getId(), parentId);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                                String.format("%s" , newPort),
-                                "Inventory object created"));
-                        }
-                    }
-
-                } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | InvalidArgumentException | OperationNotPermittedException | ApplicationObjectNotFoundException ex) {
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                    String.format("%s" , newPort),
-                                    "Can not create port"));
-                }
-            }
-        }
-    }
-
-    /**
-     * Compare the old ports with the new ones, the new ports should have been 
-     * created in the last steps if they didn't exists, after the creation we compare 
-     * the names of the old ports with the names of the new ones, if a match is 
-     * found the old port will me moved to its new location, and the new 
-     * port won't be created, this way we keep the relationships of the old port
-     *
-     * @throws InvalidArgumentException
-     * @throws BusinessObjectNotFoundException
-     * @throws MetadataObjectNotFoundException
-     * @throws OperationNotPermittedException
-     */
-    private void checkPortsToMigrate(){
-        List<BusinessObjectLight> foundOldPorts = new ArrayList<>(); //for debug
-        List<BusinessObject> foundNewPorts = new ArrayList<>(); //for debug
-        for (BusinessObjectLight oldPort : currentPorts) {
-            if(!oldPort.getName().toLowerCase().equals("gi0")){
-                try{
-                    //We copy the new attributes into the old port, to keep the relationships
-                    BusinessObjectLight oldPortParent = bem.getParent(oldPort.getClassName(), oldPort.getId());
-                    BusinessObject portFound = searchOldPortInNewPorts(oldPort);
-
-                    if (portFound != null) {
-                        String parentName = oldPortParent.getName();
-                        foundOldPorts.add(oldPort);    //for debug
-                        foundNewPorts.add(portFound); //for debug
-                        if(SyncUtil.isSynchronizable(portFound.getName()))
-                            portFound = SyncUtil.wrapPortName(portFound);
-                        //We found the port, but needs to be moved
-                        if(!parentName.equals(portFound.getAttributes().get("parentName"))){ 
-                            portFound.setId(oldPort.getId());
-
-                            String parentId = getParentPortIdIfExists(portFound);
-                            if(parentId != null) //we check if the parent of the port is already created in an old structure
-                                portFound.getAttributes().put("deviceParentId", parentId);
-                            else{
-                                portFound.getAttributes().remove("parentId");
-                                portFound.getAttributes().remove("parentName");
-                               
-                                portFound.getAttributes().remove("deviceParentId");
-                                HashMap<String, String[]> objectsToMove = new HashMap<>();
-                                String[] ids = {portFound.getId()} ;
-                                objectsToMove.put(className, ids);
-
-                                bem.updateObject(portFound.getClassName(), portFound.getId(), portFound.getAttributes());
-                                bem.moveObjects(portFound.getAttributes().remove("parentClassName"), parentId, objectsToMove);
-
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
-                                        String.format("%s", portFound), 
-                                        "Moved to an updated position"));
-                            }
-                        }
-                        else{//The port its in the rigth place but its attributes needs to be updated
-                            HashMap<String, String> oldAttributes = bem.getObject(oldPort.getClassName(), oldPort.getId()).getAttributes();
-                            HashMap<String, String> changedAttributes = SyncUtil.compareAttributes(oldAttributes, portFound.getAttributes());
-                            changedAttributes.remove("parentId");
-                            changedAttributes.remove("parentClassName");
-                            changedAttributes.remove("parentName");
-                            changedAttributes.remove("deviceParentId");   
-                            if(!changedAttributes.isEmpty()){ 
-                                bem.updateObject(oldPort.getClassName(), oldPort.getId(), changedAttributes);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                                    String.format("From: %s to: in %s", oldAttributes, changedAttributes, oldPort),
-                                   "Attributes updated"));
-                            }
-                        }
-                    } 
-                    else 
-                        notMatchedPorts.add(oldPort);
-                
-                } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException ex) {
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                    String.format("%s ", oldPort), "Checking port"));
-                }
-            }
-        }//end for
-        //we remove the ports from both lists the old port and the new ones
-        //for debuging don't delete        
-//        for (BusinessObjectLight goodPort : foundOldPorts)
-//            currentPorts.remove(goodPort);
-
-//        we must delete de new ports that were found in the old structure, the 
-//        remaining new ports that were not found will be created
-        for (BusinessObject foundNewPort : foundNewPorts) {
-            int index = removeMatchedNewPorts(foundNewPort);
-            if (index > -1) 
-                newPorts.remove(index);
-        }
-    }
-
-    private int removeMatchedNewPorts(BusinessObject newportFound) {
-        for (int i = 0; i < newPorts.size(); i++) {
-            if (newPorts.get(i).getName()
-                    .equals(newportFound.getName())) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Search by name an old port in the list of the new created ports
-     * @param port_ the old port
-     * @return a String pair key = The new parent Id (in the SNMP map) value = the new port
-     * @throws InvalidArgumentException
-     * @throws BusinessObjectNotFoundException
-     * @throws MetadataObjectNotFoundException
-     */
-    private boolean searchPortInNewPorts(BusinessObjectLight port_) throws InvalidArgumentException, BusinessObjectNotFoundException, MetadataObjectNotFoundException {
-        for (BusinessObject port : newPorts) {
-            if (SyncUtil.compareLegacyPortNames(port_.getName(), port_.getClassName(),
-                    port.getName(),
-                    port.getClassName())
-                ) 
-                return true;
-        }
-        return false;
-    }
-    
-    /**
-     * Search by name an old port in the list of the new created ports
-     * @param oldPort the old port
-     * @return a String pair key = The new parent Id (in the SNMP map) value = the new port
-     * @throws InvalidArgumentException
-     * @throws BusinessObjectNotFoundException
-     * @throws MetadataObjectNotFoundException
-     */
-    private BusinessObject searchOldPortInNewPorts(BusinessObjectLight oldPort) 
-            throws InvalidArgumentException, BusinessObjectNotFoundException, MetadataObjectNotFoundException 
-    {
-        for (BusinessObject port : newPorts) {
-            if (SyncUtil.compareLegacyPortNames(oldPort.getName(), oldPort.getClassName(),
-                    port.getName(),
-                    port.getClassName())
-                ) 
-                return port;
-        }
-        return null;
-    }
-    
-    private String getParentPortIdIfExists(BusinessObject portFound) 
-            throws InvalidArgumentException, BusinessObjectNotFoundException, MetadataObjectNotFoundException 
-    {
-        String objParentName = portFound.getAttributes().get("parentName");
-        String objParentClassName = portFound.getAttributes().get("parentClassName");
-
-        for(long key : currentObjectStructure.keySet()){
-            List<BusinessObjectLight> oldBranch = currentObjectStructure.get(key);
-            for (BusinessObjectLight oldObj : oldBranch) {
-                HashMap<String, String> oldAttributes = bem.getObject(oldObj.getClassName(), oldObj.getId()).getAttributes();
-                if(oldAttributes.get(Constants.PROPERTY_NAME).equals(objParentName)
-                        && objParentClassName.equals(oldObj.getClassName()))
-                    return oldObj.getId();
-            }
-        }
-        return null;
-    }
-    
-    private void editNewPortWithDeviceParentId(BusinessObject newPortWithDeviceParentId) {
-        for (int i=0; i<newPorts.size(); i++) {
-            if(newPortWithDeviceParentId.getAttributes().get("name").equals(newPorts.get(i).getAttributes().get("name")) &&
-                    newPortWithDeviceParentId.getClassName().equals(newPorts.get(i).getClassName())){
-                newPorts.set(i, newPortWithDeviceParentId);
-            }
-        }
-    }
-   //</editor-fold>
-    
-    //<editor-fold desc="List Types" defaultstate="collapsed">
-    /**
-     * Returns the listTypeId if exists or creates a finding to create the list-type 
-     * in case that the list type doesn't exist in Kuwaiba
-     * 
-     * JSon structure
-     * {
-     *  type: listType
-     *  name: "the new list type name"
-     * }
-     * 
-     * @param i the index of the list type in the SNMP data
-     * @return the list type (if exists, otherwise is an empty String)
-     * @throws MetadataObjectNotFoundException
-     * @throws InvalidArgumentException
-     */
-    private String findingListTypeId(int i, String listTypeClassName){
-        String SNMPoid, listTypeId = null; 
-        if(listTypeClassName.equals("EquipmentVendor")) //NOI18N
-            SNMPoid = "entPhysicalMfgName"; //NOI18N
-        else
-            SNMPoid = "entPhysicalModelName"; //NOI18N
         
+    //<editor-fold desc="List Types" defaultstate="collapsed">
+    private String findingListTypeId(int i, String syncName, String syncClass
+            , String listType)
+    {
+        String SNMPoid, listTypeId = null; 
+
+        if(listType.equals("EquipmentVendor")) //NOI18N
+            SNMPoid = "entPhysicalMfgName"; //NOI18N
+        else{
+            SNMPoid = "entPhysicalModelName"; //NOI18N
+        }
         if (!entityData.get(SNMPoid).get(i).isEmpty()) {
             try{
-                String listTypeNameFromSNMP = entityData.get(SNMPoid).get(i);
-                
-                String id_ = matchListTypeNames(listTypeNameFromSNMP, listTypeClassName);
+                String snmpListType = entityData.get(SNMPoid).get(i);
+                String id_ = matchListTypeNames(snmpListType, listType);
                 if (id_ != null)
                     listTypeId = id_;
+                                
                 else {//The list type doesn't exist, we create a finding
-                    if (!listTypeEvaluated.contains(listTypeNameFromSNMP)) {
-                        String createListTypeItem = aem.createListTypeItem(listTypeClassName, listTypeNameFromSNMP.trim(), listTypeNameFromSNMP.trim());
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,
-                                String.format("the list type %s", listTypeNameFromSNMP),
-                                "A list type was created"));
-
-                        listTypeEvaluated.add(listTypeNameFromSNMP);
+                    if (!listTypeEvaluated.contains(snmpListType)) {
+                        
+                        String createListTypeItem = aem.createListTypeItem(listType
+                                , snmpListType.trim()
+                                , snmpListType.trim());
+                        
+                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS
+                                , String.format("for: %s [%s], model updated to: %s"
+                                        , syncName, syncClass
+                                        , snmpListType)
+                                , String.format("Model added as list type under %s"
+                                        , snmpListType)));
+                        listTypeEvaluated.add(snmpListType);
                         return createListTypeItem;
                     }
                 }
             } catch (MetadataObjectNotFoundException | InvalidArgumentException | OperationNotPermittedException ex) {
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR,
-                                String.format("the list type %s", listTypeClassName),
-                                "A list type was not created"));
+                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                        , String.format("%s", ex.getMessage())
+                        , String.format("%s [%s] model not update", syncName
+                                , syncClass)));
             }    
         }
         return listTypeId;
@@ -1463,8 +1089,9 @@ public class EntPhysicalSynchronizer {
     {
         List<BusinessObjectLight> listTypeItems = aem.getListTypeItems(listTypeClassName);
         List<String> onlyNameListtypes = new ArrayList<>();
-        for(BusinessObjectLight createdLitType : listTypeItems)
-            onlyNameListtypes.add(createdLitType.getName());
+        listTypeItems.forEach(createdLitType -> 
+            onlyNameListtypes.add(createdLitType.getName())
+        );
         
         if(onlyNameListtypes.contains(listTypeNameToLoad))
             return listTypeItems.get(onlyNameListtypes.indexOf(listTypeNameToLoad)).getId();
@@ -1497,242 +1124,294 @@ public class EntPhysicalSynchronizer {
     }
     //</editor-fold>
 
+    /**
+     * Sync for interfaces based on if mib snmp
+     */
     private void syncIfMibData(){
+        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_INFORMATION
+                , "-- intefaces --"
+                , "--"));
+        
         List<String> services = ifXTable.get("ifAlias"); //NOI18N
         List<String> portNames = ifXTable.get("ifName"); //NOI18N
         List<String> portSpeeds = ifXTable.get("ifHighSpeed"); //NOI18N
-
-        for(String ifName : portNames){ //if name is the individual port names
+        
+        List<BusinessObject> interfaces = readInterfaces(new ArrayList<>(Arrays.asList(objSync)));
+        List<BusinessObject> currentTransceivers = readTransceiver(new ArrayList<>(Arrays.asList(objSync)));
+                
+        for(String ifName : portNames){//ifName is the individual port name
             String ifAlias = services.get(portNames.indexOf(ifName)); //service name
             String portSpeed = portSpeeds.get(portNames.indexOf(ifName));
             
             HashMap<String, String> attributes = new HashMap<>();
             attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName));
-            attributes.put("highSpeed", portSpeed);  //NOI18N
+            attributes.put("syncSnmpIfName", ifName);
+            attributes.put("syncSnmpHighSpeed", portSpeed);  //NOI18N
+            attributes.put("sync", "synced-" + new Date().getTime()); 
+            
             if(!ifAlias.isEmpty())
-                attributes.put("ifAlias", ifAlias);
+                attributes.put("syncSnmpIfAlias", ifAlias);
             
             String createdId; 
             try{
-            //We must create the Mngmnt Port, virtualPorts, tunnels and Loopbacks
+                //We must create the Mngmnt Port, virtualPorts, tunnels and Loopbacks
                 if(SyncUtil.isSynchronizable(ifName)){
-                    BusinessObjectLight currentInterface = null;
-                    BusinessObjectLight currentLogicalInterface = null;
+                    String logicalInterfaceClass = null;
                     //First we search the interfaces in the current structure
                     //We must add the s when we look for po ports because posx/x/x ports has no s in the if mib
-                    currentInterface = searchInCurrentStructure(SyncUtil.normalizePortName(ifName), 1);
-                    if(currentInterface == null && !ifName.contains("."))//maybe it is a PortChannel a virtual port with no . in the name just a Po1
-                        currentInterface = searchInCurrentStructure(SyncUtil.normalizePortName(ifName), 2);
-                    
-                    //Virtual Ports
-                    if(ifName.contains(".") && !ifName.toLowerCase().contains(".si.")){
-                        currentInterface = searchInCurrentStructure(SyncUtil.normalizePortName(ifName.split("\\.")[0]), 1);
-                        //it is possible than the service instance was created with the whole name, not only the numeric part 
-                        currentLogicalInterface = searchInCurrentStructure(ifName, 4);
-                        if(currentInterface != null && currentLogicalInterface == null){
-                            List<BusinessObjectLight> virtualPorts = bem.getObjectChildren(currentInterface.getClassName(), currentInterface.getId(), -1);
-                            for (BusinessObjectLight virtualPort : virtualPorts) {
-                                if(virtualPort.getName().equals(SyncUtil.normalizePortName(ifName.split("\\.")[1]))){
-                                    currentLogicalInterface = virtualPort;
-                                    break;
-                                }
-                            }
-                        }
-                    }//Service Instances
-                    else if(ifName.contains(".") && ifName.toLowerCase().contains(".si.")){
-                        currentInterface = searchInCurrentStructure(SyncUtil.normalizePortName(ifName.split("\\.")[0]), 1);
-                        if(currentInterface == null)//for port channels
-                            currentInterface = searchInCurrentStructure(SyncUtil.normalizePortName(ifName.split("\\.")[0]), 2);
-                        //it is possible than the virtual port was created with the whole name, not only the numeric part 
-                        currentLogicalInterface = searchInCurrentStructure(ifName, 4);
-                        if(currentInterface != null && currentLogicalInterface == null){
-                            List<BusinessObjectLight> virtualPorts = bem.getObjectChildren(currentInterface.getClassName(), currentInterface.getId(), -1);
-                            for (BusinessObjectLight virtualPort : virtualPorts) {
-                                if(virtualPort.getName().equals(SyncUtil.normalizePortName(ifName.split("\\.")[2]))){
-                                    currentLogicalInterface = virtualPort;
-                                    break;
-                                }
-                            }
-                        }
-                    }//Loopback
-                    else if(ifName.toLowerCase().contains("lo")) //NOI18N
-                        currentLogicalInterface = searchInCurrentStructure(SyncUtil.wrapPortName(ifName), 2);
-                    //MPLS Tunnel
-                    else if(ifName.toLowerCase().contains("tu")) //NOI18N
-                        currentLogicalInterface = searchInCurrentStructure(SyncUtil.wrapPortName(ifName), 3);
-
-                    if(currentInterface == null && (ifName.toLowerCase().equals("gi0") || ifName.startsWith("Po") || ifName.toLowerCase().contains("se"))){
-                        if(ifName.toLowerCase().equals("gi0")){ 
-                            createdId = bem.createObject(Constants.CLASS_ELECTRICALPORT, className, id, attributes, null);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("%s [%s]", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_ELECTRICALPORT),    
-                                        "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_ELECTRICALPORT);
-                            currentPorts.add(new BusinessObjectLight(Constants.CLASS_ELECTRICALPORT, createdId, attributes.get(Constants.PROPERTY_NAME)));
-                        }  
-                        else if(ifName.startsWith("Po") && ifName.length() < 4){ //port channel
-                            attributes.put(Constants.PROPERTY_NAME, ifName.split("\\.")[0]);
-                            createdId = bem.createObject("PortChannel", className, id, attributes, null);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                    String.format("%s [%s]", attributes.get(Constants.PROPERTY_NAME), "PortChannel"),    
-                                    "Inventory object created"));
-                            checkServices(ifAlias, ifName.split("\\.")[0], createdId, "PortChannel");
-                            currentVirtualPorts.add(new BusinessObjectLight("PortChannel", createdId, attributes.get(Constants.PROPERTY_NAME)));
-                        }
-                        else if (ifName.toLowerCase().contains("se")){
-                            createdId = bem.createObject(Constants.CLASS_SERIALPORT, className, id, attributes, null);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("%s [%s]", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_SERIALPORT),    
-                                        "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_SERIALPORT);            
-                            currentPorts.add(new BusinessObjectLight(Constants.CLASS_SERIALPORT, createdId, attributes.get(Constants.PROPERTY_NAME)));
-                        }
-                    }//logical interfaces special children of the device
-                    if(currentLogicalInterface == null && (ifName.toLowerCase().contains("tu") || (ifName.toLowerCase().contains("lo")))){
-                        if(ifName.toLowerCase().contains("tu")){ //MPLSTunnel
-                            createdId = bem.createSpecialObject(Constants.CLASS_MPLSTUNNEL, className, id, attributes, null); 
-                            currentMplsTunnels.add(new BusinessObject(Constants.CLASS_MPLSTUNNEL, createdId, ifName));
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("%s [%s]", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_MPLSTUNNEL),    
-                                        "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_MPLSTUNNEL);
-                        }//LoopBacks
-                        else if(ifName.toLowerCase().contains("lo")){
-                            createdId = bem.createSpecialObject(Constants.CLASS_VIRTUALPORT, className, id, attributes, null);
-                            currentVirtualPorts.add(new BusinessObject(Constants.CLASS_VIRTUALPORT, createdId, ifName));
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("%s [%s]", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_VIRTUALPORT),    
-                                        "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_VIRTUALPORT);
-                        }
-                    }
-                    //logical interfaces virtual ports and service instances with physical port as parent
-                    if(currentInterface != null && currentLogicalInterface == null){
-                        if(ifName.toLowerCase().contains(".si")){
-                            attributes.put(Constants.PROPERTY_NAME, ifName.split("\\.")[2]);
-                            createdId = bem.createObject(Constants.CLASS_SERVICE_INSTANCE, currentInterface.getClassName(), currentInterface.getId(), attributes, null);
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                String.format("%s [%s], with parent: %s ", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_SERVICE_INSTANCE, currentInterface),    
-                                "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_SERVICE_INSTANCE);
-                            currentServiceInstances.add(new BusinessObject(Constants.CLASS_SERVICE_INSTANCE, createdId, attributes.get(Constants.PROPERTY_NAME)));
-                        }else if(ifName.toLowerCase().contains(".")){
-                            attributes.put(Constants.PROPERTY_NAME, ifName.split("\\.")[1]);
-                            createdId = bem.createObject(Constants.CLASS_VIRTUALPORT, currentInterface.getClassName(), currentInterface.getId(), attributes, null);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                    String.format("%s [%s], with parent: %s ", attributes.get(Constants.PROPERTY_NAME), Constants.CLASS_VIRTUALPORT, currentInterface),    
-                                    "Inventory object created"));
-                            checkServices(ifAlias, ifName, createdId, Constants.CLASS_VIRTUALPORT);
-                            currentServiceInstances.add(new BusinessObject(Constants.CLASS_VIRTUALPORT, createdId, attributes.get(Constants.PROPERTY_NAME)));
-                        }
-                    }
-                    //we Update attributes, for now only high speed
-                    if(currentInterface != null || ((ifName.contains("\\.") && currentLogicalInterface != null && currentInterface != null) || (currentInterface == null && (ifName.toLowerCase().contains("tu") || ifName.toLowerCase().contains("lo"))))){ 
-                        BusinessObjectLight interfaceToUpdate;
-                        if(currentInterface != null && !ifName.contains("."))
-                            interfaceToUpdate = currentInterface;
-                        else
-                            interfaceToUpdate = currentLogicalInterface;
-                        //we save the virtual ports and tunnels in order to  double check what should be deleted
-                        if(currentLogicalInterface != null && currentLogicalInterface.getClassName().equals(Constants.CLASS_VIRTUALPORT))
-                            foundVirtualPorts.add(currentLogicalInterface);
-                        else if(currentLogicalInterface != null && currentLogicalInterface.getClassName().equals(Constants.CLASS_MPLSTUNNEL))
-                            foundMplsTunnels.add(currentLogicalInterface);
+                    BusinessObjectLight currentInterface = searchInterfaceBySnmpName(interfaces, ifName);
+                    BusinessObjectLight currentLogicalInterface = null;
+                  
+                    //Is a virtual port
+                    if (ifName.contains(".") || ifName.toLowerCase().contains(".si.")){
+                        currentInterface = searchInterfaceBySnmpName(interfaces
+                                , ifName.split("\\.")[0]);
                         
-                        if(interfaceToUpdate != null){
-                            HashMap<String, String> currentAttributes = bem.getObject(interfaceToUpdate.getClassName(), interfaceToUpdate.getId()).getAttributes();
-                            attributes = new HashMap<>();
-                            //We must update the speedPort
-                            String currentHighSpeed = currentAttributes.get("highSpeed");
-                            if(currentHighSpeed == null || !currentHighSpeed.equals(portSpeed)){
-                                attributes.put("highSpeed", portSpeed);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                    String.format("The attribute highSpeed was updated from: %s to %s", currentHighSpeed, portSpeed),    
-                                    String.format("highSpeed updated in interface: %s", interfaceToUpdate)));
-                            }//We must check if the ifAlias must be updated
-                            String currentiIfAlias = currentAttributes.get("ifAlias");
-                            if(!ifAlias.isEmpty() && (currentiIfAlias == null || !currentiIfAlias.equals(ifAlias))){
-                                attributes.put("ifAlias", ifAlias);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                    String.format("The attribute ifAlias was updated from: %s to %s", currentiIfAlias, ifAlias),    
-                                    String.format("ifAlias updated in interface: %s", interfaceToUpdate)));
-                            }
-                            bem.updateObject(interfaceToUpdate.getClassName(), interfaceToUpdate.getId(), attributes);
-                            if(!ifAlias.isEmpty())
-                                checkServices(ifAlias, ifName, interfaceToUpdate.getId(), interfaceToUpdate.getClassName());
-                            //we update the name for taking only the numeric part
-                            //for virtual ports
-                            if(currentLogicalInterface != null && ifName.contains(".") && currentLogicalInterface.getName().contains(".")){
-                                    attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName)); 
-                                    bem.updateObject(currentLogicalInterface.getClassName(), currentLogicalInterface.getId(), attributes);
-                                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                            String.format("The attribute name was updated from: %s to %s", currentAttributes.get(Constants.PROPERTY_NAME), attributes.get(Constants.PROPERTY_NAME)),    
-                                            String.format("name updated in interface: %s", currentLogicalInterface)));
-                            }//a service instance
-                            else if(currentLogicalInterface != null && ifName.contains(".") &&  ifName.contains(".si") && ifName.split("\\.").length == 3 && currentLogicalInterface.getName().contains(".")){
-                                attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName)); 
-                                bem.updateObject(currentLogicalInterface.getClassName(), currentLogicalInterface.getId(), attributes);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("The attribute name was updated from: %s to %s", currentAttributes.get(Constants.PROPERTY_NAME), attributes.get(Constants.PROPERTY_NAME)),    
-                                        String.format("name updated in interface: %s", currentLogicalInterface)));
-                            }//The name should be normalized applies for loopbacks
-                            else if(currentLogicalInterface != null && ifName.toLowerCase().contains("lo") && currentLogicalInterface.getName().length() < 5){
-                                attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName)); 
-                                bem.updateObject(currentLogicalInterface.getClassName(), currentLogicalInterface.getId(), attributes);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("The attribute name was updated from: %s to %s", currentAttributes.get(Constants.PROPERTY_NAME), attributes.get(Constants.PROPERTY_NAME)),    
-                                        String.format("name updated in Loopback: %s", currentLogicalInterface)));
-                            }//The name should be normalized applies for mplsTunnels
-                            else if(currentLogicalInterface != null && ifName.toLowerCase().contains("tu") && currentLogicalInterface.getName().length() < 5){
-                                attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName)); 
-                                bem.updateObject(currentLogicalInterface.getClassName(), currentLogicalInterface.getId(), attributes);
-                                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
-                                        String.format("The attribute name was updated from: %s to %s", currentAttributes.get(Constants.PROPERTY_NAME), attributes.get(Constants.PROPERTY_NAME)),    
-                                        String.format("name updated in MPLSTunnel: %s", currentLogicalInterface)));
+                        currentLogicalInterface = searchInterfaceBySnmpName(interfaces
+                                , ifName);
+
+                        if (currentInterface != null && currentLogicalInterface == null) {
+
+                            List<BusinessObjectLight> virtualPortsChildren = bem.getObjectChildren(currentInterface.getClassName(), currentInterface.getId(), -1);
+
+                            for (BusinessObjectLight virtualChild : virtualPortsChildren) {
+                                if (virtualChild.getName().equals(SyncUtil.normalizePortName(ifName.split("\\.")[1]))) {
+                                    currentLogicalInterface = virtualChild;
+                                    break;
+                                }
                             }
                         }
+                        if(currentInterface != null && currentLogicalInterface == null){
+                            if (ifName.toLowerCase().contains(".si")) {
+                                attributes.put(Constants.PROPERTY_NAME,
+                                         ifName.split("\\.")[2]);
+                                logicalInterfaceClass = Constants.CLASS_SERVICE_INSTANCE;
+                            } else if (ifName.toLowerCase().contains(".")) {
+                                attributes.put(Constants.PROPERTY_NAME,
+                                         ifName.split("\\.")[1]);
+                                logicalInterfaceClass = Constants.CLASS_VIRTUALPORT;
+                            }
+
+                            createdId = createInterface(currentInterface.getId(),
+                                     currentInterface.getClassName(),
+                                     logicalInterfaceClass,
+                                     attributes);
+
+                            BusinessObject newObj = new BusinessObject(logicalInterfaceClass,
+                                     createdId,
+                                     attributes.get(Constants.PROPERTY_NAME));
+                            newObj.setAttributes(attributes);
+                            interfaces.add(newObj);
+
+                            results.add(new SyncResult(dsConfigId
+                                , SyncResult.TYPE_SUCCESS
+                                , String.format("%s [%s]"
+                                            , attributes.get(Constants.PROPERTY_NAME)
+                                            , logicalInterfaceClass)
+                                , "Inventory object created"));
+                            
+                            relateService(ifAlias
+                                    , ifName
+                                    , createdId
+                                    , logicalInterfaceClass);
+                        }
+                    }
+                    
+                    //we create from scratch
+                    if(currentInterface == null 
+                            && (ifName.toLowerCase().equals("gi0") 
+                                || ifName.toLowerCase().startsWith("Po") 
+                                || ifName.toLowerCase().contains("se")))
+                    {
+                        String interfaceClass = null;
+                        if(ifName.toLowerCase().equals("gi0"))
+                            interfaceClass = Constants.CLASS_ELECTRICALPORT; 
+                        else if(ifName.startsWith("Po") && ifName.length() < 4) //port channel
+                            interfaceClass = "PortChannel";
+                        else if (ifName.toLowerCase().contains("se"))
+                            interfaceClass = Constants.CLASS_SERIALPORT;
+                        
+                        if (interfaceClass != null){   
+                            createdId = createInterface(objSync.getId()
+                                    , objSync.getClassName()
+                                    , interfaceClass, attributes);
+                            
+                            relateService(ifAlias, ifName, createdId
+                                , interfaceClass);
+                              
+                            BusinessObject newObj = new BusinessObject(logicalInterfaceClass,
+                                     createdId,
+                                     attributes.get(Constants.PROPERTY_NAME));
+                            newObj.setAttributes(attributes);
+                            interfaces.add(newObj);
+                            results.add(new SyncResult(dsConfigId
+                                , SyncResult.TYPE_SUCCESS
+                                , String.format("%s [%s]"
+                                            , attributes.get(Constants.PROPERTY_NAME)
+                                            , interfaceClass)
+                                , "Inventory object created"));
+                        }
+                    }
+//logical interfaces special children of the device
+                    if(currentInterface == null  
+                            && (ifName.toLowerCase().contains("tu") 
+                            || ifName.toLowerCase().contains("lo"))){
+                        currentLogicalInterface = searchInterfaceBySnmpName(interfaces, ifName);
+                        
+                        //MPLSTunnel
+                        if(ifName.toLowerCase().contains("tu"))
+                            logicalInterfaceClass = Constants.CLASS_MPLSTUNNEL;
+                        //LoopBacks
+                        else if(ifName.toLowerCase().contains("lo"))
+                            logicalInterfaceClass = Constants.CLASS_VIRTUALPORT;
+                        
+                        if(logicalInterfaceClass != null 
+                                && currentLogicalInterface == null){
+
+                            createdId = bem.createSpecialObject(logicalInterfaceClass
+                                    , objSync.getClassName()
+                                    , objSync.getId(), attributes, null);
+                            BusinessObject newObj = new BusinessObject(logicalInterfaceClass, createdId, ifName);
+                            newObj.setAttributes(attributes);
+                            interfaces.add(newObj);
+                            
+                            results.add(new SyncResult(dsConfigId
+                                    , SyncResult.TYPE_SUCCESS
+                                    , String.format("%s [%s]"
+                                                , attributes.get(Constants.PROPERTY_NAME)
+                                                , logicalInterfaceClass)
+                                    , "Inventory object created"));
+                            
+                            relateService(ifAlias, ifName, createdId, logicalInterfaceClass);
+                        }
+                    }                   
+                    //we Update attributes, for now only high speed
+                    if(currentInterface != null ){                         
+                        
+                        HashMap<String, String> currentAttributes = bem.getObject(currentInterface.getClassName(), currentInterface.getId()).getAttributes();
+                        attributes = new HashMap<>();
+                        attributes.put("sync", "synced-" + new Date().getTime()); 
+                        //We must update the speedPort
+                        String currentHighSpeed = currentAttributes.get("highSpeed");
+                        if(currentHighSpeed == null || !currentHighSpeed.equals(portSpeed)){
+                            attributes.put("highSpeed", portSpeed);
+                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
+                                String.format("The attribute highSpeed was updated from: %s to %s", currentHighSpeed, portSpeed),    
+                                String.format("highSpeed updated in interface: %s", currentInterface.getName())));
+                        }//We must check if the ifAlias must be updated
+                        String currentiIfAlias = currentAttributes.get("ifAlias");
+                        if(!ifAlias.isEmpty() && (currentiIfAlias == null || !currentiIfAlias.equals(ifAlias))){
+                            attributes.put("ifAlias", ifAlias);
+                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
+                                String.format("The attribute ifAlias was updated from: %s to %s", currentiIfAlias, ifAlias),    
+                                String.format("ifAlias updated in interface: %s", currentInterface.getName())));
+                        }
+                        bem.updateObject(currentInterface.getClassName(), currentInterface.getId(), attributes);
+                        relateService(ifAlias, ifName, currentInterface.getId(), currentInterface.getClassName());
+                        //we update the name for taking only the numeric part
+                        //for virtual ports
+                        if(currentLogicalInterface != null && ifName.contains(".") && currentLogicalInterface.getName().contains(".")){
+                            attributes.put(Constants.PROPERTY_NAME, SyncUtil.normalizePortName(ifName)); 
+                            bem.updateObject(currentLogicalInterface.getClassName(), currentLogicalInterface.getId(), attributes);
+                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS,  
+                                    String.format("The attribute name was updated from: %s to %s", currentAttributes.get(Constants.PROPERTY_NAME), attributes.get(Constants.PROPERTY_NAME)),    
+                                    String.format("name updated in interface: %s", currentLogicalInterface)));
+                        }//a service instance
                     }   
-                 }//end for ifNames
-            } catch (MetadataObjectNotFoundException | BusinessObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException | ApplicationObjectNotFoundException ex) {
+                    
+                    if(currentInterface == null && currentLogicalInterface == null){
+                        BusinessObject transceiverParent = searchTransceiverBySnmpName(currentTransceivers, ifName);
+                        
+                        if(transceiverParent != null){
+                            createdId = createInterface(transceiverParent.getId()
+                                    , transceiverParent.getClassName()
+                                    , Constants.CLASS_OPTICALPORT, attributes);
+                            
+                            relateService(ifAlias, ifName, createdId
+                                , Constants.CLASS_OPTICALPORT);
+                              
+                            BusinessObject newObj = new BusinessObject(Constants.CLASS_OPTICALPORT,
+                                     createdId,
+                                     attributes.get(Constants.PROPERTY_NAME));
+                            newObj.setAttributes(attributes);
+                            interfaces.add(newObj);
+                            results.add(new SyncResult(dsConfigId
+                                , SyncResult.TYPE_SUCCESS
+                                , String.format("%s [%s]"
+                                            , attributes.get(Constants.PROPERTY_NAME)
+                                            , Constants.CLASS_OPTICALPORT)
+                                , "Inventory object created"));
+                        }
+                    }
+                }//end for ifNames
+            } catch (MetadataObjectNotFoundException 
+                    | BusinessObjectNotFoundException 
+                    | OperationNotPermittedException 
+                    | InvalidArgumentException 
+                    | ApplicationObjectNotFoundException ex) 
+            {
                 results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
                     String.format("Creating interface %s", ifName),
                     ex.getLocalizedMessage()));
             }
         }//the not found things
-        for (BusinessObjectLight foundVirtualPort : foundVirtualPorts)
-            currentVirtualPorts.remove(foundVirtualPort);
-
-        for (BusinessObjectLight foundVMplsTunnel : foundMplsTunnels)
-            currentMplsTunnels.remove(foundVMplsTunnel);
-
-        for (BusinessObjectLight currentVirtualPort : currentVirtualPorts) {
-            if(!currentVirtualPort.getClassName().equals(Constants.CLASS_PORTCHANNEL)){
-                try {
-                    bem.deleteObject(currentVirtualPort.getClassName(), currentVirtualPort.getId(), false);
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                            String.format("Deleting interface %s", currentVirtualPort),
-                            "The interface was deleted because no math was found"));
-                } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException ex) {
-                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                        String.format("Deleting virtual interface %s", currentVirtualPort),
-                        ex.getLocalizedMessage()));
+    }
+    
+    private String createInterface(String parentId
+            , String parentClass, String className
+            , HashMap<String, String >attributes)
+    {
+        try{
+            attributes.put("sync", "synced-" + new Date().getTime()); 
+            String id = bem.createObject(className, parentClass, parentId
+                    , attributes, null);
+            results.add(new SyncResult(dsConfigId
+                    , SyncResult.TYPE_SUCCESS
+                    ,  String.format("Interface %s [%s] created"
+                            , attributes.get(Constants.PROPERTY_NAME)
+                            , Constants.CLASS_ELECTRICALPORT)
+                    ,   "New interface created"));
+            return id;
+        } catch (MetadataObjectNotFoundException 
+                | BusinessObjectNotFoundException 
+                | OperationNotPermittedException 
+                | InvalidArgumentException 
+                | ApplicationObjectNotFoundException ex) 
+        {
+            results.add(new SyncResult(dsConfigId
+                    , SyncResult.TYPE_ERROR
+                    , ex.getLocalizedMessage()
+                    , String.format("Interface no created %s"
+                            , attributes.get("name"))));
+        }
+        return "";
+    }
+    
+    private void kuwaibaServices(){
+        try{
+            List<Pool> serviceRoot = bem.getRootPools(Constants.CLASS_GENERICCUSTOMER, 2, false);
+            for(Pool customerPool: serviceRoot){
+                //TelecoOperators
+                List<BusinessObjectLight> poolItems = bem.getPoolItems(customerPool.getId(), -1);
+                for(BusinessObjectLight telecoOperator : poolItems){
+                    List<Pool> poolsInObject = bem.getPoolsInObject(telecoOperator.getClassName(), telecoOperator.getId(), "GenericService");
+                    //Service Pool
+                    for(Pool servicePool : poolsInObject){
+                        List<BusinessObjectLight> actualServices = bem.getPoolItems(servicePool.getId(), -1);
+                        actualServices.forEach((actualService) -> {
+                            kuwaibaServices.add(actualService);
+                        });
+                    }
                 }
             }
+        }catch(ApplicationObjectNotFoundException
+                | BusinessObjectNotFoundException
+                | InvalidArgumentException ex)
+        {
+            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                    , ex.getLocalizedMessage()
+                    , "interface: %s, not related with service: %s"));
         }
-
-        for (BusinessObjectLight currentMplesTunnel : currentMplsTunnels) {
-            try {
-                bem.deleteObject(currentMplesTunnel.getClassName(), currentMplesTunnel.getId(), false);
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                        String.format("Deleting interface %s", currentMplesTunnel),
-                        "The interface was deleted because no math was found"));
-            } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | OperationNotPermittedException | InvalidArgumentException ex) {
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                    String.format("Deleting virtual interface %s", currentMplesTunnel),
-                    ex.getLocalizedMessage()));
-            }
-        }
-    
     }
     
     /**
@@ -1747,56 +1426,71 @@ public class EntPhysicalSynchronizer {
      * @throws InvalidArgumentException
      * @throws OperationNotPermittedException 
      */
-    private void checkServices(String serviceName, String portName, String portId, String portClassName) {
+    private void relateService(String serviceName, String portName
+            , String portId, String portClassName) 
+    {
        try{
-            List<BusinessObjectLight> servicesCreatedInKuwaiba = new ArrayList<>();
-            //We get the services created in kuwaiba
-            List<Pool> serviceRoot = bem.getRootPools(Constants.CLASS_GENERICCUSTOMER, 2, false);
-            for(Pool customerPool: serviceRoot){
-                //TelecoOperators
-                List<BusinessObjectLight> poolItems = bem.getPoolItems(customerPool.getId(), -1);
-                for(BusinessObjectLight telecoOperator : poolItems){
-                    List<Pool> poolsInObject = bem.getPoolsInObject(telecoOperator.getClassName(), telecoOperator.getId(), "GenericService");
-                    //Service Pool
-                    for(Pool servicePool : poolsInObject){
-                        List<BusinessObjectLight> actualServices = bem.getPoolItems(servicePool.getId(), -1);
-                        actualServices.forEach((actualService) -> {
-                            servicesCreatedInKuwaiba.add(actualService);
-                        });
-                    }
-                }
-            } //Now we check the resources with the given serviceName or ifAlias
+            //Now we check the resources with the given serviceName or ifAlias
             boolean related = false;
-            for(BusinessObjectLight currentService : servicesCreatedInKuwaiba){
-                //The service is al ready created in kuwaiba
-                if(serviceName.equals(currentService.getName())){
-                    List<BusinessObjectLight> serviceResources = bem.getSpecialAttribute(currentService.getClassName(), currentService.getId(), "uses");
-                    for (BusinessObjectLight resource : serviceResources) {
-                        if(resource.getId() != null && portId != null && resource.getId().equals(portId)){ //The port is already a resource of the service
-                            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_INFORMATION, 
-                            String.format("Interface %s [%s] and service %s", portName, portClassName, currentService.getName()),
-                            "Are already related")); 
+            if(kuwaibaServices.isEmpty())
+                kuwaibaServices();
+                
+            if(!serviceName.isEmpty()){
+                for(BusinessObjectLight currentService : kuwaibaServices){
+                    //The service is al ready created in kuwaiba
+                    if(serviceName.equals(currentService.getName()))
+                    {
+                        List<BusinessObjectLight> serviceResources = 
+                                bem.getSpecialAttribute(currentService.getClassName()
+                                        , currentService.getId()
+                                        , "uses");
+                        for (BusinessObjectLight resource : serviceResources) {
+                            if(resource.getId() != null 
+                                    && portId != null 
+                                    && resource.getId().equals(portId))
+                            { //The port is already a resource of the service
+                                results.add(new SyncResult(dsConfigId
+                                        , SyncResult.TYPE_INFORMATION
+                                        , String.format(" %s [%s] related with service %s"
+                                                , portName
+                                                , portClassName
+                                                , currentService.getName())
+                                        , "already related")); 
+                                related = true;
+                                break;
+                            } 
+                        }
+                        if(!related){
+                            bem.createSpecialRelationship(currentService.getClassName()
+                                    , currentService.getId(), portClassName
+                                    , portId, "uses", true);
                             related = true;
-                            break;
-                        } 
-                    }
-                    if(!related){
-                        bem.createSpecialRelationship(currentService.getClassName(), currentService.getId(), portClassName, portId, "uses", true);
-                        related = true;
-                        results.add(new SyncResult(dsConfigId, SyncResult.TYPE_SUCCESS, 
-                               String.format("Interface %s [%s] and service %s", portName, portClassName, currentService.getName()),
-                                "were related successfully"));
+                            results.add(new SyncResult(dsConfigId
+                                    , SyncResult.TYPE_SUCCESS
+                                    , String.format(" %s [%s] related to %s"
+                                           , portName
+                                           , portClassName
+                                           , currentService.getName())
+                                    , "service related"));
+                        }
                     }
                 }
+                if(!related)
+                    results.add(new SyncResult(dsConfigId, SyncResult.TYPE_WARNING
+                            , String.format("interface: %s not related with service: %s"
+                                    , portName
+                                    , serviceName)
+                            , "service not found"));
             }
-            if(!related)
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_WARNING, 
-                        "Searching service", String.format("The service: %s Not found, the interface: %s will not be related", serviceName, portName)));
-            
-        } catch (BusinessObjectNotFoundException | MetadataObjectNotFoundException | OperationNotPermittedException | ApplicationObjectNotFoundException | InvalidArgumentException ex) {
-                results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR, 
-                        String.format("Serching service %s, related with interface: %s ", serviceName, portName),
-                        String.format("due to: %s ", ex.getLocalizedMessage())));
+        } catch (BusinessObjectNotFoundException 
+                | MetadataObjectNotFoundException 
+                | OperationNotPermittedException 
+                | InvalidArgumentException ex) 
+        {
+            results.add(new SyncResult(dsConfigId, SyncResult.TYPE_ERROR
+                    , ex.getLocalizedMessage()
+                    , String.format("interface: %s, not related with service: %s"
+                            , portName, serviceName)));
         }
     }
         
@@ -1808,32 +1502,40 @@ public class EntPhysicalSynchronizer {
      * @param type 1 port, 2 virtual port, 3 MPLSTunnel, 4 bdi, 5 VLAN
      * @return the object, null doesn't exists in the current structure
      */
-    private BusinessObjectLight searchInCurrentStructure(String interfaceName, int type){
-        switch(type){
-            case 1:
-                for(BusinessObjectLight currentPort: currentPorts){
-                    if(currentPort.getName().equals(interfaceName))
-                        return currentPort;
-                }
-                break;
-            case 2:
-                for(BusinessObjectLight currentVirtualPort: currentVirtualPorts){
-                    if(currentVirtualPort.getName().equals(interfaceName))
-                        return currentVirtualPort;
-                }
-                break;
-            case 3:
-                for(BusinessObjectLight currentMPLSTunnel: currentMplsTunnels){
-                    if(currentMPLSTunnel.getName().equals(interfaceName))
-                        return currentMPLSTunnel;
-                }
-                break;
-            case 4:
-                for(BusinessObjectLight currentVirtualPort: currentServiceInstances){
-                    if(currentVirtualPort.getName().equals(interfaceName))
-                        return currentVirtualPort;
-                }
-                break;
+    private BusinessObject searchInterfaceBySnmpName(
+            List<BusinessObject> interfaces, String interfaceName)
+    {
+        for(BusinessObject currentPort: interfaces){
+            if(currentPort.getAttributes().get("syncSnmpName") != null
+                    && currentPort.getAttributes().get("syncSnmpName")
+                    .equals(interfaceName))
+                return currentPort;
+            else if(currentPort.getAttributes().get("syncSnmpIfName") != null 
+                    && currentPort.getAttributes().get("syncSnmpIfName")
+                    .equals(interfaceName))
+                return currentPort;
+            else if(currentPort.getName().equals(SyncUtil.normalizePortName(interfaceName)))
+                return currentPort;
+        }
+        return null;
+    }
+    
+    private BusinessObject searchTransceiverBySnmpName(
+            List<BusinessObject> transceiver, String interfaceName)
+    {
+        for(BusinessObject currentTransceiver: transceiver){
+            if(currentTransceiver.getAttributes().get("syncSnmpName") != null
+                    && currentTransceiver.getAttributes().get("syncSnmpName")
+                    .equals(interfaceName))
+                return currentTransceiver;
+            else if(currentTransceiver.getAttributes().get("syncSnmpIfName") != null 
+                    && currentTransceiver.getAttributes().get("syncSnmpIfName")
+                    .equals(interfaceName))
+                return currentTransceiver;
+            else if(currentTransceiver.getName().equalsIgnoreCase(interfaceName))
+                return currentTransceiver;
+            else if(currentTransceiver.getName().equals(SyncUtil.normalizePortName(interfaceName)))
+                return currentTransceiver;
         }
         return null;
     }

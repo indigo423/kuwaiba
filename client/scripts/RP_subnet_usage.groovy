@@ -45,29 +45,39 @@ def subnet = bem.getObject(objectClassName, objectId);
 def subnetChildren = bem.getObjectSpecialChildren(objectClassName, objectId);
 
 def subnetAttributes = subnet.getAttributes();
-def hosts = Integer.parseInt(subnetAttributes.get("hosts"));
+def hosts = Integer.parseInt(subnetAttributes.get("hosts")) + 2;
 def usedIps = 0;
 
 def ips = [];
 def subnets = [];
 
+subnetChildren.each {subnetChild ->
+    if (subnetChild.getClassName() == Constants.CLASS_IP_ADDRESS) {
+        ips.add(subnetChild);
+    }
+    if (subnetChild.getClassName() == Constants.CLASS_SUBNET_IPV4 || subnetChild.getClassName() == Constants.CLASS_SUBNET_IPV6) {
+        subnets.add(subnetChild);
+    }
+}
+
 ips.each {ip -> 
     def ipDevices = bem.getSpecialAttribute(Constants.CLASS_IP_ADDRESS, ip.getId(), IPAMModule.RELATIONSHIP_IPAMHASADDRESS);
-    
-    if (ipDevices.size() > isEmpty())
+    print "ip: " + ip + " ipDevices"
+    if (ipDevices != null && ipDevices.size() > 0){
         usedIps++;
+    }
 }
+
 // There are no hosts but the
 // gateway and the broadcast
 // are in use
 if (hosts == 0 && usedIps == 0) {
     usedIps = ips.size();
     
-    if (usedIps > hosts) {
-        hosts += 2;
-    }
+   // if (usedIps > hosts) {
+    //    hosts += 2;
+   // }
 }
-
 
 int freeIps = hosts - usedIps;
 
@@ -115,24 +125,17 @@ if (subnet == null) {
 
     tblSubnets.getRows().add(new HTMLRow([columnLabelIP, columnIP, columnChart] as HTMLColumn[]));
 
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Broadcast IP Address"), new HTMLColumn("<b>" + subnetAttributes.get("broadcastIp") + "</b>")] as HTMLColumn[]));
+    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Broadcast IP Address"), new HTMLColumn(subnetAttributes.get("broadcastIp"))] as HTMLColumn[]));
     tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Description"), new HTMLColumn(subnetAttributes.get("description") == null ? "" : subnetAttributes.get("description"))] as HTMLColumn[]));
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Number of hosts"), new HTMLColumn(hosts)] as HTMLColumn[]));
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "IP addresses assigned to an interface"), new HTMLColumn("<b>" + (usedIps*100)/hosts + "%</b> (" + usedIps + ")")] as HTMLColumn[]));
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Free IPs"), new HTMLColumn("<b>" + (freeIps*100)/hosts + "%</b> (" + freeIps + ")")] as HTMLColumn[]));
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "VLAN"), new HTMLColumn(vlan)] as HTMLColumn[]));
-    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "VRF"), new HTMLColumn(vrf)] as HTMLColumn[]));
+    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Number of hosts(Network and Broadcast IP address are inlcuded)"), new HTMLColumn(hosts)] as HTMLColumn[]));
+    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "IP addresses assigned to an interface"), new HTMLColumn((usedIps*100)/hosts + "%(" + usedIps + ")")] as HTMLColumn[]));
+    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Free IPs"), new HTMLColumn((freeIps*100)/hosts + "%(" + freeIps + ")")] as HTMLColumn[]));
+//    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "VLAN"), new HTMLColumn(vlan)] as HTMLColumn[]));
+//    tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "VRF"), new HTMLColumn(vrf)] as HTMLColumn[]));
     tblSubnets.getRows().add(new HTMLRow([new HTMLColumn("", "generalInfoLabel", "Service"), new HTMLColumn(service)] as HTMLColumn[]));
     report.getComponents().add(tblSubnets);
 }
-subnetChildren.each { subnetChild ->
-    if (subnetChild.getClassName() == Constants.CLASS_IP_ADDRESS) {
-        ips.add(subnetChild);
-    }
-    if (subnetChild.getClassName() == Constants.CLASS_SUBNET_IPV4 || subnetChild.getClassName() == Constants.CLASS_SUBNET_IPV6) {
-        subnets.add(subnetChild);
-    }
-}
+
 // i is an index to define if a row are even or odd
 def i = 0;
 // Table for Subnets
@@ -188,6 +191,8 @@ if (ips.isEmpty()) {
         def ipAddress = new HTMLColumn(ip.getName());
         def ipDescription = new HTMLColumn(attributes.get("description") ==  null ? "N/A" : attributes.get("description"));
         def ipPort = new HTMLColumn(theInterface);
+        if(device == null)
+            device = "Not a Generic Communications Element";
         def ipLocation = new HTMLColumn(device);
         def ipService = new HTMLColumn(service);
 

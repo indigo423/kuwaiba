@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlType;
     "attributes"
 })
 @XmlSeeAlso({
+    RemoteInventoryProxy.class,
     RemoteContact.class
 })
 public class RemoteObject

@@ -62,7 +62,9 @@ public class SyncResult {
    
     public SyncResult() { }
 
-    public SyncResult(long dataSourceId, int type, String actionDescription, String result) {
+    public SyncResult(long dataSourceId, int type, String actionDescription
+            , String result) 
+    {
         this.dataSourceId = dataSourceId;
         this.type = type;
         this.actionDescription = actionDescription;

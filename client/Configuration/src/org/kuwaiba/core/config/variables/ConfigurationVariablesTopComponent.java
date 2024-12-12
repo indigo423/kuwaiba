@@ -37,7 +37,7 @@ import org.openide.util.NbBundle.Messages;
 @TopComponent.Description(
         preferredID = "ConfigurationVariablesTopComponent",
         iconBase="org/kuwaiba/core/config/res/variables.png", 
-        persistenceType = TopComponent.PERSISTENCE_ALWAYS
+        persistenceType = TopComponent.PERSISTENCE_NEVER
 )
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Window", id = "org.kuwaiba.core.config.variables.ConfigurationVariablesTopComponent")

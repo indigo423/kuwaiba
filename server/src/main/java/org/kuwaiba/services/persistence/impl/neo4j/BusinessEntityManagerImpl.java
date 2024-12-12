@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -769,7 +770,20 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                 case "Timestamp": //NOI18N
                     return new Date(Long.valueOf(theObject.getAttributes().get(attributeName))).toString();
                 default: //It's (or at least should be) a list type
-                    return aem.getListTypeItem(theAttribute.getType(), theObject.getAttributes().get(attributeName)).getName();
+                    if (theAttribute.isMultiple()) {
+                        String attributeValues = theObject.getAttributes().get(attributeName);
+                        String[] attrValues = attributeValues.split(";");
+                        StringBuilder stringBuilder = new StringBuilder();
+                        for (int i = 0; i < attrValues.length; i++) {
+                            stringBuilder.append(aem.getListTypeItem(theAttribute.getType(), attrValues[i]).getName());
+                            if (i == attrValues.length - 1)
+                                break;
+                            stringBuilder.append(";");
+                        }
+                        return stringBuilder.toString();
+                    } else {
+                        return aem.getListTypeItem(theAttribute.getType(), theObject.getAttributes().get(attributeName)).getName();
+                    }
             }
         }
     }
@@ -800,7 +814,20 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                         res.put(attributeName, new Date(Long.valueOf(theObject.getAttributes().get(attributeName))).toString());
                         break;
                     default: //It's (or at least should be) a list type
-                        res.put(attributeName, aem.getListTypeItem(theAttribute.getType(), theObject.getAttributes().get(attributeName)).getName());
+                        if (theAttribute.isMultiple()) {
+                            String attributeValues = theObject.getAttributes().get(attributeName);
+                            String[] attrValues = attributeValues.split(";");
+                            StringBuilder stringBuilder = new StringBuilder();
+                            for (int i = 0; i < attrValues.length; i++) {
+                                stringBuilder.append(aem.getListTypeItem(theAttribute.getType(), attrValues[i]).getName());
+                                if (i == attrValues.length - 1)
+                                    break;
+                                stringBuilder.append(";");
+                            }
+                            res.put(attributeName, stringBuilder.toString());
+                        } else {
+                            res.put(attributeName, aem.getListTypeItem(theAttribute.getType(), theObject.getAttributes().get(attributeName)).getName());
+                        }
                 }
             }
         }
@@ -825,6 +852,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                 return null;
             
             Node commonParent = (Node)queryResult.next().get("parentNode");
+            tx.success();
             if (Constants.DUMMY_ROOT.equals(commonParent.getProperty(Constants.PROPERTY_NAME)))
                 return new BusinessObjectLight(Constants.DUMMY_ROOT, "", Constants.DUMMY_ROOT);
             else
@@ -844,10 +872,14 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                 Node parentNode = objectNode.getSingleRelationship(RelTypes.CHILD_OF, Direction.OUTGOING).getEndNode();
 
                 //If the direct parent is DummyRoot, return a dummy RemoteBusinessObject with oid = -1
-                if (parentNode.hasProperty(Constants.PROPERTY_NAME) && Constants.NODE_DUMMYROOT.equals(parentNode.getProperty(Constants.PROPERTY_NAME)) )
+                if (parentNode.hasProperty(Constants.PROPERTY_NAME) && Constants.NODE_DUMMYROOT.equals(parentNode.getProperty(Constants.PROPERTY_NAME)) ){
+                    tx.success();
                     return new BusinessObject(Constants.NODE_DUMMYROOT, "-1", Constants.NODE_DUMMYROOT);
-                else    
-                    return createObjectLightFromNode(parentNode);
+                }
+                else {
+                     tx.success();
+                     return createObjectLightFromNode(parentNode);
+                }   
             }
             if (objectNode.hasRelationship(Direction.OUTGOING, RelTypes.CHILD_OF_SPECIAL)){
                 Node parentNode = objectNode.getSingleRelationship(RelTypes.CHILD_OF_SPECIAL, Direction.OUTGOING).getEndNode();
@@ -1675,6 +1707,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
         try (Transaction tx = graphDb.beginTx()) {
             getChildrenOfClassRecursive(parentOid, parentClass, classToFilter, maxResults, res);
             Collections.sort(res);
+            tx.success();
             return res;
         }
     }
@@ -2144,33 +2177,88 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
         List<BusinessObjectLight> path = new ArrayList<>();
         //If the port is a logical port (virtual port, Pseudowire or service instance, we look for the first physical parent port)
         String logicalPortId = null;
-        //This is to ensure that only works with virtual ports when are direct child of a physical port
-        //it won't work with pseudowires or loopbacks or any logical ports if is direct child of the device 
         if(mem.isSubclassOf(Constants.CLASS_GENERICLOGICALPORT, objectClass)){
-            logicalPortId = objectId; 
-            BusinessObjectLight firstPhysicalParentPort = getFirstParentOfClass(objectClass, objectId, Constants.CLASS_GENERICPHYSICALPORT);
-            objectId = firstPhysicalParentPort != null ? firstPhysicalParentPort.getId() : null;
+            logicalPortId = objectId;
+            if(objectClass.equals("Pseudowire"))
+                objectId = getFirstParentOfClass(objectClass, objectId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT).getId();
+            else{    
+                BusinessObjectLight firstPhysicalParentPort = getFirstParentOfClass(objectClass, objectId, Constants.CLASS_GENERICPHYSICALPORT);
+                objectId = firstPhysicalParentPort.getId();
+            }
         }
-        if(objectId != null){
-            //The first part of the query will return many paths, the longest is the one we need. The others are
-            //subsets of the longest
-            String cypherQuery = "MATCH paths = (o)-[r:" + RelTypes.RELATED_TO_SPECIAL + "*]-(c) "+
-                                 "WHERE o._uuid = '" + objectId + "' AND all(rel in r where rel.name = 'mirror' or rel.name = 'endpointA' or rel.name = 'endpointB') "+
-                                 "WITH nodes(paths) as path " +
-                                 "RETURN path ORDER BY length(path) DESC LIMIT 1";
-            try (Transaction tx = graphDb.beginTx()){
-                if(logicalPortId != null) //if was launch from a virtual port we should add thar port.
-                    path.add(createObjectLightFromNode(graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, logicalPortId)));
-                Result result = graphDb.execute(cypherQuery);
-                Iterator<List<Node>> column = result.columnAs("path");
-
-                for (List<Node> listOfNodes : Iterators.asIterable(column)) {
-                    for(Node node : listOfNodes)
-                        path.add(createObjectLightFromNode(node));
-                }
+        //The first part of the query will return many paths, the longest is the one we need. The others are
+        //subsets of the longest
+        String cypherQuery = "MATCH paths = (o)-[r:" + RelTypes.RELATED_TO_SPECIAL + "*]-(c) "+
+                             "WHERE o._uuid = '" + objectId + "' AND all(rel in r where rel.name IN ['mirror','mirrorMultiple'] or rel.name = 'endpointA' or rel.name = 'endpointB') "+
+                             "WITH nodes(paths) as path " +
+                             "RETURN path ORDER BY length(path) DESC LIMIT 1";
+        try (Transaction tx = graphDb.beginTx()){
+            if(logicalPortId != null)
+                path.add(createObjectLightFromNode(graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, logicalPortId)));
+            Result result = graphDb.execute(cypherQuery);
+            Iterator<List<Node>> column = result.columnAs("path");
+            
+            for (List<Node> listOfNodes : Iterators.asIterable(column)) {
+                for(Node node : listOfNodes)
+                    path.add(createObjectLightFromNode(node));
             }
         }
         return path;
+    }
+    
+    @Override
+    public HashMap<BusinessObjectLight, List<BusinessObjectLight>> getPhysicalTree(String objectClass, String objectId) 
+        throws BusinessObjectNotFoundException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
+        HashMap<BusinessObjectLight, List<BusinessObjectLight>> tree = new LinkedHashMap();
+        // If the port is a logical port (virtual port, Pseudowire or service instance, we look for the first physical parent port)
+        String logicalPortId = null;
+        if (mem.isSubclassOf(Constants.CLASS_GENERICLOGICALPORT, objectClass)) {
+            logicalPortId = objectId;
+            if (objectClass.equals("Pseudowire")) {
+                BusinessObjectLight object = getFirstParentOfClass(objectClass, objectId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT);
+                objectId = object.getId();
+            } else {
+                BusinessObjectLight firstPhysicalParentPort = getFirstParentOfClass(objectClass, objectId, Constants.CLASS_GENERICPHYSICALPORT);
+                objectId = firstPhysicalParentPort.getId();
+            }
+        }
+        try (Transaction tx = graphDb.beginTx()) {
+            //The first part of the query will return many paths, that we build as a tree
+            StringBuilder queryBuilder = new StringBuilder();
+            queryBuilder.append("MATCH paths = (o)-[r:" + RelTypes.RELATED_TO_SPECIAL + "*]-(c) ");
+            queryBuilder.append("WHERE o._uuid = '" + objectId + "' AND all(rel in r where rel.name IN ['mirror','mirrorMultiple'] or rel.name = 'endpointA' or rel.name = 'endpointB') ");
+            queryBuilder.append("WITH nodes(paths) as path ");
+            queryBuilder.append("RETURN path ORDER BY length(path) DESC");
+
+            BusinessObjectLight logicalPort = null;
+            if (logicalPortId != null) {
+                logicalPort = createObjectLightFromNode(graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, logicalPortId));
+                tree.put(logicalPort, new ArrayList());
+            }
+            Result result = graphDb.execute(queryBuilder.toString());
+            Iterator<List<Node>> column = result.columnAs("path"); //NOI18N
+
+            for (List<Node> listOfNodes : Iterators.asIterable(column)) {
+                for (int i = 0; i < listOfNodes.size(); i++) {
+                    BusinessObjectLight object = createObjectLightFromNode(listOfNodes.get(i));
+
+                    if (!tree.containsKey(object))
+                        tree.put(object, new ArrayList());
+
+                    if (logicalPort != null && i == 0)
+                        tree.get(logicalPort).add(object);
+
+                    if (i < listOfNodes.size() - 1) {
+                        BusinessObjectLight nextObject = createObjectLightFromNode(listOfNodes.get(i + 1));
+
+                        if (!tree.get(object).contains(nextObject))
+                            tree.get(object).add(nextObject);
+                    }
+                }
+            }
+            tx.success();
+        }
+        return tree;
     }
     
     @Override
@@ -2715,7 +2803,6 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                     }
                 }
             }
-            tx.success();
             return pools;
         }
     }
@@ -3023,11 +3110,30 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
                             if (attributes.get(attributeName).isEmpty())
                                 throw new InvalidArgumentException(String.format("The attribute %s is mandatory, it can not be null or empty", attributeName));
                         }
-                        if (classMetadata.getAttribute(attributeName).isUnique()){
-                            if(isObjectAttributeUnique(classMetadata.getName(), attributeName, attributes.get(attributeName)))
-                                instance.setProperty(attributeName,Util.getRealValue(attributes.get(attributeName), classMetadata.getType(attributeName)));
+                        if (classMetadata.getAttribute(attributeName).isUnique()) {
+                            //
+                            BusinessObject businessObject = createObjectFromNode(instance);
+                            boolean updateUniqueAttrCache = false;
+                            if (businessObject.getAttributes().containsKey(attributeName) && 
+                                businessObject.getAttributes().get(attributeName) != null) {
+                                updateUniqueAttrCache = true;
+                            }
+                            if (updateUniqueAttrCache && 
+                                !businessObject.getAttributes().get(attributeName).equals(attributes.get(attributeName))) {
+                                updateUniqueAttrCache = true;
+                            }
                             else
-                                throw new InvalidArgumentException(String.format("The attribute \"%s\" is unique and the value you are trying to set is already in use", attributeName));
+                                updateUniqueAttrCache = false;
+                            if (businessObject.getAttributes().get(attributeName) == null)
+                                updateUniqueAttrCache = true;
+                            //
+                            if (updateUniqueAttrCache) {
+                                if(isObjectAttributeUnique(classMetadata.getName(), attributeName, attributes.get(attributeName))) {
+                                    instance.setProperty(attributeName,Util.getRealValue(attributes.get(attributeName), classMetadata.getType(attributeName)));
+                                    CacheManager.getInstance().removeUniqueAttributeValue(businessObject.getClassName(), attributeName, businessObject.getAttributes().get(attributeName));
+                                } else
+                                    throw new InvalidArgumentException(String.format("The attribute \"%s\" is unique and the value you are trying to set is already in use", classMetadata.getAttribute(attributeName).getDisplayName() != null ? classMetadata.getAttribute(attributeName).getDisplayName() : attributeName));
+                            }
                         }
                         else
                             instance.setProperty(attributeName,Util.getRealValue(attributes.get(attributeName), classMetadata.getType(attributeName)));
@@ -3087,19 +3193,37 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
      * @return The cloned node
      */
     private Node copyObject(Node templateObject, boolean recursive) {
-        
         Node newInstance = graphDb.createNode(inventoryObjectLabel);
-        for (String property : templateObject.getPropertyKeys())
-            newInstance.setProperty(property, templateObject.getProperty(property));
-        for (Relationship rel : templateObject.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING))
-            newInstance.createRelationshipTo(rel.getEndNode(), RelTypes.RELATED_TO).setProperty(Constants.PROPERTY_NAME, rel.getProperty(Constants.PROPERTY_NAME));
+         // Make sure the object has a name, even if it's marked as no copy. Remember that all inventory object nodes 
+         //must at least have the properties name, creationDate and _uuid. The latter are also set below too.
+        newInstance.setProperty(Constants.PROPERTY_NAME, "");
+        
+        // Let's find out what attributes should not be copied because they're either marked as unique or noCopy
+        ClassMetadata classMetadata = CacheManager.getInstance().
+                getClass((String)templateObject.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING)
+                        .getEndNode()
+                        .getProperty(Constants.PROPERTY_NAME));
+        
+        // First copy normal attributes
+        for (String property : templateObject.getPropertyKeys()) {
+            AttributeMetadata currentAttribute = classMetadata.getAttribute(property);
+            if (currentAttribute != null && !currentAttribute.isUnique() && !currentAttribute.isNoCopy())
+                newInstance.setProperty(property, templateObject.getProperty(property));
+        }
+        
+        // Then list types
+        for (Relationship rel : templateObject.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING)) {
+            AttributeMetadata currentAttribute = classMetadata.getAttribute((String)rel.getProperty(Constants.PROPERTY_NAME));
+            if (currentAttribute != null && !currentAttribute.isNoCopy()) // We don't check for uniqueness, because list types can not be set as unique
+                newInstance.createRelationshipTo(rel.getEndNode(), RelTypes.RELATED_TO).setProperty(Constants.PROPERTY_NAME, rel.getProperty(Constants.PROPERTY_NAME));
+        }
         
         newInstance.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
         newInstance.setProperty(Constants.PROPERTY_UUID, UUID.randomUUID().toString());
         
         newInstance.createRelationshipTo(templateObject.getRelationships(RelTypes.INSTANCE_OF).iterator().next().getEndNode(), RelTypes.INSTANCE_OF);
 
-        if (recursive){
+        if (recursive) {
             for (Relationship rel : templateObject.getRelationships(RelTypes.CHILD_OF, Direction.INCOMING)){
                 Node newChild = copyObject(rel.getStartNode(), true);
                 newChild.createRelationshipTo(newInstance, RelTypes.CHILD_OF);
@@ -3434,7 +3558,7 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
      * @param instance The object as a Node instance.
      * @param classMetadata The class metadata to map the node's properties into a RemoteBussinessObject.
      * @return The business object.
-     * @throws InvalidArgumentException If an attribute value can't be mapped into value.
+     * @throws InvalidArgumentException If an attribute value can't be mapped into an object value.
      */
     private BusinessObject createObjectFromNode(Node instance, ClassMetadata classMetadata) throws InvalidArgumentException {
         
@@ -3536,11 +3660,19 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
             attachmentNode.delete();
         }
         
+        //Now the SyncsDataSourceConfiguration Related to the object
+        for (Relationship rel : instance.getRelationships(RelTypes.HAS_CONFIGURATION)){
+            Node endNode = rel.getEndNode();
+            for (Relationship relds : endNode.getRelationships())
+                relds.delete();
+            endNode.delete();
+        }
+        
         //Remove the remaining relationships without deleting the other end of the relationship, 
         //because we don't know what's there (a list type, another element of the model that should not be delete along, etc)
         for (Relationship rel : instance.getRelationships())
             rel.delete();
-
+        
         instance.delete();
     }
     
@@ -3552,4 +3684,94 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager {
     private boolean canDeleteObject(Node instance) {
         return !instance.hasRelationship(RelTypes.RELATED_TO_SPECIAL, RelTypes.HAS_PROCESS_INSTANCE);        
     }
+    
+    //<editor-fold desc="Kuwaiba 2.1" defaultstate="collapsed">
+    @Override
+    public long getObjectChildrenCount(String className, String oid) throws InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            if (className == null)
+                throw new InvalidArgumentException("The className cannot be null");
+                        
+            HashMap<String, Object> parameters = new HashMap();
+            StringBuilder queryBuilder = new StringBuilder();
+            final String COUNT = "count"; //NOI18N
+                                    
+            if (oid == null) {
+                queryBuilder.append("MATCH (dummyRoot:root:specialNodes)"); //NOI18N
+                queryBuilder.append("<-[:CHILD_OF]-"); //NOI18N
+                queryBuilder.append("(childNode:inventoryObjects)\n"); //NOI18N
+                queryBuilder.append("WHERE dummyRoot.name = $name\n"); //NOI18N
+                queryBuilder.append(String.format("RETURN count(childNode) AS %s;", COUNT)); //NOI18N
+                
+                parameters.put("name", Constants.DUMMY_ROOT); //NOI18N
+            } else {
+                queryBuilder.append("MATCH (classNode:classes)"); //NOI18N
+                queryBuilder.append("<-[:INSTANCE_OF]-"); //NOI18N
+                queryBuilder.append("(parentNode:inventoryObjects)"); //NOI18N
+                queryBuilder.append("<-[:CHILD_OF]-"); //NOI18N
+                queryBuilder.append("(childNode:inventoryObjects)\n"); //NOI18N
+                queryBuilder.append("WHERE classNode.name = $className\n"); //NOI18N
+                queryBuilder.append("AND parentNode._uuid = $oid\n"); //NOI18N
+                queryBuilder.append(String.format("RETURN count(childNode) AS %s;", COUNT)); //NOI18N
+                
+                parameters.put("className", className); //NOI18N
+                parameters.put("oid", oid); //NOI18N
+            }
+            Result result = graphDb.execute(queryBuilder.toString(), parameters);
+            while (result.hasNext()) {
+                tx.success();
+                return (long) result.next().get(COUNT);
+            }
+            tx.success();
+            return 0;
+        }
+    }
+    @Override
+    public List<BusinessObjectLight> getObjectChildren(String className, String oid, long skip, long limit) throws InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            if (className == null)
+                throw new InvalidArgumentException("The className cannot be null");
+            if (skip < 0)
+                throw new InvalidArgumentException("The skip cannot be less than 0");
+            if (limit < 0)
+                throw new InvalidArgumentException("The limit cannot be less than 0");
+                        
+            HashMap<String, Object> parameters = new HashMap();
+            StringBuilder queryBuilder = new StringBuilder();
+            final String CHILD_NODE = "childNode"; //NOI18N
+                                    
+            if (oid == null) {
+                queryBuilder.append("MATCH (dummyRoot:root:specialNodes)"); //NOI18N
+                queryBuilder.append("<-[:CHILD_OF]-"); //NOI18N
+                queryBuilder.append("(childNode:inventoryObjects)\n"); //NOI18N
+                queryBuilder.append("WHERE dummyRoot.name = $name\n"); //NOI18N
+                queryBuilder.append(String.format("RETURN childNode AS %s\n", CHILD_NODE)); //NOI18N
+                queryBuilder.append("ORDER BY childNode.name ASC SKIP $skip LIMIT $limit;"); //NOI18N
+                
+                parameters.put("name", Constants.DUMMY_ROOT); //NOI18N
+            } else {
+                queryBuilder.append("MATCH (classNode:classes)"); //NOI18N
+                queryBuilder.append("<-[:INSTANCE_OF]-"); //NOI18N
+                queryBuilder.append("(parentNode:inventoryObjects)"); //NOI18N
+                queryBuilder.append("<-[:CHILD_OF]-"); //NOI18N
+                queryBuilder.append("(childNode:inventoryObjects)\n"); //NOI18N
+                queryBuilder.append("WHERE classNode.name = $className\n"); //NOI18N
+                queryBuilder.append("AND parentNode._uuid = $oid\n"); //NOI18N
+                queryBuilder.append(String.format("RETURN childNode AS %s\n", CHILD_NODE)); //NOI18N
+                queryBuilder.append("ORDER BY childNode.name ASC SKIP $skip LIMIT $limit;"); //NOI18N
+                
+                parameters.put("className", className); //NOI18N
+                parameters.put("oid", oid); //NOI18N
+            }
+            parameters.put("skip", skip); //NOI18N
+            parameters.put("limit", limit); //NOI18N
+            Result result = graphDb.execute(queryBuilder.toString(), parameters);
+            List<BusinessObjectLight> objectChildren = new ArrayList();
+            while (result.hasNext())
+                objectChildren.add(createObjectLightFromNode((Node) result.next().get(CHILD_NODE)));
+            tx.success();
+            return objectChildren;
+        }
+    }
+    //</editor-fold>
 }

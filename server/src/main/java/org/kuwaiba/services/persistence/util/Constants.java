@@ -194,9 +194,21 @@ public class Constants {
      */
     public static final String LABEL_VALIDATOR_DEFINITIONS = "validatorDefinitions";
     /**
+     * Proxies.
+     */
+    public static final String LABEL_PROXIES = "proxies";
+    /**
+     * Proxies.
+     */
+    public static final String LABEL_PROXY_POOLS = "proxyPools";
+    /**
      * Label used for file attachments
      */
     public static final String LABEL_ATTACHMENTS = "attachments";
+    /**
+     * Label used for the metadata classes nodes label
+     */
+    public static final String LABEL_SYNCDSCONFIG = "syncDatasourceConfiguration"; //NOI18N
     /**
      * Property "background path" for views
      */
@@ -323,11 +335,15 @@ public class Constants {
      */
     public static final String PROPERTY_MASK = "mask";
     /**
+     * Root of all boards
+     */
+    public static final String CLASS_GENERICBOARD = "GenericBoard"; //NOI18N ID 27
+    /**
      * Root for all business classes
      */
     public static final String CLASS_INVENTORYOBJECT = "InventoryObject"; //NOI18N ID 286
     /**
-     * Root for all business classes
+     * Root for all configuration classes
      */
     public static final String CLASS_CONFIGURATIONITEM = "ConfigurationItem"; //NOI18N ID 286
     /**
@@ -338,6 +354,16 @@ public class Constants {
      * Root for all list types class name
      */
     public static final String CLASS_GENERICOBJECTLIST = "GenericObjectList"; //NOI18N ID 27
+    public static final String CLASS_TRANSCEIVER = "Transceiver";
+    /**
+     * These classes are to keep record of the synchronization
+     */
+    public static final String CLASS_GENERICMODELTYPE = "GenericModelType";
+    public static final String CLASS_BOARDMODELTYPE = "BoardModel";
+    public static final String CLASS_TRANSCEIVERMODELTYPE = "TransceiverModel";
+    public static final String CLASS_PORTMODEL = "PortModel";
+    public static final String CLASS_ROUTERMODEL = "RouterModel";
+    public static final String CLASS_SWITCHMODEL = "SwitchModel";
     /**
      * Root for all classes that can have a view attached
      */
@@ -426,7 +452,10 @@ public class Constants {
      * Class GenericVirtualPort possible children of a physical port
      */
     public static final String CLASS_GENERICVIRTUALPORT = "GenericVirtualPort";
-    
+    /**
+     * Proxies used to integrate Kuwaiba to other platforms.
+     */
+    public static final String CLASS_GENERICPROXY = "GenericProxy";
     /**
      * Class SFPPort 
      */

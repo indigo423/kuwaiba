@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -76,6 +76,10 @@ public class Constants {
      */
     public static final String CLASS_GENERICLOGICALPORT = "GenericLogicalPort";
     /**
+     * Physical port
+     */
+    public static final String CLASS_GENERICPHYSICALPORT = "GenericPhysicalPort";
+    /**
      * Root class to all physical containers (wire, wireless, etc)
      */
     public static final String CLASS_GENERICPHYSICALCONTAINER = "GenericPhysicalContainer";
@@ -99,6 +103,10 @@ public class Constants {
      * Root class of all generic distribution frame (DDF, ODF, etc)
      */
     public static final String CLASS_GENERICDISTRIBUTIONFRAME = "GenericDistributionFrame";
+    /**
+     * Root class of all generic distribution frame (DDF, ODF, etc)
+     */
+    public static final String CLASS_GENERICBOX = "GenericBox";
     /**
      * Root class of all application list type (CustomShape)
      */
@@ -256,6 +264,10 @@ public class Constants {
      * This relationship is used to relate a VLAN with a Subnet
      */
     public static final String RELATIONSHIP_IPAMBELONGSTOVLAN = "ipamBelongsToVlan";
+    /**
+     * This relationship is used to relate a Port with a VLAN
+     */
+    public static final String RELATIONSHIP_PORT_BELONGS_TO_VLAN = "portBelongsToVlan";
     /**
      * This relationship is used to relate a VRF with a Subnet
      */

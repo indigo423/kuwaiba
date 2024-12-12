@@ -19,12 +19,14 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.util.Random;
+import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.visual.actions.CustomAddRemoveControlPointAction;
+import org.inventory.core.visual.actions.CustomMoveControlPointAction;
 import org.inventory.core.visual.scene.AbstractScene;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.action.ConnectProvider;
-import org.netbeans.api.visual.layout.LayoutFactory;
+import org.netbeans.api.visual.anchor.PointShape;
 import org.netbeans.api.visual.router.Router;
 import org.netbeans.api.visual.router.RouterFactory;
 import org.netbeans.api.visual.widget.LayerWidget;
@@ -36,20 +38,35 @@ import org.netbeans.api.visual.widget.Widget;
  */
 public class PhysicalPathScene extends AbstractScene <LocalObjectLight, LocalObjectLight>{
     public static final int X_OFFSET = 50;
+    /**
+     * Default control point move action (shared by all connection widgets)
+     */
+    private final CustomMoveControlPointAction moveControlPointAction =
+            new CustomMoveControlPointAction(this);
+    /**
+     * Default add/remove control point action (shared by all connection widgets)
+     */
+    private final CustomAddRemoveControlPointAction addRemoveControlPointAction =
+            new CustomAddRemoveControlPointAction(this);
     private Router router;
 
     public PhysicalPathScene() {       
         nodeLayer = new LayerWidget(this);
         edgeLayer = new LayerWidget(this);
-        router = RouterFactory.createOrthogonalSearchRouter(nodeLayer);
-        nodeLayer.setLayout(LayoutFactory.createHorizontalFlowLayout(LayoutFactory.SerialAlignment.LEFT_TOP, 50));
+        router = RouterFactory.createFreeRouter(); 
+//        router = RouterFactory.createOrthogonalSearchRouter(nodeLayer);
+//        nodeLayer.setLayout(LayoutFactory.createHorizontalFlowLayout(LayoutFactory.SerialAlignment.LEFT_TOP, 50));
         addChild(nodeLayer);
         addChild(edgeLayer);
     }
     
+    public LayerWidget getNodeLayer() {
+        return nodeLayer;
+    }
+    
     @Override
     protected Widget attachNodeWidget(LocalObjectLight node) {
-        Color randomColor = ObjectBoxWidget.colorPalette[new Random().nextInt(12)];
+        Color randomColor = CommunicationsStub.getInstance().getMetaForClass(node.getClassName(), false).getColor();//ObjectBoxWidget.colorPalette[new Random().nextInt(12)];
         Widget widget = new ObjectBoxWidget(this, node, randomColor);
         widget.getActions().addAction(createSelectAction());
         initSelectionListener();
@@ -63,6 +80,11 @@ public class PhysicalPathScene extends AbstractScene <LocalObjectLight, LocalObj
         SimpleConnectionWidget widget = new SimpleConnectionWidget(this, edge, Color.BLUE);
         widget.getActions().addAction(createSelectAction());
         widget.setStroke(new BasicStroke(1));
+        widget.getActions().addAction(addRemoveControlPointAction);
+        widget.getActions().addAction(moveControlPointAction);
+        widget.setControlPointShape(PointShape.SQUARE_FILLED_BIG);
+        widget.setEndPointShape(PointShape.SQUARE_FILLED_BIG);
+        widget.setRouter(router);
         edgeLayer.addChild(widget);
         return widget;
     }

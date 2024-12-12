@@ -802,6 +802,19 @@ public interface BusinessEntityManager {
         throws MetadataObjectNotFoundException, BusinessObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException;
     
     /**
+     * Gets A tree representation of all physical paths as a hash map.
+     * @param objectClass The source port class
+     * @param objectId The source port id
+     * @return A tree representation of all physical paths as a hash map
+     * @throws BusinessObjectNotFoundException If any of the objects involved in the path cannot be found
+     * @throws MetadataObjectNotFoundException If any of the object classes involved in the path cannot be found
+     * @throws ApplicationObjectNotFoundException If any of the objects involved in the path has a malformed list type attribute
+     * @throws InvalidArgumentException If any of the objects involved in the path has an invalid objectId or className
+     */    
+    public HashMap<BusinessObjectLight, List<BusinessObjectLight>> getPhysicalTree(String objectClass, String objectId) 
+        throws BusinessObjectNotFoundException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException;
+    
+    /**
      * Convenience method that returns the link connected to a port (if any). It serves to avoid calling {@link getSpecialAttribute} two times.
      * @param portClassName The class of the port
      * @param portId The id of the port
@@ -1136,5 +1149,26 @@ public interface BusinessEntityManager {
      */
     public BusinessObjectLight getWarehouseToObject(String objectClassName, String objectId) 
         throws MetadataObjectNotFoundException, BusinessObjectNotFoundException, InvalidArgumentException;
+    //</editor-fold>
+    
+    //<editor-fold desc="Kuwaiba 2.1" defaultstate="collapsed">
+    /**
+     * Get the child count given the parent class name and id.
+     * @param className Parent class name
+     * @param oid Parent id
+     * @return The count of child
+     * @throws InvalidArgumentException If the class name is null
+     */
+    public long getObjectChildrenCount(String className, String oid) throws InvalidArgumentException;
+    /**
+     * Get a set of children to the given the parent class name and id.
+     * @param className Parent class name
+     * @param oid Parent id
+     * @param skip Skip index
+     * @param limit Max count of child
+     * @return Set of children
+     * @throws InvalidArgumentException If the class name is null
+     */
+    public List<BusinessObjectLight> getObjectChildren(String className, String oid, long skip, long limit) throws InvalidArgumentException;
     //</editor-fold>
 }

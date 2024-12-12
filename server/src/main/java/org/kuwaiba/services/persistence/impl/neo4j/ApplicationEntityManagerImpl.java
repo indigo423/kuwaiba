@@ -62,6 +62,7 @@ import org.kuwaiba.apis.persistence.application.ExtendedQuery;
 import org.kuwaiba.apis.persistence.application.FavoritesFolder;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
 import org.kuwaiba.apis.persistence.application.GroupProfileLight;
+import org.kuwaiba.apis.persistence.application.InventoryProxy;
 import org.kuwaiba.apis.persistence.application.Pool;
 import org.kuwaiba.apis.persistence.application.Privilege;
 import org.kuwaiba.apis.persistence.application.ResultRecord;
@@ -116,6 +117,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Iterators;
 import org.openide.util.Exceptions;
+import scala.collection.convert.Wrappers;
 
 /**
  * Application Entity Manager reference implementation
@@ -195,9 +197,21 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
      */
     private Label syncGroupsLabel;
     /**
+     * SyncDataSourceConfig label
+     */
+    private Label syncDatasourceConfigLabel;
+    /**
      * Process Instances Label
      */
     private Label processInstanceLabel;
+    /**
+     * Proxies Label.
+     */
+    private Label proxiesLabel;
+    /**
+     * Proxy Pool Label.
+     */
+    private Label proxyPoolsLabel;
     /**
      * The label that contains the configuration variables pools
      */
@@ -257,9 +271,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         generalViewsLabel = Label.label(Constants.LABEL_GENERAL_VIEWS);
         syncGroupsLabel = Label.label(Constants.LABEL_SYNCGROUPS);
         processInstanceLabel = Label.label(Constants.LABEL_PROCESS_INSTANCE);
+        syncDatasourceConfigLabel = Label.label(Constants.LABEL_SYNCDSCONFIG);
         configurationVariablesPools = Label.label(Constants.LABEL_CONFIG_VARIABLES_POOLS);
         configurationVariables = Label.label(Constants.LABEL_CONFIG_VARIABLES);
         validatorDefinitions = Label.label(Constants.LABEL_VALIDATOR_DEFINITIONS);
+        proxiesLabel = Label.label(Constants.LABEL_PROXIES);
+        proxyPoolsLabel = Label.label(Constants.LABEL_PROXY_POOLS);
         
         try (Transaction tx = graphDb.beginTx()) {
             
@@ -284,10 +301,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         return sessions;
     }
 
-    //TODO add ipAddress, sessionId
     @Override
     public long createUser(String userName, String password, String firstName,
-            String lastName, boolean enabled, int type, List<Privilege> privileges, long defaultGroupId)
+            String lastName, boolean enabled, int type, String email, List<Privilege> privileges, long defaultGroupId)
             throws InvalidArgumentException {
         if (userName == null)
             throw new InvalidArgumentException("User name can not be null");
@@ -304,7 +320,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         if (password.trim().isEmpty())
             throw new InvalidArgumentException("Password can not be an empty string");
         
-        if (type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
+        if (type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && 
+                type != UserProfile.USER_TYPE_SOUTHBOUND && type != UserProfile.USER_TYPE_SYSTEM)
             throw new InvalidArgumentException("Invalid user type");
             
         try(Transaction tx = graphDb.beginTx()) {
@@ -322,6 +339,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             newUserNode.setProperty(UserProfile.PROPERTY_LAST_NAME, lastName == null ? "" : lastName);
             newUserNode.setProperty(UserProfile.PROPERTY_TYPE, type);
             newUserNode.setProperty(Constants.PROPERTY_ENABLED, enabled);
+            newUserNode.setProperty(UserProfile.PROPERTY_EMAIL, email);
             
             Node defaultGroupNode = Util.findNodeByLabelAndId(groupLabel, defaultGroupId);
             
@@ -350,28 +368,33 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
 
     @Override
     public void setUserProperties(long oid, String userName, String password, String firstName,
-            String lastName, int enabled, int type)
+            String lastName, int enabled, int type, String email)
             throws InvalidArgumentException, ApplicationObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) {
             Node userNode = Util.findNodeByLabelAndId(userLabel, oid);
 
             if(userNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s", oid));
+            
+            // Note that once a system user is created, it can only be deleted or modified by accessing directly to the database 
+            if (userNode.hasProperty(UserProfile.PROPERTY_TYPE) && (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) == UserProfile.USER_TYPE_SYSTEM)
+                throw new InvalidArgumentException("System users can not be deleted or modified");
 
             if(password != null) {
                 if (password.trim().isEmpty())
                     throw new InvalidArgumentException("Password can't be an empty string");
+                
+                userNode.setProperty(Constants.PROPERTY_PASSWORD, BCrypt.hashpw(password, BCrypt.gensalt()));
             }
             
-            if (password != null)
-                userNode.setProperty(Constants.PROPERTY_PASSWORD, BCrypt.hashpw(password, BCrypt.gensalt()));
             if (firstName != null)
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
             if (lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
             
-            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
-                throw new InvalidArgumentException("User type provided is not valid");
+            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && 
+                    type != UserProfile.USER_TYPE_SOUTHBOUND && type != UserProfile.USER_TYPE_SYSTEM)
+                throw new InvalidArgumentException("Invalid user type");
             
             if (type != -1)
                 userNode.setProperty(Constants.PROPERTY_TYPE, type);
@@ -381,6 +404,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             
             if (enabled != -1)
                 userNode.setProperty(Constants.PROPERTY_ENABLED, enabled == 1 );
+            
+            if (email != null)
+                userNode.setProperty(UserProfile.PROPERTY_EMAIL, email);
             
             if(userName != null) {
                 
@@ -401,16 +427,19 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 userNode.setProperty(Constants.PROPERTY_NAME, userName);
                 cm.removeUser(userName);
             }
-
+            UserProfile userProfile = Util.createUserProfileWithGroupPrivilegesFromNode(userNode);
+            for (Session session : sessions.values()) {
+                if (session.getUser().getId() == userProfile.getId())
+                    session.setUser(userProfile);
+            }
             tx.success();
-            
-            cm.putUser(Util.createUserProfileWithGroupPrivilegesFromNode(userNode));
+            cm.putUser(userProfile);
         }
     }
 
     @Override
     public void setUserProperties(String formerUsername, String newUserName, String password, String firstName,
-            String lastName, int enabled, int type)
+            String lastName, int enabled, int type, String email)
             throws InvalidArgumentException, ApplicationObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) { 
             Node userNode = graphDb.findNode(userLabel, Constants.PROPERTY_NAME, formerUsername);
@@ -418,6 +447,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             if(userNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find a user with name %s", formerUsername));
 
+            // Note that once a system user is created, it can only be deleted or modified by accessing directly to the database 
+            if (userNode.hasProperty(UserProfile.PROPERTY_TYPE) && (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) == UserProfile.USER_TYPE_SYSTEM)
+                throw new InvalidArgumentException("System users can not be deleted or modified");
+            
             if(newUserName != null) {
                 if (newUserName.trim().isEmpty())
                     throw new InvalidArgumentException("User name can not be an empty string");
@@ -449,18 +482,25 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
             if(lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
-                throw new InvalidArgumentException("User type provided is not valid");
+            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && 
+                    type != UserProfile.USER_TYPE_SOUTHBOUND && type != UserProfile.USER_TYPE_SYSTEM)
+                throw new InvalidArgumentException("Invalid user type");
             if (type != -1)
                 userNode.setProperty(Constants.PROPERTY_TYPE, type );
             if (enabled != -1 && enabled != 0 && enabled != 1)
                 throw new InvalidArgumentException("User enabled state is not valid");
             if (enabled != -1)
                 userNode.setProperty(Constants.PROPERTY_ENABLED, enabled == 1 );
+            if (email != null)
+                userNode.setProperty(UserProfile.PROPERTY_EMAIL, email);
             
+            UserProfile userProfile = Util.createUserProfileWithGroupPrivilegesFromNode(userNode);
+            for (Session session : sessions.values()) {
+                if (session.getUser().getId() == userProfile.getId())
+                    session.setUser(userProfile);
+            }
             tx.success();
-            
-            cm.putUser(Util.createUserProfileWithGroupPrivilegesFromNode(userNode));
+            cm.putUser(userProfile);
         }
     }
 
@@ -719,24 +759,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
 
     @Override
     public void deleteGroups(long[] oids) throws ApplicationObjectNotFoundException, InvalidArgumentException {
-        
         try(Transaction tx = graphDb.beginTx()) {
             if(oids != null) {
+                
                 for (long id : oids) {
                     Node groupNode = Util.findNodeByLabelAndId(groupLabel, id);
                     if(groupNode == null)
-                        throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %s",id));
+                        throw new ApplicationObjectNotFoundException(String.format("Can not find a group with id %s", id));
                     
-                    Node adminNode = graphDb.findNode(userLabel, Constants.PROPERTY_NAME, UserProfile.DEFAULT_ADMIN);
-                    List<Node> adminGroupNodes = new ArrayList();
-
-                    for (Relationship relationship : adminNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP))
-                        adminGroupNodes.add(relationship.getEndNode());
-                    
-                    if (adminGroupNodes.size() == 1) {
-                        if (groupNode.getId() == adminGroupNodes.get(0).getId())
-                            throw new InvalidArgumentException("User admin can no be orphan. Put it in another group before removing this group");                                                                                    
-                    }
                     
                     for (Relationship relationship : groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
                         Node privilegeNode = relationship.getEndNode();
@@ -746,19 +776,16 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                     
                     for (Relationship relationship : groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP)) {
                         Node userNode = relationship.getStartNode();
-                        
-                        if (adminNode.getId() == userNode.getId())
-                            continue;
                                                 
                         relationship.delete();
                         
-                        //This will delete all users associated *only* to this group. The users associated to other groups will be kept and the relationship with this group will be released
-                        if (userNode.hasRelationship(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP)) 
+                        // This will delete all users associated *only* to this group. The users associated to other groups will be kept and the relationship 
+                        // with this group will be released. The user "admin" can not be deleted
+                        if (!userNode.hasRelationship(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP)) 
                             Util.deleteUserNode(userNode);
-                            
                     }
                     
-                    //Now we release the rest of the relationships
+                    // Now we release the rest of the relationships, if any
                     for (Relationship otherRelationship : groupNode.getRelationships())
                         otherRelationship.delete();
                     
@@ -792,7 +819,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                  throw new InvalidArgumentException(String.format("Class %s is not a list type", className));
 
             if (myClass.isInDesign())
-                 throw new OperationNotPermittedException("Can not create instances of classes marked as isDesign");
+                 throw new OperationNotPermittedException("Can not create instances of classes marked as inDesign");
 
             if (myClass.isAbstract())
                  throw new OperationNotPermittedException("Can not create instances of abstract classes");
@@ -818,10 +845,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             throws MetadataObjectNotFoundException, OperationNotPermittedException, BusinessObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
         try(Transaction tx = graphDb.beginTx())
         {
+            ClassMetadata classMetadata = Util.createClassMetadataFromNode(graphDb.findNode(classLabel, Constants.PROPERTY_NAME, className));
+            
             if (!mem.isSubclassOf(Constants.CLASS_GENERICOBJECTLIST, className))
                 throw new InvalidArgumentException(String.format("Class %s is not a list type", className));
 
             Node listTypeItemNode = getInstanceOfClass(className, oid);
+            
+            //Updates the unique attributes cache
+            try {
+                BusinessObject remoteObject = createObjectFromNode(listTypeItemNode);
+                for(AttributeMetadata attribute : classMetadata.getAttributes()) {
+                    if(attribute.isUnique()) { 
+                        String attributeValues = remoteObject.getAttributes().get(attribute.getName());
+                        if(attributeValues != null)
+                            CacheManager.getInstance().removeUniqueAttributeValue(className, attribute.getName(), attributeValues);
+                    }
+                }
+            } catch (InvalidArgumentException ex) {
+                //Should not happen
+            }
             
             Iterator<Relationship> relationShipsIterator = listTypeItemNode.getRelationships(RelTypes.RELATED_TO).iterator();
             if (relationShipsIterator.hasNext()) {
@@ -839,6 +882,75 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             tx.success();
             cm.removeListType(className);
         }
+    }
+    
+    private BusinessObject createObjectFromNode(Node instance) throws InvalidArgumentException {
+        String className = (String)instance.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).getEndNode().getProperty(Constants.PROPERTY_NAME);
+        try {
+            return createObjectFromNode(instance, mem.getClass(className));
+        } catch (MetadataObjectNotFoundException mex) {
+            throw new InvalidArgumentException(mex.getLocalizedMessage());
+        }
+    }
+    /**
+     * Builds a RemoteBusinessObject instance from a node representing a business object
+     * @param instance The object as a Node instance.
+     * @param classMetadata The class metadata to map the node's properties into a RemoteBussinessObject.
+     * @return The business object.
+     * @throws InvalidArgumentException If an attribute value can't be mapped into value.
+     */
+    private BusinessObject createObjectFromNode(Node instance, ClassMetadata classMetadata) throws InvalidArgumentException {
+        
+        HashMap<String, String> attributes = new HashMap<>();
+        String name = "";
+        
+        for (AttributeMetadata myAtt : classMetadata.getAttributes()) {
+            //Only set the attributes existing in the current node. Please note that properties can't be null in
+            //Neo4J, so a null value is actually a non-existing relationship/value
+            if (instance.hasProperty(myAtt.getName())){
+               if (AttributeMetadata.isPrimitive(myAtt.getType())) {
+                    if (!myAtt.getType().equals("Binary")) {
+                        String value = String.valueOf(instance.getProperty(myAtt.getName()));
+                        
+                        if (Constants.PROPERTY_NAME.equals(myAtt.getName()))
+                            name = value;
+                        
+                        attributes.put(myAtt.getName(),value);
+                    }
+                }
+            }
+        }
+
+        //Iterates through relationships and transform the into "plain" attributes
+        Iterable<Relationship> iterableRelationships = instance.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING);
+        Iterator<Relationship> relationships = iterableRelationships.iterator();
+
+        while(relationships.hasNext()){
+            Relationship relationship = relationships.next();
+            if (!relationship.hasProperty(Constants.PROPERTY_NAME))
+                throw new InvalidArgumentException(String.format("El objeto con id %s está mal formado", instance.getId()));
+
+            String relationshipName = (String)relationship.getProperty(Constants.PROPERTY_NAME);              
+            
+            boolean hasRelationship = false;
+            for (AttributeMetadata myAtt : classMetadata.getAttributes()) {
+                if (myAtt.getName().equals(relationshipName)) {
+                    if (attributes.containsKey(relationshipName))
+                        attributes.put(relationshipName, attributes.get(relationshipName) + ";" + relationship.getEndNode().getProperty(Constants.PROPERTY_UUID)); //A multiple selection list type
+                    else    
+                        attributes.put(relationshipName, (String)relationship.getEndNode().getProperty(Constants.PROPERTY_UUID));
+                    hasRelationship = true;
+                    break;
+                }                  
+            }
+            
+            if (!hasRelationship) //This verification will help us find potential inconsistencies with list types
+                                  //What this does is to verify if is there is a RELATED_TO relationship that shouldn't exist because its name is not an attribute of the class
+                throw new InvalidArgumentException(String.format("El objeto con %s (%s) está relacionado con el tipo de lista %s (%s), pero eso no es coherente con el modelo de datos", 
+                            instance.getProperty(Constants.PROPERTY_NAME), instance.getId(), relationship.getEndNode().getProperty(Constants.PROPERTY_NAME), relationship.getEndNode().getId()));
+        }
+        
+        return new BusinessObject(classMetadata.getName(), (String)instance.getProperty(Constants.PROPERTY_UUID), name, attributes);
     }
 
     @Override
@@ -1250,36 +1362,140 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             return templateElements;
         }
     }
-    
+          
     @Override
     public byte[] getDeviceLayoutStructure(String oid, String className) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        final String columnName = "name"; //NOI18N
+        final String columnId = "id"; //NOI18N
+        final String columnClassName = "className"; //NOI18N
+        final String columnModelId = "modelId"; //NOI18N
+        final String columnModelName = "modelName"; //NOI18N
+        final String columnModelClassName = "modelClassName"; //NOI18N
+        final String columnViewId = "viewId"; //NOI18N
+        final String columnViewClassName = "viewClassName"; //NOI18N
+        final String columnViewStructure = "viewStructure"; //NOI18N
+        final String columnParentId = "parentId"; //NOI18N
+        
+        HashMap<String, HashMap<String, Object>> devicesWithLayout = new HashMap();
+                
+        try (Transaction tx = graphDb.beginTx()) {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("MATCH (deviceClass:classes)<-[:INSTANCE_OF]-(device:inventoryObjects)<-[:CHILD_OF*]-(deviceChild:inventoryObjects)").append(" ");
+            stringBuilder.append("WHERE deviceClass.name = {className} AND device._uuid = {id}").append(" ");
+            stringBuilder.append("WITH [deviceChild, device] AS deviceChild1").append(" ");
+            stringBuilder.append("UNWIND deviceChild1 AS deviceChild2").append(" ");
+            stringBuilder.append("MATCH (deviceChildClass:classes)<-[:INSTANCE_OF]-(deviceChild2:inventoryObjects)-[:RELATED_TO{name:'model'}]->(model:listTypeItems)-[:HAS_VIEW]->(layout:layouts), (deviceChild2)-[:CHILD_OF]->(deviceParent), (model)-[:INSTANCE_OF]->(modelClass:classes)").append(" ");
+            stringBuilder.append("RETURN DISTINCT deviceChild2.name AS name, deviceChild2._uuid AS id, deviceChildClass.name AS className, model._uuid as modelId, model.name as modelName, modelClass.name as modelClassName, id(layout) as viewId, layout.className as viewClassName, layout.structure as viewStructure, deviceParent._uuid as parentId;");
+
+            String cypherQuery = stringBuilder.toString();
+
+            HashMap<String, Object> queryParameters = new HashMap<>();
+            queryParameters.put("id", oid); //NOI18N
+            queryParameters.put("className", className); //NOI18N
+
+            Result result = graphDb.execute(cypherQuery, queryParameters);
+            
+            while (result.hasNext()) {
+                Wrappers.MapWrapper next = (Wrappers.MapWrapper) result.next();
+                
+                HashMap<String, Object> properties = new HashMap();
+                properties.put(columnName, next.get(columnName));
+                properties.put(columnId, next.get(columnId));
+                properties.put(columnClassName, next.get(columnClassName));
+                properties.put(columnModelId, next.get(columnModelId));
+                properties.put(columnModelName, next.get(columnModelName));
+                properties.put(columnModelClassName, next.get(columnModelClassName));
+                properties.put(columnViewId, next.get(columnViewId));
+                properties.put(columnViewClassName, next.get(columnViewClassName));
+                properties.put(columnViewStructure, next.get(columnViewStructure));
+                properties.put(columnParentId, next.get(columnParentId));                
+                
+                devicesWithLayout.put((String) next.get(columnId), properties);
+            }
+            tx.success();
+        }
+        HashMap<String, HashMap<String, Object>> devices = new HashMap();
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            StringBuilder stringBuilder = new StringBuilder();        
+            stringBuilder.append("MATCH (deviceClass:classes)<-[:INSTANCE_OF]-(device:inventoryObjects)<-[:CHILD_OF*]-(deviceChild:inventoryObjects)").append(" ");
+            stringBuilder.append("WHERE deviceClass.name = {className} AND device._uuid = {id}").append(" ");
+            stringBuilder.append("WITH deviceChild AS deviceChild1").append(" ");
+            stringBuilder.append("MATCH (deviceChild1)-[:INSTANCE_OF]->(deviceChildClass), (deviceChild1)-[:CHILD_OF]->(deviceChildParent)").append(" ");
+            stringBuilder.append("RETURN deviceChild1.name AS name, deviceChild1._uuid AS id, deviceChildClass.name AS className, deviceChildParent._uuid AS parentId;");
+            
+            String cypherQuery = stringBuilder.toString();
+            
+            HashMap<String, Object> queryParameters = new HashMap<>();
+            queryParameters.put("id", oid); //NOI18N
+            queryParameters.put("className", className); //NOI18N
+
+            Result result = graphDb.execute(cypherQuery, queryParameters);
+            
+            while(result.hasNext()) {
+                Wrappers.MapWrapper next = (Wrappers.MapWrapper) result.next();
+                                
+                HashMap<String, Object> properties = new HashMap();
+                properties.put(columnName, next.get(columnName));
+                properties.put(columnId, next.get(columnId));
+                properties.put(columnClassName, next.get(columnClassName));
+                properties.put(columnParentId, next.get(columnParentId));
+                
+                devices.put((String) next.get(columnId), properties);
+            }
+            tx.success();
+        }
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
             XMLEventWriter xmlew = xmlof.createXMLEventWriter(baos);
             XMLEventFactory xmlef = XMLEventFactory.newInstance();
             
-            QName tagStructure = new QName("deviceLayoutStructure");
-            xmlew.add(xmlef.createStartElement(tagStructure, null, null));
+            QName tagDeviceLayoutStructure = new QName("deviceLayoutStructure"); //NOI18N
+            QName tagDevice = new QName("device"); //NOI18N
+            QName tagModel = new QName("model"); //NOI18N
+            QName tagView = new QName("view"); //NOI18N
+            QName tagStructure = new QName("structure"); //NOI18N
+            QName attrId = new QName("id"); //NOI18N
+            QName attrName = new QName("name"); //NOI18N
+            QName attrClassName = new QName("className"); //NOI18N
+            QName attrParentId = new QName("parentId"); //NOI18N
             
-            QName tagDevice = new QName("device"); // NOI18N
-            xmlew.add(xmlef.createStartElement(tagDevice, null, null));
-            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), oid));
-            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), className));
-            addDeviceModelAsXML(oid, xmlew, xmlef);
-            xmlew.add(xmlef.createEndElement(tagDevice, null));
-            
-            addDeviceNodeChildrenAsXml(oid, className, xmlew, xmlef);
-            
-            xmlew.add(xmlef.createEndElement(tagStructure, null));          
-            
+            xmlew.add(xmlef.createStartElement(tagDeviceLayoutStructure, null, null));
+            for (String deviceId : devices.keySet()) {
+                xmlew.add(xmlef.createStartElement(tagDevice, null, null));
+                xmlew.add(xmlef.createAttribute(attrId, String.valueOf(devices.get(deviceId).get("id")))); //NOI18N
+                xmlew.add(xmlef.createAttribute(attrName, String.valueOf(devices.get(deviceId).get("name")))); //NOI18N
+                xmlew.add(xmlef.createAttribute(attrClassName, String.valueOf(devices.get(deviceId).get("className")))); //NOI18N
+                if (!oid.equals(deviceId))
+                    xmlew.add(xmlef.createAttribute(attrParentId, String.valueOf(devices.get(deviceId).get("parentId")))); //NOI18N
+                if (devicesWithLayout.containsKey(deviceId)) {
+                    xmlew.add(xmlef.createStartElement(tagModel, null, null));
+                    xmlew.add(xmlef.createAttribute(attrId, String.valueOf(devicesWithLayout.get(deviceId).get("modelId")))); //NOI18N
+                    xmlew.add(xmlef.createAttribute(attrClassName, String.valueOf(devicesWithLayout.get(deviceId).get("modelClassName")))); //NOI18N
+                    xmlew.add(xmlef.createAttribute(attrName, String.valueOf(devicesWithLayout.get(deviceId).get("modelName")))); //NOI18N
+                    
+                    xmlew.add(xmlef.createStartElement(tagView, null, null));
+                    xmlew.add(xmlef.createAttribute(attrId, String.valueOf(devicesWithLayout.get(deviceId).get("viewId")))); //NOI18N
+                    xmlew.add(xmlef.createAttribute(attrClassName, String.valueOf(devicesWithLayout.get(deviceId).get("viewClassName")))); //NOI18N
+                                        
+                    xmlew.add(xmlef.createStartElement(tagStructure, null, null));
+                    xmlew.add(xmlef.createCharacters(DatatypeConverter.printBase64Binary((byte[]) devicesWithLayout.get(deviceId).get("viewStructure")))); //NOI18N
+                    
+                    xmlew.add(xmlef.createEndElement(tagStructure, null));
+                    xmlew.add(xmlef.createEndElement(tagView, null));
+                    xmlew.add(xmlef.createEndElement(tagModel, null));
+                }
+                xmlew.add(xmlef.createEndElement(tagDevice, null));
+            }
+            xmlew.add(xmlef.createEndElement(tagDeviceLayoutStructure, null));
             xmlew.close();
             
             return baos.toByteArray();
         } catch (XMLStreamException ex) {
-            Logger.getLogger(ApplicationEntityManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
-            return null;            
-        }
+            ex.printStackTrace();
+            return null;
+        }                
     }
             
     @Override
@@ -2049,6 +2265,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             if (userNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("The user %s does not exist", userName));
 
+            if (userNode.hasProperty(UserProfile.PROPERTY_TYPE) && (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) == UserProfile.USER_TYPE_SYSTEM)
+                throw new NotAuthorizedException("System users can not create sessions");
+            
             if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
                 throw new NotAuthorizedException(String.format("The user %s is not enabled", userName));
 
@@ -2062,6 +2281,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                         break;
                     }
                 }
+                
                 Session newSession = new Session(user, IPAddress, sessionType);
                 sessions.put(newSession.getToken(), newSession);
                 cm.putUser(user);
@@ -2902,6 +3122,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 templates.add(new TemplateObjectLight(className, (String)templateNode.getProperty(Constants.PROPERTY_UUID), 
                         (String)templateNode.getProperty(Constants.PROPERTY_NAME)));
             }
+            tx.success();
             return templates;
         }
     }
@@ -3260,9 +3481,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         Node newTemplateElementInstance = graphDb.createNode(templateElementLabel);
         newTemplateElementInstance.setProperty(Constants.PROPERTY_UUID, UUID.randomUUID().toString());
         
-        for (String property : templateObject.getPropertyKeys())
+        for (String property : templateObject.getPropertyKeys()) {
+            if (Constants.PROPERTY_UUID.equals(property))
+                continue;
             newTemplateElementInstance.setProperty(property, templateObject.getProperty(property));
-        
+        }
         for (Relationship rel : templateObject.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING))
             newTemplateElementInstance.createRelationshipTo(rel.getEndNode(), RelTypes.RELATED_TO).setProperty(Constants.PROPERTY_NAME, rel.getProperty(Constants.PROPERTY_NAME));
         
@@ -3657,9 +3880,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                    throw new UnsupportedPropertyException(String.format("The object %s (%s) does not have a sync datasource configuration", 
                            inventoryObjectNode.getProperty(Constants.PROPERTY_NAME), objectId));
                 
-                syncDatasourceConfiguration = inventoryObjectNode.getSingleRelationship(RelTypes.HAS_CONFIGURATION, Direction.INCOMING).getStartNode();
+                syncDatasourceConfiguration = inventoryObjectNode.getSingleRelationship(RelTypes.HAS_CONFIGURATION, Direction.OUTGOING).getEndNode();
                 if(syncDatasourceConfiguration == null)
-                    throw new ApplicationObjectNotFoundException(String.format("The object with id %s has no data source configuration related", objectId));
+                    throw new ApplicationObjectNotFoundException(String.format("The object with id %s has a malformed data source configuration related", objectId));
             }
 
             tx.success();
@@ -3768,7 +3991,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             if(objectNode.hasRelationship(Direction.OUTGOING, RelTypes.HAS_CONFIGURATION))
                 throw new OperationNotPermittedException(String.format("The object id %s already has a sync datasource configuration", objectId));
             
-            Node syncDataSourceConfigNode =  graphDb.createNode();
+            Node syncDataSourceConfigNode =  graphDb.createNode(syncDatasourceConfigLabel);
             syncDataSourceConfigNode.setProperty(Constants.PROPERTY_NAME, configName);
             
             for (StringPair parameter : parameters) {
@@ -3778,7 +4001,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                     throw new InvalidArgumentException(String.format("Parameter %s in configuration %s is duplicated", configName, parameter.getKey()));
             }
             
-            syncDataSourceConfigNode.createRelationshipTo(objectNode, RelTypes.HAS_CONFIGURATION);
+            objectNode.createRelationshipTo(syncDataSourceConfigNode, RelTypes.HAS_CONFIGURATION);
             syncDataSourceConfigNode.createRelationshipTo(syncGroupNode, RelTypes.BELONGS_TO_GROUP);
             
             tx.success();
@@ -3791,7 +4014,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         throws ApplicationObjectNotFoundException {
         
         try (Transaction tx = graphDb.beginTx()) {
-            Node syncDataSourceConfig = graphDb.getNodeById(syncDataSourceConfigId);
+            Node syncDataSourceConfig = Util.findNodeByLabelAndId(syncDatasourceConfigLabel, syncDataSourceConfigId);
             if (syncDataSourceConfig == null)
                 throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSourceConfigId));
             
@@ -3805,13 +4028,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     @Override    
     public void deleteSynchronizationDataSourceConfig(long syncDataSourceConfigId) throws ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
-            Node syncDataSourceConfigNode = graphDb.getNodeById(syncDataSourceConfigId);
+            Node syncDataSourceConfigNode = Util.findNodeByLabelAndId(syncDatasourceConfigLabel, syncDataSourceConfigId);
             if (syncDataSourceConfigNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find the Synchronization Data Source Configuration with id %s",syncDataSourceConfigId));
             
             List<Relationship> relationshipsToDelete = new ArrayList();
            
-            for (Relationship relationship : syncDataSourceConfigNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_CONFIGURATION)) 
+            for (Relationship relationship : syncDataSourceConfigNode.getRelationships(Direction.INCOMING, RelTypes.HAS_CONFIGURATION)) 
                 relationshipsToDelete.add(relationship);
             
             for (Relationship relationship : syncDataSourceConfigNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP)) 
@@ -3825,64 +4048,24 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         }
     }
     
-//    @Override
-//    public List<SynchronizationGroup> copySyncGroup(long[] syncGroupIds) throws ApplicationObjectNotFoundException, InvalidArgumentException {
-//        try (Transaction tx = graphDb.beginTx()) {
-//            List<SynchronizationGroup> result = new ArrayList();
-//            
-//            for (long syncGroupId : syncGroupIds) {
-//                
-//                Node syncGroupNode = Util.findNodeByLabelAndId(syncGroupsLabel, syncGroupId);
-//                if (syncGroupNode == null)
-//                    throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
-//                
-//                SynchronizationGroup syncGroup = Util.createSyncGroupFromNode(syncGroupNode);
-//                long newSyncGroupId = createSyncGroup(syncGroup.getName(), syncGroup.getProvider().getClass().getName());//TODO: review the second parameter
-//                
-//                List<SyncDataSourceConfiguration> syncDataSources = syncGroup.getSyncDataSourceConfigurations();
-//                for (SyncDataSourceConfiguration syncDataSource : syncDataSources) {
-//                    List<StringPair> parameters = new ArrayList();
-//                    for (String paramKey : syncDataSource.getParameters().keySet()) {
-//                        String paramValue = syncDataSource.getParameters().get(paramKey);
-//                        parameters.add(new StringPair(paramKey, paramValue));
-//                    }
-//                    createSyncDataSourceConfig(newSyncGroupId, syncDataSource.getName(), parameters);
-//                }
-//                
-//                Node newSyncGroupNode = Util.findNodeByLabelAndId(syncGroupsLabel, newSyncGroupId);
-//                if (newSyncGroupNode == null)
-//                    throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", newSyncGroupId));
-//                result.add(Util.createSyncGroupFromNode(newSyncGroupNode));
-//            }
-//            tx.success();
-//            return result;
-//        }
-//    }
-    
     @Override
     public void moveSyncDataSourceConfiguration(long oldSyncGroupId, long newSyncGroupId, long[] syncDataSourceConfigurationIds) throws ApplicationObjectNotFoundException, InvalidArgumentException {
         try (Transaction tx = graphDb.beginTx()) {
-            
             Node oldSyncGroupNode = Util.findNodeByLabelAndId(syncGroupsLabel, oldSyncGroupId);
             if (oldSyncGroupNode == null)
-                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", oldSyncGroupId));
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be found", oldSyncGroupId));
 
             Node newSyncGroupNode = Util.findNodeByLabelAndId(syncGroupsLabel, newSyncGroupId);
             if (newSyncGroupNode == null)
-                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", newSyncGroupId));
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be found", newSyncGroupId));
             
             for (long syncDataSrcId : syncDataSourceConfigurationIds) {
-                Node syncDataSrcNode = graphDb.getNodeById(syncDataSrcId);
+                Node syncDataSrcNode = Util.findNodeByLabelAndId(syncDatasourceConfigLabel, syncDataSrcId);
                 if (syncDataSrcNode == null)
-                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSrcId));
+                    throw new ApplicationObjectNotFoundException(String.format("SyncDatasourceConfig with id %s does't exist, please close, reopen the sync manager", syncDataSrcId));
                 
-                List <Relationship> relsToDelete = new ArrayList<>();
                 Iterable<Relationship> relationships = syncDataSrcNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING);
-                for (Relationship relationship : relationships) {
-                    if(relationship.getEndNodeId() == oldSyncGroupNode.getId())
-                        relsToDelete.add(relationship);
-                }
-                
+              
                 for (Relationship relationship : relationships)
                     relationship.delete();
 
@@ -3897,9 +4080,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         try (Transaction tx = graphDb.beginTx()) {
                         
             for (long syncDataSrcId : syncDataSourceConfigurationIds) {
-                Node syncDataSrcNode = graphDb.getNodeById(syncDataSrcId);
+                Node syncDataSrcNode = Util.findNodeByLabelAndId(syncDatasourceConfigLabel, syncDataSrcId);
                 if (syncDataSrcNode == null)
-                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSrcId));
+                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Datasource Configuration with id %s could not be found", syncDataSrcId));
 
                 List<Relationship> relsToDelete = new ArrayList<>();
                 Iterable<Relationship> relationships = syncDataSrcNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP);
@@ -3929,7 +4112,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
                         
             for (long syncDataSrcId : syncDataSourceConfigurationIds) {
-                Node syncDataSrcNode = graphDb.getNodeById(syncDataSrcId);
+                Node syncDataSrcNode = Util.findNodeByLabelAndId(syncDatasourceConfigLabel, syncDataSrcId);
                 if (syncDataSrcNode == null)
                     throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSrcId));
                 
@@ -4424,7 +4607,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
 
     @Override
     public String createConfigurationVariablesPool(String name, String description) throws InvalidArgumentException {
-        
         if (name == null || name.trim().isEmpty())
             throw  new InvalidArgumentException("The name of the configuration variables pool can not be empty");
         
@@ -4566,6 +4748,279 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     //</editor-fold>
+    
+    // <editor-fold desc="Proxies" defaultstate="collapsed">
+    @Override
+    public String createProxy(String proxyPoolId, String proxyClass, HashMap<String, String> attributes) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, MetadataObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            if (!mem.isSubclassOf(Constants.CLASS_GENERICPROXY, proxyClass))
+                throw new MetadataObjectNotFoundException(String.format("Class %s is not an inventory proxy", proxyClass));         
+
+            Node classNode = graphDb.findNode(classLabel, Constants.PROPERTY_NAME, proxyClass);
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Class %s could not be found", proxyClass));
+            
+            ClassMetadata proxyMetadata = mem.getClass(proxyClass);
+            
+            Node parentPoolNode = graphDb.findNode(poolLabel, Constants.PROPERTY_UUID, proxyPoolId);
+            if (parentPoolNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Proxy pool with id %s could not be found", proxyPoolId));
+            
+            Node proxyNode = graphDb.createNode(proxiesLabel, inventoryObjectLabel);
+            proxyNode.createRelationshipTo(parentPoolNode, RelTypes.CHILD_OF_SPECIAL).setProperty(Constants.PROPERTY_NAME, Constants.REL_PROPERTY_POOL);
+            proxyNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF);
+            
+            proxyNode.setProperty(Constants.PROPERTY_NAME, ""); // By default the proxy name is an empty string
+            for (String attributeName : attributes.keySet()) {
+                // TODO: Handle list type attributes
+                if (!proxyMetadata.hasAttribute(attributeName))
+                    throw new InvalidArgumentException(String.format("Attribute %s not found in class %s", attributeName, proxyClass));
+                AttributeMetadata attributeMetadata = proxyMetadata.getAttribute(attributeName);
+                proxyNode.setProperty(attributeName, Util.getRealValue(attributes.get(attributeName), attributeMetadata.getType()));
+            }
+            proxyNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
+            
+            String uuid = UUID.randomUUID().toString();
+            proxyNode.setProperty(Constants.PROPERTY_UUID, uuid);
+            
+            tx.success();
+            return uuid;
+        }
+    }
+    
+    @Override
+    public void deleteProxy(String proxyClass, String proxyId) throws ApplicationObjectNotFoundException, MetadataObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            if (!mem.isSubclassOf(Constants.CLASS_GENERICPROXY, proxyClass))
+                throw new MetadataObjectNotFoundException(String.format("Class %s is not an inventory proxy", proxyClass));          
+            
+            Node proxyNode = graphDb.findNode(proxiesLabel, Constants.PROPERTY_UUID, proxyId);
+            if (proxyNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Proxy with id %s could not be found", proxyId));
+            
+            proxyNode.getRelationships().forEach( aRelationship -> aRelationship.delete() );
+            proxyNode.delete();
+            
+            tx.success();
+        }
+    }
+    
+    @Override
+    public void updateProxy(String proxyClass, String proxyId, HashMap<String, String> attributes) 
+            throws ApplicationObjectNotFoundException, InvalidArgumentException, MetadataObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            if (!mem.isSubclassOf(Constants.CLASS_GENERICPROXY, proxyClass))
+                throw new MetadataObjectNotFoundException(String.format("Class %s is not an inventory proxy", proxyClass));
+            
+            Node proxyNode = graphDb.findNode(proxiesLabel, Constants.PROPERTY_UUID, proxyId);
+            if (proxyNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Proxy with id %s could not be found", proxyId));
+            
+            ClassMetadata proxyMetadata = mem.getClass(proxyClass);
+            for (String attributeName : attributes.keySet()) {
+                if (!proxyMetadata.hasAttribute(attributeName))
+                    throw new InvalidArgumentException(String.format("Attribute %s not found in class %s", attributeName, proxyClass));
+                
+                if (AttributeMetadata.isPrimitive(proxyMetadata.getAttribute(attributeName).getType())) {
+                    if (attributes.get(attributeName) == null) {
+                        if (attributeName.equals(Constants.PROPERTY_NAME))
+                            throw new InvalidArgumentException("A proxy name can not be null");
+                        else {
+                            if (proxyNode.hasProperty(attributeName))
+                                proxyNode.removeProperty(attributeName);
+                        }
+                    } else {
+                        AttributeMetadata attributeMetadata = proxyMetadata.getAttribute(attributeName);
+                        proxyNode.setProperty(attributeName, Util.getRealValue(attributes.get(attributeName), attributeMetadata.getType()));
+                    }
+                } else { // It's a list type
+                    proxyNode.getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO).forEach( aListTypeItemRel -> {
+                        if (aListTypeItemRel.hasProperty(Constants.PROPERTY_NAME) && 
+                                aListTypeItemRel.getProperty(Constants.PROPERTY_NAME).equals(attributeName))
+                            aListTypeItemRel.delete();
+                    });
+                    
+                    if (attributes.get(attributeName) != null) {
+                        String[] listTypeItemIds = attributes.get(attributeName).split(";");
+                        for (String listTypeItemId : listTypeItemIds) {
+                            Node listTypeItemNode = graphDb.findNode(listTypeItemLabel, Constants.PROPERTY_UUID, listTypeItemId);
+                            if (listTypeItemNode == null)
+                                throw new MetadataObjectNotFoundException(String.format("List type item of class %s with id %s not found", 
+                                        proxyMetadata.getAttribute(attributeName).getType(), listTypeItemId));
+                            proxyNode.createRelationshipTo(listTypeItemNode, RelTypes.RELATED_TO).setProperty(Constants.PROPERTY_NAME, attributeName);
+                        }
+                        
+                    }
+                }
+            }
+            
+            tx.success();
+        }
+    }
+
+    @Override
+    public String createProxyPool(String name, String description) {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node newProxyPoolNode = graphDb.createNode(poolLabel, proxyPoolsLabel);
+            newProxyPoolNode.setProperty(Constants.PROPERTY_NAME, name == null ? "" : name);
+            newProxyPoolNode.setProperty(Constants.PROPERTY_DESCRIPTION, description == null ? "" : description);
+            newProxyPoolNode.setProperty(Constants.PROPERTY_CLASS_NAME, "ProxyPool");
+            newProxyPoolNode.setProperty(Constants.PROPERTY_TYPE, POOL_TYPE_MODULE_ROOT);
+            
+            String uuid = UUID.randomUUID().toString();
+            newProxyPoolNode.setProperty(Constants.PROPERTY_UUID, uuid);
+            tx.success();
+            return uuid;
+        }
+    }
+
+    @Override
+    public void updateProxyPool(String proxyPoolId, String attributeName, String attributeValue) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node proxyPoolNode = graphDb.findNode(proxyPoolsLabel, Constants.PROPERTY_UUID, proxyPoolId);
+            if (proxyPoolNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("A proxy pool with id %s could not be found", proxyPoolId));
+            
+            switch (attributeName) {
+                case Constants.PROPERTY_NAME:
+                case Constants.PROPERTY_DESCRIPTION:
+                    proxyPoolNode.setProperty(attributeName, attributeValue);
+                    break;
+                default:
+                    throw new InvalidArgumentException(String.format("Property %s is not supported by this pool", attributeName));
+            }
+            tx.success();
+        }
+    }
+
+    @Override
+    public void deleteProxyPool(String proxyPoolId) throws ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node proxyPoolNode = graphDb.findNode(proxyPoolsLabel, Constants.PROPERTY_UUID, proxyPoolId);
+            if (proxyPoolNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("A proxy pool with id %s could not be found", proxyPoolId));
+            
+            proxyPoolNode.getRelationships(RelTypes.CHILD_OF_SPECIAL).forEach( aChildOfSpecialRelationship -> {
+                Node aProxyNode = aChildOfSpecialRelationship.getStartNode();
+                // On purpose, we only release the RELATED_TO_SPECIAL and CHILD_OF relationships. If anything is related to the proxy via other relationship types, this method 
+                // will fail (technically, someone could try to manipulate the containment hierarchy to create children under a proxy, for example).
+                aProxyNode.getRelationships(RelTypes.RELATED_TO_SPECIAL).forEach( aRelationship -> aRelationship.delete() );
+                aProxyNode.getSingleRelationship(RelTypes.CHILD_OF_SPECIAL, Direction.OUTGOING).delete();
+                aProxyNode.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).delete();
+                aProxyNode.delete();
+            });
+            
+            proxyPoolNode.delete();
+            tx.success();
+        }
+    }
+    
+    @Override
+    public List<Pool> getProxyPools() {
+        try (Transaction tx = graphDb.beginTx()) {
+            List<Pool> proxyPools = new ArrayList<>();
+            graphDb.findNodes(proxyPoolsLabel).forEachRemaining( aProxyPoolNode -> {
+                Map<String, Object> poolProperties = aProxyPoolNode.getProperties(Constants.PROPERTY_UUID, Constants.PROPERTY_NAME, 
+                        Constants.PROPERTY_DESCRIPTION, Constants.PROPERTY_CLASS_NAME);
+                proxyPools.add(new Pool((String)aProxyPoolNode.getProperty(Constants.PROPERTY_UUID), 
+                                        (String)aProxyPoolNode.getProperty(Constants.PROPERTY_NAME), 
+                                        (String)aProxyPoolNode.getProperty(Constants.PROPERTY_DESCRIPTION),
+                                        "ProxyPool", POOL_TYPE_MODULE_ROOT));
+            });
+            
+            Collections.sort(proxyPools);
+            tx.success();
+            return proxyPools;
+        }
+    }
+    
+    @Override
+    public List<InventoryProxy> getProxiesInPool(String proxyPoolId) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node proxyPoolNode = graphDb.findNode(proxyPoolsLabel, Constants.PROPERTY_UUID, proxyPoolId);
+            if (proxyPoolNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("A proxy pool with id %s could not be found", proxyPoolId));
+            
+            List<InventoryProxy> res = new ArrayList<>();
+            for (Relationship rel : proxyPoolNode.getRelationships(RelTypes.CHILD_OF_SPECIAL))
+                res.add(new InventoryProxy(createObjectFromNode(rel.getStartNode())));
+
+            Collections.sort(res);
+            tx.success();
+            return res;
+        }
+    }
+    
+    @Override
+    public List<InventoryProxy> getAllProxies() throws InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            List<InventoryProxy> res = new ArrayList<>();
+            graphDb.findNodes(proxiesLabel).forEachRemaining( aProxyNode -> {
+                try {
+                    res.add(new InventoryProxy(createObjectFromNode(aProxyNode)));
+                } catch (InvalidArgumentException ex) {
+                    Exceptions.printStackTrace(ex); //Should not happen
+                }
+            });
+
+            Collections.sort(res);
+            tx.success();
+            return res;
+        }
+    }
+
+    @Override
+    public void associateObjectToProxy(String objectClass, String objectId, String proxyClass, String proxyId) 
+            throws BusinessObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node objectNode = graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, objectId);
+            if (objectNode == null || !objectNode.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).
+                    getEndNode().getProperty(Constants.PROPERTY_NAME).equals(objectClass))
+                throw new BusinessObjectNotFoundException(objectClass, objectId);
+            
+            boolean hasRelationship = false;
+            for (Relationship aRelationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO_SPECIAL)) {
+                if (aRelationship.getProperty(Constants.PROPERTY_NAME).equals("hasProxy") && 
+                        aRelationship.getEndNode().getProperty(Constants.PROPERTY_UUID).equals(proxyId))
+                    hasRelationship = true;
+            }
+            
+            if (hasRelationship)
+                throw new InvalidArgumentException(String.format("The object of class %s and id %s is already related to the proxy of class %s and id %s", 
+                                objectClass, objectId, proxyClass, proxyId));
+                        
+            Node proxyNode = graphDb.findNode(proxiesLabel, Constants.PROPERTY_UUID, proxyId);
+            if (proxyNode == null || !proxyNode.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).
+                    getEndNode().getProperty(Constants.PROPERTY_NAME).equals(proxyClass))
+                throw new BusinessObjectNotFoundException(proxyClass, proxyId);
+            
+            Relationship rel = objectNode.createRelationshipTo(proxyNode, RelTypes.RELATED_TO_SPECIAL);
+            rel.setProperty(Constants.PROPERTY_NAME, "hasProxy");
+            
+            tx.success();
+        }
+    }
+
+    @Override
+    public void releaseObjectFromProxy(String objectClass, String objectId, String proxyClass, String proxyId) throws BusinessObjectNotFoundException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node objectNode = graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, objectId);
+            if (objectNode == null || !objectNode.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).
+                    getEndNode().getProperty(Constants.PROPERTY_NAME).equals(objectClass))
+                throw new BusinessObjectNotFoundException(objectClass, objectId);
+            
+            for (Relationship aRelationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO_SPECIAL)) {
+                if (aRelationship.getProperty(Constants.PROPERTY_NAME).equals("hasProxy") && 
+                        aRelationship.getEndNode().getProperty(Constants.PROPERTY_UUID).equals(proxyId))
+                    aRelationship.delete();
+            }
+            
+            tx.success();
+        }
+    }
+    
+    // </editor-fold>
     
     //<editor-fold desc="Validators" defaultstate="collapsed">
     @Override
@@ -4940,87 +5395,5 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             rel.delete();
 
         instance.delete();
-    }
-    
-    private void addDeviceNodeChildrenAsXml(String id, String className, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException, ApplicationObjectNotFoundException, InvalidArgumentException {
-        try (Transaction tx = graphDb.beginTx()) {
-            
-            String columnName = "childNode"; //NOI18N
-
-            String cypherQuery = String.format(
-                "MATCH (classNode)<-[:%s]-(objectNode)<-[:%s]-(objChildNode) "
-              + "WHERE objectNode._uuid = {id} AND classNode.name = {className}"
-              + "RETURN objChildNode AS %s"
-              , RelTypes.INSTANCE_OF, RelTypes.CHILD_OF, columnName);
-
-            HashMap<String, Object> queryParameters = new HashMap<>();
-            queryParameters.put("id", id); //NOI18N
-            queryParameters.put("className", className); //NOI18N
-            
-            Result result = graphDb.execute(cypherQuery, queryParameters);
-            Iterator<Node> column = result.columnAs(columnName);
-
-            for (Node deviceNode : Iterators.asIterable(column))
-                addDeviceNodeAsXML(deviceNode, id, xmlew, xmlef);
-        }
-    }
-    
-    private void addDeviceNodeAsXML(Node deviceNode, String parentId, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException, ApplicationObjectNotFoundException, InvalidArgumentException {
-        QName tagDevice = new QName("device"); // NOI18N
-        
-        String deviceId = (String) deviceNode.getProperty(Constants.PROPERTY_UUID);
-        String className = Util.getClassName(deviceNode);
-
-        xmlew.add(xmlef.createStartElement(tagDevice, null, null));
-        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), deviceId));
-        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_NAME), deviceNode.getProperty(Constants.PROPERTY_NAME).toString()));
-        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), className));
-        xmlew.add(xmlef.createAttribute(new QName("parentId"), parentId)); //NOI18N     
-        
-        addDeviceModelAsXML(deviceId, xmlew, xmlef);
-        
-        xmlew.add(xmlef.createEndElement(tagDevice, null));
-        
-        addDeviceNodeChildrenAsXml(deviceId, className, xmlew, xmlef);
-    }
-    
-    private void addDeviceModelAsXML(String id, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException, ApplicationObjectNotFoundException, InvalidArgumentException {
-        try (Transaction tx = graphDb.beginTx()) {
-            Node objectNode = graphDb.findNode(inventoryObjectLabel, Constants.PROPERTY_UUID, id);
-            
-            Node modelNode = null;
-            
-            for (Relationship aListTypeAttributeRelationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO)) {
-                if (aListTypeAttributeRelationship.getProperty(Constants.PROPERTY_NAME).equals("model")) {
-                    modelNode = aListTypeAttributeRelationship.getEndNode();
-                    break;
-                }
-            }
-            
-            if (modelNode != null && modelNode.hasRelationship(RelTypes.HAS_VIEW, Direction.OUTGOING)) {
-                Node layoutNode = modelNode.getSingleRelationship(RelTypes.HAS_VIEW, Direction.OUTGOING).getEndNode();
-                QName tagModel = new QName("model");
-
-                xmlew.add(xmlef.createStartElement(tagModel, null, null));
-                xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), (String)modelNode.getProperty(Constants.PROPERTY_UUID)));
-                xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), 
-                        (String)modelNode.getSingleRelationship(RelTypes.INSTANCE_OF, Direction.OUTGOING).getEndNode().getProperty(Constants.PROPERTY_NAME)));
-                xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_NAME), (String)modelNode.getProperty(Constants.PROPERTY_NAME)));
-
-                QName tagView = new QName("view");
-
-                xmlew.add(xmlef.createStartElement(tagView, null, null));
-                xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(layoutNode.getId())));
-                xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), (String)layoutNode.getProperty(Constants.PROPERTY_CLASS_NAME)));
-
-                QName tagStructure = new QName("structure");
-                xmlew.add(xmlef.createStartElement(tagStructure, null, null));
-                if (layoutNode.hasProperty(Constants.PROPERTY_STRUCTURE))
-                    xmlew.add(xmlef.createCharacters(DatatypeConverter.printBase64Binary((byte[])layoutNode.getProperty(Constants.PROPERTY_STRUCTURE))));
-                xmlew.add(xmlef.createEndElement(tagStructure, null));
-                xmlew.add(xmlef.createEndElement(tagView, null));  
-                xmlew.add(xmlef.createEndElement(tagModel, null));  
-            }
-        }
     }
 }

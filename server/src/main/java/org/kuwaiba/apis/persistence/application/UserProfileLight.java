@@ -29,8 +29,13 @@ public class UserProfileLight {
     public static final String PROPERTY_CREATION_DATE = "creationDate"; //NOI18N
     public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
     public static final String PROPERTY_TYPE = "type"; //NOI18N
+    public static final String PROPERTY_EMAIL = "email"; //NOI18N
     
     public static final String DEFAULT_ADMIN = "admin";
+    /**
+     * "Hard-coded" users that should not be deleted or modified in any way (nor can they log in).
+     */
+    public static final int USER_TYPE_SYSTEM = 0;
     /**
      * Users that will access the system via desktop client or web interface
      */
@@ -73,8 +78,12 @@ public class UserProfileLight {
      * See USER_TYPE* for possible values.
      */
     private int type;
+    /**
+     * User's email
+     */
+    private String email;
 
-    public UserProfileLight(long id, String userName, String firstName, String lastName, boolean enabled, long creationDate, int type) {
+    public UserProfileLight(long id, String userName, String firstName, String lastName, boolean enabled, long creationDate, int type, String email) {
         this.id = id;
         this.userName = userName;
         this.firstName = firstName;
@@ -82,6 +91,7 @@ public class UserProfileLight {
         this.creationDate = creationDate;
         this.enabled = enabled;
         this.type = type;
+        this.email = email;
     }
 
     public long getId() {
@@ -138,5 +148,13 @@ public class UserProfileLight {
 
     public void setType(int type) {
         this.type = type;
+    }
+    
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

@@ -79,10 +79,12 @@ import org.kuwaiba.interfaces.ws.toserialize.metadata.RemoteClassMetadata;
 import org.kuwaiba.interfaces.ws.toserialize.metadata.RemoteClassMetadataLight;
 import org.kuwaiba.beans.WebserviceBean;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteConfigurationVariable;
+import org.kuwaiba.interfaces.ws.toserialize.application.RemoteInventoryProxy;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteSynchronizationProvider;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteValidator;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteValidatorDefinition;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteMPLSConnectionDetails;
+import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectRelatedObjects;
 
 /**
  * Main web service
@@ -104,7 +106,8 @@ public class KuwaibaService {
 
     // <editor-fold defaultstate="collapsed" desc="Application methods. Click on the + sign on the left to edit the code.">
     /**
-     * Creates a session. Only one session per type is allowed. If a new session is created and there was already one of the same type, the old one will be discarded. See RemoteSession.TYPE_XXX for possible session types
+     * Creates a session. Only one session per type is allowed. If a new session is created and there was already one of the same type, 
+     * the old one will be discarded. See RemoteSession.TYPE_XXX for possible session types. System users can not create sessions.
      * @param username user login name
      * @param password user password
      * @param sessionType The type of session to be created. This type depends on what kind of client is trying to access (a desktop client, a web client, a web service user, etc. See RemoteSession.TYPE_XXX for possible session types
@@ -236,19 +239,23 @@ public class KuwaibaService {
     }
 
     /**
-     * Creates a user
+     * Creates a user. System users can be created but not deleted or modified. <b>Create system users only if you are a developer</b>, 
+     * as they can only be modified or deleted by accessing directly to the database.
      * @param username User name. Can't be null, empty or have non standard characters.
      * @param password A password (in plain text, it'll be encrypted later). Can't be null nor an empty string
      * @param firstName User's first name
      * @param lastName User's last name
      * @param enabled Is this user enable by default?
      * @param type The type of the user. See UserProfileLight.USER_TYPE* for possible values
+     * @param email User's email
      * @param privileges A list privileges that will be granted to this user.
      * @param defaultGroupId Default group this user will be associated to. Users <b>always</b> belong to at least one group. Other groups can be added later.
      * @param sessionId Session token
      * @return The new user Id
      * @throws ServerSideException If the user is not allowed to invoke the method
-     *                             If the username is null or empty or the username already exists
+     *                             If the username is null or empty or the username already exists, 
+     * if the user type is invalid or if the password is an empty string, or if it is attempted to change 
+     * the user name of the admin user name, or if this operation is attempted on a system user. Also, if the new user type is invalid.
      */
     @WebMethod(operationName = "createUser")
     public long createUser(
@@ -258,11 +265,12 @@ public class KuwaibaService {
             @WebParam(name = "LastName")String lastName,
             @WebParam(name = "enabled")boolean enabled,
             @WebParam(name = "type") int type,
+            @WebParam(name = "email") String email,
             @WebParam(name = "privileges")List<PrivilegeInfo> privileges,
             @WebParam(name = "defaultGroupId")long defaultGroupId,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
-            return wsBean.createUser(username, password, firstName, lastName, enabled, type, privileges, defaultGroupId, getIPAddress(), sessionId);
+            return wsBean.createUser(username, password, firstName, lastName, enabled, type, email, privileges, defaultGroupId, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
                 throw e;
@@ -282,10 +290,12 @@ public class KuwaibaService {
      * @param lastName New user's last name. Use null to leave it unchanged
      * @param enabled 0 for false, 1 for true, -1 to leave it unchanged
      * @param type User type. See UserProfile.USER_TYPE* for possible values. Use -1 to leave it unchanged
+     * @param email New user's email
      * @param sessionId Session token
      * @throws ServerSideException If the user is not allowed to invoke the method
-     *                             If the username is null or empty or 
-     *                             the username already exists or if the user could not be found
+     *                             If the username is null or empty or the username already exists, 
+     * if the user type is invalid or if the password is an empty string, or if it is attempted to change 
+     * the user name of the admin user name, or if this operation is attempted on a system user. Also, if the new user type is invalid.
      */
     @WebMethod(operationName = "setUserProperties")
     public void setUserProperties(
@@ -296,9 +306,10 @@ public class KuwaibaService {
             @WebParam(name = "password")String password,
             @WebParam(name = "enabled")int enabled,
             @WebParam(name = "type")int type,
+            @WebParam(name = "email") String email,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
-            wsBean.setUserProperties(oid, username, password, firstName, lastName, enabled, type, getIPAddress(), sessionId);
+            wsBean.setUserProperties(oid, username, password, firstName, lastName, enabled, type, email, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
                 throw e;
@@ -2283,6 +2294,261 @@ public class KuwaibaService {
             }
         }
     }
+    
+    /**
+     * Creates an inventory proxy. Inventory proxies are used to integrate third party-applications with Kuwaiba. Sometimes these applications must refer to 
+     * assets managed by Kuwaiba from another perspective (financial, for example). In these applications, multiple Kuwaiba inventory assets might be represented by
+     * a single entity (e.g. a router with slots, boards and ports might just be something like "standard network device"). Proxies are used to map multiple inventory 
+     * elements into a single entity. It's a sort of "impedance matching" between systems that refer to the same real world object from different perspectives.
+     * @param proxyPoolId The parent pool id.
+     * @param proxyClass The proxy class. Must be subclass of GenericProxy.
+     * @param attributes The set of initial attributes. If no attribute <code>name</code> is specified, an empty string will be used.
+     * @param sessionId Session token.
+     * @return The id of the newly created proxy.
+     * @throws ServerSideException If the parent pool could not be found or if any of the initial attributes could not be mapped or 
+     * if the proxy class could not be found.
+     */
+    @WebMethod(operationName = "createProxy")
+    public String createProxy(@WebParam(name = "proxyPoolId")String proxyPoolId, @WebParam(name = "proxyClass")String proxyClass, 
+            @WebParam(name = "attributes")List<StringPair> attributes, @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.createProxy(proxyPoolId, proxyClass, attributes, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createProxy: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Deletes a proxy and delete its association with the related inventory objects. These objects will remain untouched.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy
+     * @param sessionId Session token.
+     * @throws ServerSideException If the proxy could not be found or if the proxy class could not be found.
+     */
+    @WebMethod(operationName = "deleteProxy")
+    public void deleteProxy(@WebParam(name = "proxyClass")String proxyClass, @WebParam(name = "proxyId")String proxyId, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.deleteProxy(proxyClass, proxyId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in deleteProxy: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Updates one or many proxy attributes.
+     * @param proxyId The parent pool id,
+     * @param proxyClass The class of the proxy.
+     * @param attributes The set of initial attributes. If no attribute <code>name</code> is specified, an empty string will be used.
+     * @param sessionId Session token.
+     * @throws ServerSideException If the parent pool could not be found or if any of the initial attributes could not be mapped or 
+     * if the proxy class could not be found.
+     */
+    @WebMethod(operationName = "updateProxy")
+    public void updateProxy(@WebParam(name = "proxyClass")String proxyClass, @WebParam(name = "proxyId")String proxyId, 
+            @WebParam(name = "attributes")List<StringPair> attributes, @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.updateProxy(proxyClass, proxyId, attributes, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in updateProxy: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Creates a proxy pool.
+     * @param name The name of the pool.
+     * @param description The description of the pool.
+     * @param sessionId Session token.
+     * @throws ServerSideException In case something unexpected happened.
+     * @return The id of the newly created proxy.
+     */
+    @WebMethod(operationName = "createProxyPool")
+    public String createProxyPool(@WebParam(name = "name")String name, 
+            @WebParam(name = "description")String description, @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.createProxyPool(name, description, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createProxyPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Updates an attribute of a proxy pool.
+     * @param proxyPoolId The id of the pool to be updated.
+     * @param attributeName The name of the pool attribute to be updated. Valid values are "name" and "description"
+     * @param attributeValue The value of the attribute. Null values will be ignored.
+     * @param sessionId Session token.
+     * @throws ServerSideException If the pool could not be found or if an unknown attribute name is provided.
+     */
+    @WebMethod(operationName = "updateProxyPool")
+    public void updateProxyPool(@WebParam(name = "proxyPoolId")String proxyPoolId, @WebParam(name = "attributeName")String attributeName, 
+            @WebParam(name = "attributeValue")String attributeValue, @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.updateProxyPool(proxyPoolId, attributeName, attributeValue, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in updateProxyPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Deletes a proxy pool.
+     * @param proxyPoolId The id of the pool.
+     * @param sessionId Session token.
+     * @throws ServerSideException If the pool could not be found.
+     */
+    @WebMethod(operationName = "deleteProxyPool")
+    public void deleteProxyPool(@WebParam(name = "proxyPoolId")String proxyPoolId, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.deleteProxyPool(proxyPoolId, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in deleteProxyPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Retrieves the list of pools of proxies.
+     * @return The available pools of inventory proxies.
+     * @param sessionId Session token.
+     * @throws ServerSideException If case something unexpected happened.
+     */
+    @WebMethod(operationName = "getProxyPools")
+    public List<RemotePool> getProxyPools(@WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getProxyPools(getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getProxyPools: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    /**
+     * Gets the list of inventory proxies in a given pool.
+     * @param proxyPoolId The id of the parent pool.
+     * @param sessionId Session token.
+     * @return The proxies
+     * @throws ServerSideException If the parent pool could not be found or if the object in the database can not be mapped into an InventoryProxy instance.
+     */
+    @WebMethod(operationName = "getProxiesInPool")
+    public List<RemoteInventoryProxy> getProxiesInPool(@WebParam(name = "proxyPoolId")String proxyPoolId, 
+            @WebParam(name = "sessionId")String sessionId)throws ServerSideException {
+        try {
+            return wsBean.getProxiesInPool(proxyPoolId, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getProxiesInPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets all the inventory proxies in the database.
+     * @param sessionId Session token.
+     * @return The list of inventory proxy objects.
+     * @throws ServerSideException If any proxy node could not be mapped into a Java object.
+     */
+    @WebMethod(operationName = "getAllProxies")
+    public List<RemoteInventoryProxy> getAllProxies(@WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getAllProxies(getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getAllProxies: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Associates an inventory object to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @param sessionId Session token.
+     * @throws ServerSideException If the inventory object could not be found or
+     *                             if the proxy could not be found or
+     *                             if the two entities are already related.
+     */
+    @WebMethod(operationName = "associateObjectToProxy")
+    public void associateObjectToProxy(@WebParam(name = "objectClass")String objectClass, @WebParam(name = "objectId")String objectId, 
+            @WebParam(name = "proxyClass")String proxyClass, @WebParam(name = "proxyId")String proxyId, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.associateObjectToProxy(objectClass, objectId, proxyClass, proxyId, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in associateObjectToProxy: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+
+    /**
+     * Releases an inventory previously related to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @param sessionId Session token.
+     * @throws ServerSideException If the inventory object could not be found or 
+     *                             if the proxy could not be found.
+     */
+    @WebMethod(operationName = "releaseObjectFromProxy")
+    public void releaseObjectFromProxy(@WebParam(name = "objectClass")String objectClass, @WebParam(name = "objectId")String objectId, 
+            @WebParam(name = "proxyClass")String proxyClass, @WebParam(name = "proxyId")String proxyId, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            wsBean.releaseObjectFromProxy(objectClass, objectId, proxyClass, proxyId, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in releaseObjectFromProxy: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
     //</editor-fold>
     
     //<editor-fold desc="Validators" defaultstate="collapsed">
@@ -3490,7 +3756,33 @@ public class KuwaibaService {
             }
         }
     }
-    
+    /**
+     * Connect two ports using a mirrorMultiple relationship
+     * @param aObjectClass Port a class
+     * @param aObjectId Port a id
+     * @param bObjectClasses Port b classes
+     * @param bObjectIds Port b ids
+     * @param sessionId Session token
+     * @throws ServerSideException
+     */
+    @WebMethod(operationName = "connectMirrorMultiplePort")
+    public void connectMirrorMultiplePort(
+        @WebParam(name="aObjectClass") String aObjectClass, 
+        @WebParam(name="aObjectId") String aObjectId, 
+        @WebParam(name="bObjectClasses") List<String> bObjectClasses, 
+        @WebParam(name="bObjectIds") List<String> bObjectIds,
+        @WebParam(name="sessionId") String sessionId) throws ServerSideException {
+        try {
+            wsBean.connectMirrorMultiplePort(aObjectClass, aObjectId, bObjectClasses, bObjectIds, getIPAddress(), sessionId);
+        } catch(Exception ex) {
+            if (ex instanceof ServerSideException)
+                throw ex;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in connectMirrorMultiplePort: " + ex.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
     /**
      * Releases a port mirroring relationship between two ports, receiving one of the ports as parameter
      * @param objectClass Object class
@@ -3517,14 +3809,37 @@ public class KuwaibaService {
     }
     
     /**
+     * Releases a port mirroring multiple relationship between two ports, receiving one of the ports as parameter
+     * @param objectClass Object class
+     * @param objectId Object id
+     * @param sessionId Session token
+     * @throws ServerSideException If the object can not be found
+     *                             If the class can not be found
+     */
+    @WebMethod(operationName = "releaseMirrorMultiplePort")
+    public void releaseMirrorMultiplePort(
+            @WebParam(name = "objectClass")String objectClass,
+            @WebParam(name = "objectId")String objectId,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            wsBean.releaseMirrorMultiplePort(objectClass, objectId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in releaseMirrorMultiplePort: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+        
+    /**
      * Creates a physical connection (a container or a link). The validations are made at server side (this is,
      * if the connection can be established between the two endpoints, if they're not already connected, etc)
      * @param aObjectClass "a" endpoint object class
      * @param aObjectId "a" endpoint object id
      * @param bObjectClass "b" endpoint object class
      * @param bObjectId "b" endpoint object id
-     * @param parentClass Parent object class
-     * @param parentId Parent object id
      * @param name COnnection name. Leave empty if you want to use the one in the template
      * @param connectionClass Class used to create the connection. See Constants class for supported values
      * @param templateId Id of the template for class connectionClass. Use -1 if you want to create a connection without template
@@ -3552,6 +3867,51 @@ public class KuwaibaService {
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
             return wsBean.createPhysicalConnection(aObjectClass, aObjectId,bObjectClass, bObjectId,
+                   name, connectionClass, templateId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createPhysicalConnection: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+
+    /**
+     * Creates a physical connection (a container or a link). The validations are made at server side (this is,
+     * if the connection can be established between the two endpoints, if they're not already connected, etc)
+     * @param aObjectClasses "a" endpoints object class
+     * @param aObjectIds "a" endpoints object id
+     * @param bObjectClasses "b" endpoints object class
+     * @param bObjectIds "b" endpoints object id
+     * @param name COnnection name. Leave empty if you want to use the one in the template
+     * @param connectionClass Class used to create the connection. See Constants class for supported values
+     * @param templateId Id of the template for class connectionClass. Use -1 if you want to create a connection without template
+     * @param sessionId Session token
+     * @return The new connection id
+     * @throws ServerSideException If the user is not allowed to invoke the method
+     *                             If the object's class can't be found
+     *                             If the parent id is not found
+     *                             If the update can't be performed due to a format issue
+     *                             If any of the attribute values has an invalid value or format.
+     *                             If the specified template could not be found.
+     *                             If any of the objects can't be found
+     *                             If any of the objects involved can't be connected (i.e. if it's not an inventory object)
+     *                             If any of the classes provided can not be found
+     */
+    @WebMethod(operationName = "createPhysicalConnections")
+    public String[] createPhysicalConnections(
+            @WebParam(name = "aObjectClasses")String[] aObjectClasses,
+            @WebParam(name = "aObjectIds")String[] aObjectIds,
+            @WebParam(name = "bObjectClasses")String[] bObjectClasses,
+            @WebParam(name = "bObjectIds")String[] bObjectIds,
+            @WebParam(name = "name")String name,
+            @WebParam(name = "connectionClass") String connectionClass,
+            @WebParam(name = "templateId") String templateId,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            return wsBean.createPhysicalConnections(aObjectClasses, aObjectIds, bObjectClasses, bObjectIds,
                    name, connectionClass, templateId, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
@@ -3785,7 +4145,34 @@ public class KuwaibaService {
             }
         }
     }  
-   
+    /**
+     * Gets the tree representation of all physical paths.
+     * @param objectClass Port object class
+     * @param objectId Port object id
+     * @param sessionId Session token
+     * @return A tree representation of all physical paths.
+     * @throws ServerSideException If the user is not allowed to invoke the method
+     *  If any of the objects involved in the path cannot be found
+     *  If any of the object classes involved in the path cannot be found
+     *  If any of the objects involved in the path has a malformed list type attribute
+     *  If any of the objects involved in the path has an invalid objectId or className
+     */
+    @WebMethod(operationName = "getPhysicalTree")
+    public RemoteObjectRelatedObjects getPhysicalTree(
+        @WebParam(name = "objectClass") String objectClass, 
+        @WebParam(name = "objectId") String objectId, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getPhysicalTree(objectClass, objectId, getIPAddress(), sessionId);
+        } catch(Exception ex) {
+            if (ex instanceof ServerSideException)
+                throw ex;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getPhysicalTree: " + ex.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
     /**
      * Connects pairs of ports (if they are not connected already) using physical link
      * @param sideAClassNames The list of classes of one of the sides of the connection
@@ -3808,7 +4195,8 @@ public class KuwaibaService {
                                       @WebParam(name = "sideBClassNames")String[] sideBClassNames, @WebParam(name = "sideBIds")String[] sideBIds,
                                       @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
-            if ((sideAClassNames.length + sideAIds.length + linksClassNames.length + linksIds.length + sideBClassNames.length + sideBIds.length) / 4 != sideAClassNames.length)
+            if (sideAClassNames.length != sideAIds.length || linksClassNames.length != linksIds.length || sideBClassNames.length != sideBIds.length
+                    || sideAClassNames.length != sideBClassNames.length || sideBClassNames.length != linksClassNames.length)
                 throw new ServerSideException("The array sizes don't match");
             
             wsBean.connectPhysicalLinks(sideAClassNames, sideAIds, linksClassNames, linksIds, sideBClassNames, sideBIds, getIPAddress(), sessionId);
@@ -3978,7 +4366,7 @@ public class KuwaibaService {
         }
     }
     
-     /**
+    /**
      * Associates a list of objects (resources) to an existing service
      * @param objectClass Object class
      * @param objectId Object id
@@ -7204,6 +7592,7 @@ public class KuwaibaService {
      * @param sessionId Session token
      * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime   
      */
+    @Deprecated
     @WebMethod(operationName = "relateSubnetToVlan")
     public void relateSubnetToVlan (
             @WebParam(name = "id")String id,
@@ -7231,6 +7620,7 @@ public class KuwaibaService {
      * @param sessionId Session token
      * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime    
      */
+    @Deprecated
     @WebMethod(operationName = "releaseSubnetFromVlan")
     public void releaseSubnetFromVlan (
             @WebParam(name = "subnetId")String subnetId,
@@ -7238,6 +7628,58 @@ public class KuwaibaService {
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try{
             wsBean.releaseSubnetFromVlan(vlanId, subnetId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in releaseSubnetFromVlan: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+        /**
+     * Creates a relation between a set of ports and a VLAN
+     * TODO: check the model, there are redundant relationships
+     * @param portsIds the ports ids
+     * @param portsClassNames the ports classnames
+     * @param vlanId VLAN id
+     * @param sessionId Session token
+     * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime   
+     */
+    @WebMethod(operationName = "relatePortsToVlan")
+    public void relatePortsToVlan (
+            @WebParam(name = "portsIds")List<String> portsIds,
+            @WebParam(name = "portsClassNames")List<String> portsClassNames,
+            @WebParam(name = "vlanId")String vlanId,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try{
+            wsBean.relatePortsToVlan(portsIds, portsClassNames, vlanId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in relateSubnetToVlan: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Releases the relation between a set of ports and a VLAN, this method is also using 
+     * TODO: check the model there are redundant relationships 
+     * @param portsIds the ports ids to release
+     * @param vlanId the VLAN id
+     * @param sessionId Session token
+     * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime    
+     */
+    @WebMethod(operationName = "releasePortsFromVlan")
+    public void releasePortsFromVlan (
+            @WebParam(name = "portsIds")List<String> portsIds,
+            @WebParam(name = "vlanId")String vlanId,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try{
+            wsBean.releasePortsFromVlan(portsIds, vlanId, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
                 throw e;
@@ -7992,6 +8434,20 @@ public class KuwaibaService {
         }      
     }
     
+    @WebMethod(operationName = "getAllProjects")
+    public List<RemoteObjectLight> getAllProjects(@WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getAllProjects(getIPAddress(), sessionId);
+        } catch (Exception ex) {
+            if (ex instanceof ServerSideException)
+                throw ex;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getAllProjects: " + ex.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }      
+    }
+    
     /**
      * Creates a Project Pool
      * @param name Project Pool name
@@ -8410,7 +8866,7 @@ public class KuwaibaService {
                 if (ex instanceof ServerSideException)
                     throw ex;
                 else {
-                    System.out.println("[KUWAIBA] An unexpected error occurred in moveSyncDataSourceConfiguration: " + ex.getMessage());
+                    System.out.println("[KUWAIBA] An unexpected error occurred in moveSyncDataSourceConfiguration: " + ex.getLocalizedMessage());
                     throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
                 }
             }

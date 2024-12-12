@@ -40,6 +40,7 @@ import org.kuwaiba.interfaces.ws.toserialize.application.RemoteBusinessRule;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteConfigurationVariable;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteContact;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteFavoritesFolder;
+import org.kuwaiba.interfaces.ws.toserialize.application.RemoteInventoryProxy;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteKpiResult;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteFileObject;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteFileObjectLight;
@@ -67,11 +68,10 @@ import org.kuwaiba.interfaces.ws.toserialize.business.AssetLevelCorrelatedInform
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteLogicalConnectionDetails;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteMPLSConnectionDetails;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObject;
-import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLinkObject;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLight;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLightList;
+import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectRelatedObjects;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectSpecialRelationships;
-import org.kuwaiba.interfaces.ws.toserialize.business.RemotePhysicalConnectionDetails;
 import org.kuwaiba.interfaces.ws.toserialize.business.modules.sdh.RemoteSDHContainerLinkDefinition;
 import org.kuwaiba.interfaces.ws.toserialize.business.modules.sdh.RemoteSDHPosition;
 import org.kuwaiba.interfaces.ws.toserialize.metadata.RemoteAttributeMetadata;
@@ -224,8 +224,11 @@ public interface WebserviceBean {
     public String[] createBulkSpecialObjects(String className, String parentClassName, String parentId, int numberOfSpecialObjects, String namePattern, String ipAddress, String sessionId) throws ServerSideException;
     //Physical connections
     public void connectMirrorPort(String[] aObjectClass, String[] aObjectId, String[] bObjectClass, String[] bObjectId, String ipAddress, String sessionId) throws ServerSideException;
+    public void connectMirrorMultiplePort(String aObjectClass, String aObjectId, List<String> bObjectClasses, List<String>  bObjectIds, String ipAddress, String sessionId) throws ServerSideException;
     public void releaseMirrorPort(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException;
+    public void releaseMirrorMultiplePort(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException;
     public String createPhysicalConnection(String aObjectClass, String aObjectId, String bObjectClass, String bObjectId, String name, String connectionClass, String templateId, String ipAddress, String sessionId) throws ServerSideException;
+    public String[] createPhysicalConnections(String[] aObjectClass, String[] aObjectId, String[] bObjectClass, String[] bObjectId, String name, String connectionClass, String templateId, String ipAddress, String sessionId) throws ServerSideException;
     public void deletePhysicalConnection(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException;
     public RemoteObjectLight[] getPhysicalConnectionEndpoints(String connectionClass, String connectionId, String ipAddress, String sessionId) throws ServerSideException;
     
@@ -236,6 +239,7 @@ public interface WebserviceBean {
     public void disconnectPhysicalConnection(String connectionClass, String connectionId, int sideToDisconnect, String ipAddress, String sessionId) throws ServerSideException;
     
     public List<RemoteObjectLight> getPhysicalPath(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException;
+    public RemoteObjectRelatedObjects getPhysicalTree(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException;
     @Deprecated
     public RemoteLogicalConnectionDetails getLogicalLinkDetails(String linkClass, String linkId, String ipAddress, String sessionId) throws ServerSideException;
     public RemoteViewObject validateSavedE2EView(List<String> linkClasses, List<String> linkIds, RemoteViewObject savedView, String ipAddress, String sessionId) throws ServerSideException;
@@ -255,7 +259,7 @@ public interface WebserviceBean {
 
     // <editor-fold defaultstate="collapsed" desc="Application methods. Click on the + sign on the left to edit the code.">
     public void setUserProperties(long oid, String userName, String password, String firstName,
-            String lastName, int enabled, int type, String ipAddress, String sessionId)
+            String lastName, int enabled, int type, String email, String ipAddress, String sessionId)
             throws ServerSideException;
 
     public void addUserToGroup(long userId, long groupId, String ipAddress, String sessionId) throws ServerSideException;
@@ -275,7 +279,7 @@ public interface WebserviceBean {
     public List<GroupInfo> getGroups(String ipAddress, String sessionId) throws ServerSideException;
 
     public long createUser(String userName, String password, String firstName, 
-        String lastName, boolean enabled, int type, List<PrivilegeInfo> privileges, 
+        String lastName, boolean enabled, int type, String email, List<PrivilegeInfo> privileges, 
         long defaultGroupId, String ipAddress, String sessionId) throws ServerSideException;
 
     public void setGroupProperties(long oid, String groupName, String description, String ipAddress, String sessionId)throws ServerSideException;
@@ -543,7 +547,9 @@ public interface WebserviceBean {
         public String addIPAddress(String id, String parentClassName, List<StringPair> attributesToBeUpdated, String ipAddress, String sessionId) throws ServerSideException;
         public void removeIP(String[] ids, boolean releaseRelationships, String ipAddress, String sessionId) throws ServerSideException;
         public void relateIPtoPort(String id, String deviceClassName, String deviceId, String ipAddress, String sessionId) throws ServerSideException;
+        @Deprecated
         public void relateSubnetToVlan(String id, String className, String vlanId, String ipAddress, String sessionId) throws ServerSideException;
+        @Deprecated
         public void releaseSubnetFromVlan(String vlanId, String id, String ipAddress, String sessionId) throws ServerSideException;
         public void relateSubnetToVrf(String id, String className, String vrfId, String ipAddress, String sessionId) throws ServerSideException;
         public void releasePortFromIP(String deviceClassName, String deviceId, String id, String ipAddress, String sessionId) throws ServerSideException;
@@ -578,6 +584,7 @@ public interface WebserviceBean {
         public String addActivity(String parentId, String parentClassName, String className, String attributeNames[], String attributeValues[], String ipAddress, String sessionId) throws ServerSideException;
         public void deleteActivity(String className, String oid, boolean releaseRelationships, String ipAddress, String sessionId) throws ServerSideException;
         public List<RemoteObjectLight> getProjectsInProjectPool(String poolId, int limit, String ipAddress, String sessionId) throws ServerSideException;
+        public List<RemoteObjectLight> getAllProjects(String ipAddress, String sessionId) throws ServerSideException;
         public List<RemoteObjectLight> getProjectResurces(String projectClass, String projectId, String ipAddress, String sessionId) throws ServerSideException;
         public List<RemoteObjectLight> getProjectActivities(String projectClass, String projectId, String ipAddress, String sessionId) throws ServerSideException;
         public void associateObjectsToProject(String projectClass, String projectId, String[] objectClass, String[] objectId, String ipAddress, String sessionId) throws ServerSideException;
@@ -675,7 +682,7 @@ public interface WebserviceBean {
     public RemoteKpiResult executeActivityKpiAction(String kpiActionName, RemoteArtifact remoteArtifact, long processDefinitionId, long activityDefinitionId, String ipAddress, String sessionId) throws ServerSideException;
     //</editor-fold>
     
-    //<editor-fold defaultstate="collapsed" desc="Configuration Values">
+    //<editor-fold defaultstate="collapsed" desc="Configuration Variables">
     public long createConfigurationVariable(String configVariablesPoolId, String name, String description, int type, boolean masked, String valueDefinition, String ipAddress, String sessionId) throws ServerSideException;
     public void updateConfigurationVariable(String name, String propertyToUpdate, String newValue, String ipAddress, String sessionId) throws ServerSideException;
     public void deleteConfigurationVariable(String name, String ipAddress, String sessionId) throws ServerSideException;
@@ -687,6 +694,21 @@ public interface WebserviceBean {
     public void updateConfigurationVariablesPool(String poolId, String propertyToUpdate, String value, String ipAddress, String sessionId) throws ServerSideException;
     public void deleteConfigurationVariablesPool(String poolId, String ipAddress, String sessionId) throws ServerSideException;
     //</editor-fold>
+    
+    //<editor-fold defaultstate="collapsed" desc="Proxies">
+    public String createProxy(String proxyPoolId, String proxyClass, List<StringPair> attributes, String ipAddress, String sessionId) throws ServerSideException;
+    public void deleteProxy(String proxyClass, String proxyId, String ipAddress, String sessionId) throws ServerSideException;
+    public void updateProxy(String proxyClass, String proxyId, List<StringPair> attributes, String ipAddress, String sessionId) throws ServerSideException;
+    public String createProxyPool(String name, String description, String ipAddress, String sessionId) throws ServerSideException;
+    public void updateProxyPool(String proxyPoolId, String attributeName, String attributeValue, String ipAddress, String sessionId) throws ServerSideException;
+    public void deleteProxyPool(String proxyPoolId, String ipAddress, String sessionId) throws ServerSideException;
+    public List<RemotePool> getProxyPools(String ipAddress, String sessionId) throws ServerSideException;
+    public List<RemoteInventoryProxy> getProxiesInPool(String proxyPoolId, String ipAddress, String sessionId) throws ServerSideException;
+    public List<RemoteInventoryProxy> getAllProxies(String ipAddress, String sessionId) throws ServerSideException;
+    public void associateObjectToProxy(String objectClass, String objectId, String proxyClass, String proxyId, String ipAddress, String sessionId) throws ServerSideException;
+    public void releaseObjectFromProxy(String objectClass, String objectId, String proxyClass, String proxyId, String ipAddress, String sessionId) throws ServerSideException;
+    //</editor-fold>
+    
     //<editor-fold desc="Validators" defaultstate="collapsed">
     public long createValidatorDefinition(String name, String description, String classToBeApplied, String script, boolean enabled, String ipAddress, String sessionId) 
             throws ServerSideException;
@@ -699,5 +721,16 @@ public interface WebserviceBean {
     public List<RemoteValidator> runValidationsForObject(String objectClass, long objectId, String ipAddress, String sessionId) throws ServerSideException;
     
     public void deleteValidatorDefinition(long validatorDefinitionId, String ipAddress, String sessionId) throws ServerSideException;
+    //</editor-fold>
+    
+    //<editor-fold desc="Kuwaiba 2.1" defaultstate="collapsed">
+    public long getObjectChildrenCount(String className, String oid, String ipAddress, String sessionId) throws ServerSideException;
+    
+    public List<RemoteObjectLight> getObjectChildren(String className, String oid, long skip, long limit, String ipAddress, String sessionId) throws ServerSideException;
+    //</editor-fold>
+        
+    //<editor-fold desc="special explorer actions for VLANs" defaultstate="collapsed">
+        public void relatePortsToVlan(List<String> portsIds, List<String> portsClassNames, String vlanId, String ipAddress, String sessionId) throws ServerSideException;
+        public void releasePortsFromVlan(List<String> portsIds, String vlanId, String ipAddress, String sessionId) throws ServerSideException;
     //</editor-fold>
 }

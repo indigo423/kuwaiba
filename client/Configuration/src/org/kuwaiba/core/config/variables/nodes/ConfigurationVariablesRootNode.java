@@ -59,13 +59,13 @@ public class ConfigurationVariablesRootNode extends AbstractNode {
 
         @Override
         public void addNotify() {
-            List<LocalPool> customerPools = CommunicationsStub.getInstance().getConfigurationVariablesPools();
+            List<LocalPool> configurationVariablesPools = CommunicationsStub.getInstance().getConfigurationVariablesPools();
 
-            if (customerPools == null)
+            if (configurationVariablesPools == null)
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                         CommunicationsStub.getInstance().getError());
             else 
-                setKeys(customerPools);
+                setKeys(configurationVariablesPools);
         }
         
         @Override

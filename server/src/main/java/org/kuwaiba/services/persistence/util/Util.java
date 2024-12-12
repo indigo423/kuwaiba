@@ -344,7 +344,7 @@ public class Util {
         attribute.setType((String)attributeNode.getProperty(Constants.PROPERTY_TYPE));
         attribute.setVisible((Boolean)attributeNode.getProperty(Constants.PROPERTY_VISIBLE));
         attribute.setAdministrative((Boolean)attributeNode.getProperty(Constants.PROPERTY_ADMINISTRATIVE));
-        attribute.setNoCopy((Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY));
+        attribute.setNoCopy(attributeNode.hasProperty(Constants.PROPERTY_NO_COPY) ? (Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY) : false);
         attribute.setMandatory(attributeNode.hasProperty(Constants.PROPERTY_MANDATORY) ? (Boolean)attributeNode.getProperty(Constants.PROPERTY_MANDATORY) : false );
         attribute.setUnique((Boolean)attributeNode.getProperty(Constants.PROPERTY_UNIQUE));
         attribute.setId(attributeNode.getId());
@@ -453,7 +453,9 @@ public class Util {
                 (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
                 (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
                 userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
-                        (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI);
+                        (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI,
+                userNode.hasProperty(UserProfile.PROPERTY_EMAIL) ? //To keep backward compatibility
+                    (String) userNode.getProperty(UserProfile.PROPERTY_EMAIL) : null);
     }
     
     /**
@@ -477,6 +479,8 @@ public class Util {
                 (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
                 userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
                         (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI, 
+                userNode.hasProperty(UserProfile.PROPERTY_EMAIL) ? //To keep backward compatibility
+                    (String) userNode.getProperty(UserProfile.PROPERTY_EMAIL) : null,
                 privileges);
     }
     
@@ -513,16 +517,21 @@ public class Util {
                 (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
                 userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
                         (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI, 
+                userNode.hasProperty(UserProfile.PROPERTY_EMAIL) ? //To keep backward compatibility
+                    (String) userNode.getProperty(UserProfile.PROPERTY_EMAIL) : null, 
                 privileges);
     }
     
     /**
-     * Releases all the relationships associated to a user, and deletes the node corresponding to such user.
-     * should be released but the caller
-     * @param userNode The user node
+     * Releases all the relationships associated to a user, and deletes the node corresponding to such user. The user "admin" can not be deleted. 
+     * Historical entry associated to the user to be deleted are NOT deleted, so they can be edited later if necessary.
+     * @param userNode The user node.
      * @throws InvalidArgumentException If you try to delete the default administrator
      */
     public static void deleteUserNode(Node userNode) throws InvalidArgumentException {
+        if (userNode.hasProperty(UserProfile.PROPERTY_TYPE) && (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) == UserProfile.USER_TYPE_SYSTEM)
+            throw new InvalidArgumentException("System users can not be deleted or modified");
+        
         String userName = (String)userNode.getProperty(Constants.PROPERTY_NAME);
         if (UserProfile.DEFAULT_ADMIN.equals(userName))
             throw new InvalidArgumentException("The default administrator can not be deleted");
@@ -534,7 +543,7 @@ public class Util {
             privilegeNode.delete();
         }
 
-        //Delete the rest of relationships
+        //Delete the rest of relationships. Audit trail entries are kept.
         for (Relationship relationship : userNode.getRelationships()) 
             relationship.delete();
                 
@@ -565,9 +574,12 @@ public class Util {
                         (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
                         (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
                         (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
-                        userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
+                        userNode.hasProperty(UserProfile.PROPERTY_TYPE) ? //To keep backward compatibility
                             (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) :
-                            UserProfile.USER_TYPE_GUI, userPrivileges));
+                            UserProfile.USER_TYPE_GUI, 
+                        userNode.hasProperty(UserProfile.PROPERTY_EMAIL) ? //To keep backward compatibility
+                            (String) userNode.getProperty(UserProfile.PROPERTY_EMAIL) : null, 
+                        userPrivileges));
         }
         
         List<Privilege> privileges = new ArrayList<>();
@@ -659,9 +671,9 @@ public class Util {
             throw new UnsupportedPropertyException(String.format("The sync configuration with id %s is malformed. Check its properties", syncDataSourceConfigNode.getId()));
         
         if(!syncDataSourceConfigNode.hasRelationship(RelTypes.HAS_CONFIGURATION))
-            throw new UnsupportedPropertyException(String.format("The sync configuration with id %s is malformed. its not related with a inventory object", syncDataSourceConfigNode.getId()));
+            throw new UnsupportedPropertyException(String.format("The sync configuration with id %s is malformed. It is not related with a inventory object", syncDataSourceConfigNode.getId()));
         
-        Node inventoryObjectNode = syncDataSourceConfigNode.getSingleRelationship(RelTypes.HAS_CONFIGURATION, Direction.OUTGOING).getEndNode();
+        Node inventoryObjectNode = syncDataSourceConfigNode.getSingleRelationship(RelTypes.HAS_CONFIGURATION, Direction.INCOMING).getStartNode();
 
         HashMap<String, String> parameters = new HashMap<>();
         String configName = "";

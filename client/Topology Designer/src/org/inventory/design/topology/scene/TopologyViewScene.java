@@ -24,6 +24,7 @@ import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -121,7 +122,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
     
     public void addFreeFrame() {
         String oid = UUID.randomUUID().toString();
-        LocalObjectLight lol = new LocalObjectLight(oid, oid + FREE_FRAME + "New Frame", null);
+        LocalObjectLight lol = new LocalObjectLight(oid, oid + FREE_FRAME + "New Frame", "AFrame");
         Widget newWidget = addNode(lol);
         newWidget.setPreferredLocation(new Point(100, 100));
         this.validate();
@@ -130,7 +131,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
     
     public void addFreeCloud() {
         String oid = UUID.randomUUID().toString();
-        LocalObjectLight lol = new LocalObjectLight(oid, oid + CLOUD_ICON + "New Cloud", null);
+        LocalObjectLight lol = new LocalObjectLight(oid, oid + CLOUD_ICON + "New Cloud", "ACloud");
         Widget newWidget = addNode(lol);
         newWidget.setPreferredLocation(new Point(100, 100));
         this.validate();
@@ -148,9 +149,9 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
-            XMLEventWriter xmlew = xmlof.createXMLEventWriter(baos);
+            XMLEventWriter xmlew = xmlof.createXMLEventWriter(baos, "UTF-8"); // By default the character set is ISO something
             XMLEventFactory xmlef = XMLEventFactory.newInstance();
-            
+
             QName qnameView = new QName("view");
             xmlew.add(xmlef.createStartElement(qnameView, null, null));
             xmlew.add(xmlef.createAttribute(new QName("version"), FORMAT_VERSION));
@@ -277,8 +278,9 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
     public void render(byte[] structure) throws IllegalArgumentException {
         //Here is where we use Woodstox as StAX provider
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-
+        
         QName qNode = new QName("node"); //NOI18N
+        QName qView = new QName("view"); //NOI18N
         QName qEdge = new QName("edge"); //NOI18N
         QName qControlPoint = new QName("controlpoint"); //NOI18N
         QName qPolygon = new QName("polygon"); //NOI18N
@@ -286,12 +288,19 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
         
         try {
             ByteArrayInputStream bais = new ByteArrayInputStream(structure);
-            XMLStreamReader reader = inputFactory.createXMLStreamReader(bais);
+            XMLStreamReader reader = inputFactory.createXMLStreamReader(bais, "UTF-8");
 
             while (reader.hasNext()){
                 int event = reader.next();
                 if (event == XMLStreamConstants.START_ELEMENT) {
-                    if (reader.getName().equals(qNode)){
+                    if (reader.getName().equals(qView)) {
+                         Double version = Double.valueOf(reader.getAttributeValue(null, "version"));
+                         if (version != null && version >= 2) {
+                              NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.ERROR_MESSAGE, "The view you are opening was saved using the web client and cannot be opened here");
+                              clear();
+                              break;
+                         }
+                    } else if (reader.getName().equals(qNode)){
                         String objectClass = reader.getAttributeValue(null, "class");
 
                         int x = Double.valueOf(reader.getAttributeValue(null,"x")).intValue();
@@ -311,7 +320,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
                                     int y = Double.valueOf(reader.getAttributeValue(null,"y")).intValue();
                                     
                                     String oid = reader.getAttributeValue(null,"id");
-                                    LocalObjectLight lol = new LocalObjectLight(oid, reader.getElementText(), null);
+                                    LocalObjectLight lol = new LocalObjectLight(oid, reader.getElementText(), "ACloud");
                                     this.addNode(lol).setPreferredLocation(new Point(x, y));
                                 }
                             }
@@ -320,10 +329,10 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
                                 String aSide = reader.getAttributeValue(null,"aside");
                                 String bSide = reader.getAttributeValue(null,"bside");
 
-                                LocalObjectLight aSideObject = new LocalObjectLight(aSide, null, null);
+                                LocalObjectLight aSideObject = new LocalObjectLight(aSide, "", "AnEdge");
                                 Widget aSideWidget = this.findWidget(aSideObject);
 
-                                LocalObjectLight bSideObject = new LocalObjectLight(bSide, null, null);
+                                LocalObjectLight bSideObject = new LocalObjectLight(bSide, "", "AnEdge");
                                 Widget bSideWidget = this.findWidget(bSideObject);
 
                                 if (aSideWidget == null || bSideWidget == null)
@@ -354,7 +363,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
                             else{ // FREE FRAMES
                                 if (reader.getName().equals(qPolygon)) { 
                                     String oid = UUID.randomUUID().toString();
-                                    LocalObjectLight lol = new LocalObjectLight(oid, oid + FREE_FRAME + reader.getAttributeValue(null, "title"), null);
+                                    LocalObjectLight lol = new LocalObjectLight(oid, oid + FREE_FRAME + reader.getAttributeValue(null, "title"), "AFrame");
                                     Widget myPolygon = addNode(lol);
                                     Point p = new Point();
                                     p.setLocation(Double.valueOf(reader.getAttributeValue(null, "x")), Double.valueOf(reader.getAttributeValue(null, "y")));

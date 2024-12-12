@@ -23,7 +23,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -373,7 +372,7 @@ public final class RackViewTopComponent extends TopComponent implements ActionLi
 
     private void btnShowConnectionsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnShowConnectionsActionPerformed
         final ProgressHandle progressHandle = ProgressHandleFactory.createHandle(String.format("Loading rack view for %s", rack), (Action) null);
-        
+        scene.clear();
         RequestProcessor.getDefault().post(new Runnable() {
 
             @Override
@@ -390,7 +389,7 @@ public final class RackViewTopComponent extends TopComponent implements ActionLi
                     remove(satelliteView);
                     
                     scene.setShowConnections(true);            
-                    scene.clear();
+                    
 
                     RackViewService.setProgressHandle(progressHandle);
                     service.shownRack();
@@ -411,7 +410,7 @@ public final class RackViewTopComponent extends TopComponent implements ActionLi
                     remove(satelliteView);
                     
                     scene.setShowConnections(false);
-                    scene.clear();
+                    
                     
                     RackViewService.setProgressHandle(progressHandle);
                     service.shownRack();

@@ -30,6 +30,7 @@ import com.neotropic.kuwaiba.modules.views.ViewModule;
 import com.neotropic.kuwaiba.modules.warehouse.WarehouseModule;
 import com.neotropic.kuwaiba.scheduling.BackgroundJob;
 import com.neotropic.kuwaiba.scheduling.JobManager;
+import static com.neotropic.kuwaiba.sync.connectors.snmp.vlan.CiscoVlansSynchronizer.RELATIONSHIP_PORT_BELONGS_TO_VLAN;
 import com.neotropic.kuwaiba.sync.model.AbstractSyncProvider;
 import com.neotropic.kuwaiba.sync.model.SyncAction;
 import com.neotropic.kuwaiba.sync.model.SyncDataSourceConfiguration;
@@ -117,6 +118,7 @@ import org.kuwaiba.interfaces.ws.toserialize.application.RemoteActivityDefinitio
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteArtifact;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteArtifactDefinition;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteConfigurationVariable;
+import org.kuwaiba.interfaces.ws.toserialize.application.RemoteInventoryProxy;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteKpi;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteKpiAction;
 import org.kuwaiba.interfaces.ws.toserialize.application.RemoteKpiResult;
@@ -144,6 +146,7 @@ import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObject;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLinkObject;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLight;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectLightList;
+import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectRelatedObjects;
 import org.kuwaiba.interfaces.ws.toserialize.business.RemoteObjectSpecialRelationships;
 import org.kuwaiba.interfaces.ws.toserialize.business.ServiceLevelCorrelatedInformation;
 import org.kuwaiba.interfaces.ws.toserialize.business.modules.sdh.RemoteSDHContainerLinkDefinition;
@@ -482,10 +485,12 @@ public class WebserviceBeanImpl implements WebserviceBean {
                                                        atrbMtdt.getType(),
                                                        atrbMtdt.isAdministrative(),
                                                        atrbMtdt.isVisible(),
+                                                       atrbMtdt.isReadOnly(),
                                                        atrbMtdt.isUnique(),
                                                        atrbMtdt.isMandatory(),
                                                        atrbMtdt.isMultiple(),
                                                        atrbMtdt.getDescription(), 
+                                                       atrbMtdt.isNoCopy(), 
                                                        atrbMtdt.getOrder());
             return atrbInfo;
          } catch (InventoryException ex) {
@@ -507,10 +512,12 @@ public class WebserviceBeanImpl implements WebserviceBean {
                                                        atrbMtdt.getType(),
                                                        atrbMtdt.isAdministrative(),
                                                        atrbMtdt.isVisible(),
+                                                       atrbMtdt.isReadOnly(),
                                                        atrbMtdt.isUnique(),
                                                        atrbMtdt.isMandatory(),
                                                        atrbMtdt.isMultiple(),
                                                        atrbMtdt.getDescription(), 
+                                                       atrbMtdt.isNoCopy(), 
                                                        atrbMtdt.getOrder());
             return attrInfo;
 
@@ -1038,7 +1045,6 @@ public class WebserviceBeanImpl implements WebserviceBean {
         if (aem == null)
             throw new ServerSideException(I18N.gm("cannot_reach_backend"));
         try {
-            
             Session newSession = aem.createSession(user, password, sessionType, IPAddress);
             aem.createGeneralActivityLogEntry(user, ActivityLogEntry.ACTIVITY_TYPE_OPEN_SESSION, String.format("Connected from %s", IPAddress));
             return new RemoteSession(newSession.getToken(), newSession.getUser(), sessionType, newSession.getIpAddress());
@@ -1805,6 +1811,41 @@ public class WebserviceBeanImpl implements WebserviceBean {
     }
     
     @Override
+    public void connectMirrorMultiplePort(String aObjectClass, String aObjectId, List<String> bObjectClasses, List<String>  bObjectIds, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        for (String bObjectId : bObjectIds) {
+            if (aObjectId.equals(bObjectId))
+                throw new ServerSideException("A port can not be mirror to itself");
+        }
+        try {
+            aem.validateWebServiceCall("connectMirrorMultiplePort", ipAddress, sessionId);
+            final String MIRROR_MULTIPLE = "mirrorMultiple";
+            
+            if (!mem.isSubclassOf("GenericPort", aObjectClass))
+                throw new ServerSideException(String.format("Object %s is not a port", bem.getObjectLight(aObjectClass, aObjectId)));
+                        
+            for (int i = 0; i < bObjectClasses.size(); i++) {
+                if (!mem.isSubclassOf("GenericPort", aObjectClass)) {
+                    throw new ServerSideException(String.format(
+                        "Object %s is not a port", 
+                        bem.getObjectLight(bObjectClasses.get(i), bObjectIds.get(i))));
+                }
+                if (bem.hasSpecialRelationship(bObjectClasses.get(i), bObjectIds.get(i), MIRROR_MULTIPLE, 1)) //NOI18N
+                    throw new ServerSideException(String.format("Object %s already has a %s port", bem.getObjectLight(bObjectClasses.get(i), bObjectIds.get(i)), MIRROR_MULTIPLE));
+                
+                bem.createSpecialRelationship(aObjectClass, aObjectId, bObjectClasses.get(i), bObjectIds.get(i), MIRROR_MULTIPLE, true); //NOI18N
+            
+                aem.createObjectActivityLogEntry(getUserNameFromSession(sessionId), aObjectClass, aObjectId, 
+                    ActivityLogEntry.ACTIVITY_TYPE_CREATE_RELATIONSHIP_INVENTORY_OBJECT, 
+                    MIRROR_MULTIPLE, "", bObjectClasses.get(i) + ", " + bObjectIds.get(i), ""); //NOI18N      
+            }
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    
+    @Override
     public void releaseMirrorPort(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException {
         if (bem == null || aem == null)
             throw new ServerSideException(I18N.gm("cannot_reach_backend"));
@@ -1826,6 +1867,34 @@ public class WebserviceBeanImpl implements WebserviceBean {
             aem.createObjectActivityLogEntry(getUserNameFromSession(sessionId), objectClass, objectId, 
                 ActivityLogEntry.ACTIVITY_TYPE_RELEASE_RELATIONSHIP_INVENTORY_OBJECT, 
                 "mirror", theOtherPort.getId(), "", ""); //NOI18N
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    
+    @Override
+    public void releaseMirrorMultiplePort(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("releaseMirrorMultiplePort", ipAddress, sessionId);
+            if (!mem.isSubclassOf("GenericPort", objectClass)) //NOI18N
+                throw new ServerSideException(String.format("Object %s is not a port", bem.getObjectLight(objectClass, objectId)));
+            final String MIRROR_MULTIPLE = "mirrorMultiple"; //NOI18N
+                        
+            BusinessObjectLight theOtherPort = null;
+            if (bem.hasSpecialRelationship(objectClass, objectId, MIRROR_MULTIPLE, 1))
+                theOtherPort = bem.getSpecialAttribute(objectClass, objectId, MIRROR_MULTIPLE).get(0);
+            
+            if (theOtherPort == null)
+                throw new ServerSideException(String.format("Object %s no has a mirror multiple port", bem.getObjectLight(objectClass, objectId)));
+                
+            bem.releaseSpecialRelationship(objectClass, objectId, "-1", MIRROR_MULTIPLE);
+            
+            aem.createObjectActivityLogEntry(getUserNameFromSession(sessionId), objectClass, objectId, 
+                ActivityLogEntry.ACTIVITY_TYPE_RELEASE_RELATIONSHIP_INVENTORY_OBJECT, 
+                MIRROR_MULTIPLE, theOtherPort.getId(), "", ""); //NOI18N
         } catch (InventoryException ex) {
             throw new ServerSideException(ex.getMessage());
         }
@@ -1901,6 +1970,87 @@ public class WebserviceBeanImpl implements WebserviceBean {
         }
     }
 
+    @Override
+    public String[] createPhysicalConnections(String[] aObjectClass, String[] aObjectId,
+            String[] bObjectClass, String[] bObjectId, String name, String connectionClass, 
+            String templateId, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        String newConnectionId = null;
+        
+        try {
+            aem.validateWebServiceCall("createPhysicalConnection", ipAddress, sessionId);
+            
+            if (!mem.isSubclassOf(Constants.CLASS_GENERICPHYSICALCONNECTION, connectionClass)) //NOI18N
+                throw new ServerSideException(String.format("Class %s is not subclass of GenericPhysicalConnection", connectionClass)); //NOI18N
+            
+            if(aObjectClass.length != aObjectId.length && bObjectClass.length != bObjectId.length && 
+                    aObjectClass.length != aObjectClass.length && bObjectId.length != bObjectId.length)
+                throw new ServerSideException("The number of ports provided does not match. The connections can not be created");
+            
+            BusinessObjectLight commonParent = null;
+            boolean isLink;
+            
+            HashMap<String, String> attributes = new HashMap<>();
+            if (name == null || name.isEmpty())
+                throw new ServerSideException("The name of the connection can not be empty");
+            //The connection (either link or container, will be created in the closest common parent between the endpoints)
+            
+            String[] newConnectionIds = new String[aObjectId.length];
+            
+            for (int i = 0; i < aObjectClass.length; i++) {
+                commonParent = bem.getCommonParent(aObjectClass[i], aObjectId[i], bObjectClass[i], bObjectId[i]);
+                
+                if (commonParent == null || commonParent.getName().equals(Constants.DUMMY_ROOT))
+                    throw new ServerSideException("The objects provided does not have a common parent, or it is the navigation root. The connection can not be created");
+                
+                isLink = false;
+            
+                //Check if the endpoints are already connected, but only if the connection is a link (the endpoints are ports)
+                if (mem.isSubclassOf(Constants.CLASS_GENERICPHYSICALLINK, connectionClass)) { //NOI18N
+
+                    if (!mem.isSubclassOf("GenericPort", aObjectClass[i]) || !mem.isSubclassOf("GenericPort", bObjectClass[i])) //NOI18N
+                        throw new ServerSideException("One of the endpoints provided is not a port");
+
+                    if (!bem.getSpecialAttribute(aObjectClass[i], aObjectId[i], "endpointA").isEmpty()) //NOI18N
+
+                        throw new ServerSideException(String.format("The selected endpoint %s is already connected", bem.getObjectLight(aObjectClass[i], aObjectId[i])));
+
+                    if (!bem.getSpecialAttribute(bObjectClass[i], bObjectId[i], "endpointB").isEmpty()) //NOI18N
+                        throw new ServerSideException(String.format("The selected endpoint %s is already connected", bem.getObjectLight(bObjectClass[i], bObjectId[i])));
+
+                    isLink = true;
+                }
+                
+                attributes.put(Constants.PROPERTY_NAME, name + "_" + i);
+          
+                newConnectionId = bem.createSpecialObject(connectionClass, commonParent.getClassName(), commonParent.getId(), attributes, templateId);
+                newConnectionIds[i] = newConnectionId;
+                
+                if (isLink) { //Check connector mappings only if it's a link
+                   aem.checkRelationshipByAttributeValueBusinessRules(connectionClass, newConnectionId, aObjectClass[i], aObjectId[i]);
+                   aem.checkRelationshipByAttributeValueBusinessRules(connectionClass, newConnectionId, bObjectClass[i], bObjectId[i]);
+                }
+
+                bem.createSpecialRelationship(connectionClass, newConnectionId, aObjectClass[i], aObjectId[i], "endpointA", true);
+                bem.createSpecialRelationship(connectionClass, newConnectionId, bObjectClass[i], bObjectId[i], "endpointB", true);
+
+                aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                       ActivityLogEntry.ACTIVITY_TYPE_CREATE_INVENTORY_OBJECT, String.format("%s [%s] (%s)", name, connectionClass, newConnectionId));
+            }//end for
+            
+            return newConnectionIds;
+        } catch (InventoryException e) {
+            //If the new connection was successfully created, but there's a problem creating the relationships,
+            //delete the connection and throw an exception
+            if (newConnectionId != null)
+                deleteObjects(new String[]{ connectionClass }, new String[]{ newConnectionId }, true, ipAddress, sessionId);
+
+            throw new ServerSideException(e.getMessage());
+        }
+    }
+    
     @Override
     public RemoteObjectLight[] getPhysicalConnectionEndpoints(String connectionClass, String connectionId, String ipAddress, String sessionId) throws ServerSideException {
         if (bem == null || aem == null)
@@ -2145,7 +2295,21 @@ public class WebserviceBeanImpl implements WebserviceBean {
             throw new ServerSideException(ex.getMessage());
         }
     }
-     
+    
+    @Override
+    public RemoteObjectRelatedObjects getPhysicalTree(String objectClass, String objectId, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        try {
+            aem.validateWebServiceCall("getPhysicalTree", ipAddress, sessionId);
+            if (!mem.isSubclassOf("GenericPort", objectClass))
+                throw new ServerSideException(String.format("Class %s is not a port", objectClass));
+            return new RemoteObjectRelatedObjects(bem.getPhysicalTree(objectClass, objectId));            
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    
     @Deprecated
     @Override
     public RemoteLogicalConnectionDetails getLogicalLinkDetails(String linkClass, 
@@ -2616,12 +2780,12 @@ public class WebserviceBeanImpl implements WebserviceBean {
 
     @Override
     public void setUserProperties(long oid, String userName, String password, 
-    String firstName, String lastName, int enabled, int type, String ipAddress, String sessionId) throws ServerSideException{
+    String firstName, String lastName, int enabled, int type, String email, String ipAddress, String sessionId) throws ServerSideException{
         if (aem == null)
             throw new ServerSideException(I18N.gm("cannot_reach_backend"));
         try {
             aem.validateWebServiceCall("setUserProperties", ipAddress, sessionId);
-            aem.setUserProperties(oid, userName, password, firstName, lastName, enabled, type);
+            aem.setUserProperties(oid, userName, password, firstName, lastName, enabled, type, email);
             
             aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
                 ActivityLogEntry.ACTIVITY_TYPE_UPDATE_APPLICATION_OBJECT, 
@@ -2746,7 +2910,7 @@ public class WebserviceBeanImpl implements WebserviceBean {
 
     @Override
     public long createUser(String userName, String password, String firstName, 
-        String lastName, boolean enabled, int type, List<PrivilegeInfo> privileges, 
+        String lastName, boolean enabled, int type, String email, List<PrivilegeInfo> privileges, 
         long defaultGroupId, String ipAddress, String sessionId) throws ServerSideException {
         
         if (aem == null)
@@ -2763,7 +2927,7 @@ public class WebserviceBeanImpl implements WebserviceBean {
                 }
             }
             
-            long newUserId = aem.createUser(userName, password, firstName, lastName, enabled, type, remotePrivileges, defaultGroupId);
+            long newUserId = aem.createUser(userName, password, firstName, lastName, enabled, type, email, remotePrivileges, defaultGroupId);
             
             aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
                     ActivityLogEntry.ACTIVITY_TYPE_CREATE_APPLICATION_OBJECT, String.format("New User %s", userName));
@@ -3868,8 +4032,186 @@ public class WebserviceBeanImpl implements WebserviceBean {
             throw new ServerSideException(ex.getMessage());
         }
     }
-    // </editor-fold>
+
+    @Override
+    public String createProxy(String proxyPoolId, String proxyClass, List<StringPair> attributes, 
+            String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("createProxy", ipAddress, sessionId);
+            
+            HashMap<String, String> attributesAsHashMap = new HashMap<>();
+            attributes.stream().forEach( anAttribute -> attributesAsHashMap.put(anAttribute.getKey(), anAttribute.getValue()) );
+            
+            String proxyId = aem.createProxy(proxyPoolId, proxyClass, attributesAsHashMap);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_CREATE_APPLICATION_OBJECT, String.format("Created proxy with id %s", proxyId));
+            
+            return proxyId;
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void deleteProxy(String proxyClass, String proxyId, String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("deleteProxy", ipAddress, sessionId);
+            aem.deleteProxy(proxyClass, proxyId);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_DELETE_APPLICATION_OBJECT, String.format("Proxy with id %s", proxyId));
+            
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void updateProxy(String proxyClass, String proxyId, List<StringPair> attributes, 
+            String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("updateProxy", ipAddress, sessionId);
+            
+            HashMap<String, String> attributesAsHashMap = new HashMap<>();
+            attributes.stream().forEach( anAttribute -> attributesAsHashMap.put(anAttribute.getKey(), anAttribute.getValue()) );
+            
+            aem.updateProxy(proxyClass, proxyId, attributesAsHashMap);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_UPDATE_APPLICATION_OBJECT, String.format("Updated proxy with id %s", proxyId));
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public String createProxyPool(String name, String description, String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("createProxyPool", ipAddress, sessionId);
+            String proxyPoolId = aem.createProxyPool(name, description);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_CREATE_APPLICATION_OBJECT, String.format("Create proxy pool %s with id %s", name, proxyPoolId));
+            return proxyPoolId;
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void updateProxyPool(String proxyPoolId, String attributeName, String attributeValue, 
+            String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("updateProxyPool", ipAddress, sessionId);
+            aem.updateProxyPool(proxyPoolId, attributeName, attributeValue);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_UPDATE_APPLICATION_OBJECT, String.format("Updated proxy pool with id %s", proxyPoolId));
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void deleteProxyPool(String proxyPoolId, String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("deleteProxyPool", ipAddress, sessionId);
+            aem.deleteProxyPool(proxyPoolId);
+            aem.createGeneralActivityLogEntry(getUserNameFromSession(sessionId), 
+                ActivityLogEntry.ACTIVITY_TYPE_DELETE_APPLICATION_OBJECT, String.format("Deleted proxy pool with id %s", proxyPoolId));
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public List<RemotePool> getProxyPools(String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("getProxyPools", ipAddress, sessionId);
+            List<RemotePool> res = new ArrayList<>();
+            aem.getProxyPools().forEach( aPool -> res.add(new RemotePool(aPool) ));
+            return res;
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public List<RemoteInventoryProxy> getProxiesInPool(String proxyPoolId, String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("getProxiesInPool", ipAddress, sessionId);
+            List<RemoteInventoryProxy> res = new ArrayList<>();
+            aem.getProxiesInPool(proxyPoolId).forEach( aProxy -> res.add(new RemoteInventoryProxy(aProxy)) );
+            return res;
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
     
+    @Override
+    public List<RemoteInventoryProxy> getAllProxies(String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("getAllProxies", ipAddress, sessionId);
+            List<RemoteInventoryProxy> res = new ArrayList<>();
+            aem.getAllProxies().forEach( aProxy -> res.add(new RemoteInventoryProxy(aProxy)) );
+            return res;
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void associateObjectToProxy(String objectClass, String objectId, String proxyClass, String proxyId, 
+            String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("associateObjectToProxy", ipAddress, sessionId);
+            aem.associateObjectToProxy(objectClass, objectId, proxyClass, proxyId);
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public void releaseObjectFromProxy(String objectClass, String objectId, String proxyClass, String proxyId, 
+            String ipAddress, String sessionId) throws ServerSideException {
+        if (aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("releaseObjectFromProxy", ipAddress, sessionId);
+            aem.releaseObjectFromProxy(objectClass, objectId, proxyClass, proxyId);
+        } catch(InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    
+    // </editor-fold>
     //<editor-fold desc="Validators" defaultstate="collapsed">
 
     @Override
@@ -4768,6 +5110,7 @@ public class WebserviceBeanImpl implements WebserviceBean {
         }
     }
     
+    @Deprecated
     @Override
     public void relateSubnetToVlan(String id, String className, String vlanId, String ipAddress, String sessionId) throws ServerSideException{
         try{
@@ -4813,6 +5156,7 @@ public class WebserviceBeanImpl implements WebserviceBean {
         }
     }
 
+    @Deprecated
     @Override
     public void releaseSubnetFromVlan(String vlanId, String id, String ipAddress, String sessionId) throws ServerSideException{
         try{
@@ -5134,6 +5478,21 @@ public class WebserviceBeanImpl implements WebserviceBean {
             
             ProjectsModule projectsModule = (ProjectsModule) aem.getCommercialModule("Projects Module"); //NOI18N                        
             return RemoteObjectLight.toRemoteObjectLightArray(projectsModule.getProjectsInProjectPool(poolId, limit));
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+
+    @Override
+    public List<RemoteObjectLight> getAllProjects(String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        
+        try {
+            aem.validateWebServiceCall("getAllProjects", ipAddress, sessionId);
+            
+            ProjectsModule projectsModule = (ProjectsModule) aem.getCommercialModule("Projects Module"); //NOI18N                        
+            return RemoteObjectLight.toRemoteObjectLightArray(projectsModule.getAllProjects());
         } catch (InventoryException ex) {
             throw new ServerSideException(ex.getMessage());
         }
@@ -6742,4 +7101,75 @@ public class WebserviceBeanImpl implements WebserviceBean {
         return e2eMap;
     }
     // </editor-fold>
+    
+    //<editor-fold desc="Kuwaiba 2.1" defaultstate="collapsed">
+    @Override
+    public long getObjectChildrenCount(String className, String oid, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        try {
+            aem.validateWebServiceCall("getObjectChildrenCount", ipAddress, sessionId);
+            return bem.getObjectChildrenCount(className, oid);
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
         }
+    }
+    @Override
+    public List<RemoteObjectLight> getObjectChildren(String className, String oid, long skip, long limit, String ipAddress, String sessionId) throws ServerSideException {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        try {
+            aem.validateWebServiceCall("getObjectChildren", ipAddress, sessionId);
+            return RemoteObjectLight.toRemoteObjectLightArray(bem.getObjectChildren(className, oid, skip, limit));
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }        
+    }
+    //</editor-fold>
+    
+    //<editor-fold desc="special explorer actions for VLANs" defaultstate="collapsed">
+    @Override
+    public void relatePortsToVlan(List<String> portsIds, List<String> portsClassNames, 
+            String vlanId, String ipAddress, String sessionId) 
+            throws ServerSideException
+    {
+         if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        try {
+            aem.validateWebServiceCall("relatePortsToVlan", ipAddress, sessionId);
+            
+            if(portsIds.size() == portsClassNames.size()){
+                for (int i = 0; i < portsIds.size(); i++){
+                    bem.createSpecialRelationship(Constants.CLASS_VLAN, vlanId, portsClassNames.get(i), portsIds.get(i), RELATIONSHIP_PORT_BELONGS_TO_VLAN, true);
+                
+                    aem.createObjectActivityLogEntry(getUserNameFromSession(sessionId), Constants.CLASS_VLAN, vlanId, 
+                        ActivityLogEntry.ACTIVITY_TYPE_CREATE_RELATIONSHIP_INVENTORY_OBJECT, 
+                        RELATIONSHIP_PORT_BELONGS_TO_VLAN, "", portsIds.get(i), "Relate port to VLAN"); //NOI18N
+                }
+            }
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    
+    @Override
+    public void releasePortsFromVlan(List<String> portsIds, String vlanId,
+            String ipAddress, String sessionId) throws ServerSideException
+    {
+        if (bem == null || aem == null)
+            throw new ServerSideException(I18N.gm("cannot_reach_backend"));
+        try {
+            aem.validateWebServiceCall("releasePortsFromVlan", ipAddress, sessionId);
+            for (String portId : portsIds) {
+                bem.releaseSpecialRelationship(Constants.CLASS_VLAN, vlanId, portId, RELATIONSHIP_PORT_BELONGS_TO_VLAN); //NOI18N
+                       
+            aem.createObjectActivityLogEntry(getUserNameFromSession(sessionId), 
+                    Constants.CLASS_VLAN, vlanId, ActivityLogEntry.ACTIVITY_TYPE_RELEASE_RELATIONSHIP_INVENTORY_OBJECT, 
+                RELATIONSHIP_PORT_BELONGS_TO_VLAN, portId, "", "Release object from VLAN"); //NOI18N  
+            }
+        } catch (InventoryException ex) {
+            throw new ServerSideException(ex.getMessage());
+        }
+    }
+    //</editor-fold>    
+}

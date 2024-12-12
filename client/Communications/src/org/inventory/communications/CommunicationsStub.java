@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -77,7 +77,9 @@ import com.neotropic.inventory.modules.sync.AbstractRunnableSyncFindingsManager;
 import com.neotropic.inventory.modules.sync.AbstractRunnableSyncResultsManager;
 import com.neotropic.inventory.modules.sync.LocalSyncAction;
 import com.neotropic.inventory.modules.sync.LocalSyncProvider;
+import java.util.LinkedHashMap;
 import org.inventory.communications.core.LocalConfigurationVariable;
+import org.inventory.communications.core.LocalInventoryProxy;
 import org.inventory.communications.core.LocalMPLSConnectionDetails;
 import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.core.LocalValidatorDefinition;
@@ -104,11 +106,13 @@ import org.inventory.communications.wsclient.RemoteConfigurationVariable;
 import org.inventory.communications.wsclient.RemoteContact;
 import org.inventory.communications.wsclient.RemoteFileObject;
 import org.inventory.communications.wsclient.RemoteFileObjectLight;
+import org.inventory.communications.wsclient.RemoteInventoryProxy;
 import org.inventory.communications.wsclient.RemoteLogicalConnectionDetails;
 import org.inventory.communications.wsclient.RemoteMPLSConnectionDetails;
 import org.inventory.communications.wsclient.RemoteObject;
 import org.inventory.communications.wsclient.RemoteObjectLight;
 import org.inventory.communications.wsclient.RemoteObjectLightList;
+import org.inventory.communications.wsclient.RemoteObjectRelatedObjects;
 import org.inventory.communications.wsclient.RemoteObjectSpecialRelationships;
 import org.inventory.communications.wsclient.RemotePool;
 import org.inventory.communications.wsclient.RemoteQueryLight;
@@ -154,7 +158,7 @@ public class CommunicationsStub {
                                                                     "VC4", "VC4-04", "VC4-16", "VC4-07", "VC4-64", "VC4TributaryLink", "VC12TributaryLink", "VC3TributaryLink",
                                                                     "STM1", "STM4", "STM16", "STM64", "STM256",
                                                                     "WireContainer", "WirelessContainer",
-                                                                    "Provider","BGPPeer", "VFI",
+                                                                    "Provider","BGPPeer", "VFI", "VLAN",
                                                                     "CorporateCustomer", "TelecomOperator", "Provider", "HomeCustomer",
                                                                     "Subnet", "BillingContact", "TechnicalContact", "CommercialContact", "BridgeDomain" };
     
@@ -1225,6 +1229,7 @@ public class CommunicationsStub {
                                                 ci.getAttributesDisplayNames().toArray(new String[0]), ci.getAttributesDescriptions().toArray(new String[0]),
                                                 ci.getAttributesMandatories(), ci.getAttributesMultiples(), 
                                                 ci.getAttributesUniques(),
+                                                ci.getAttributesNoCopies(),
                                                 ci.getAttributesVisibles(), ci.getAttributesOrders());
                 i++;
             }
@@ -1269,6 +1274,7 @@ public class CommunicationsStub {
                     cm.getAttributesMandatories(),
                     cm.getAttributesMultiples(),
                     cm.getAttributesUniques(),
+                    cm.getAttributesNoCopies(),
                     cm.getAttributesVisibles(),
                     cm.getAttributesOrders());
             cache.addMeta(new LocalClassMetadata[]{res});
@@ -1311,6 +1317,7 @@ public class CommunicationsStub {
                     cm.getAttributesMandatories(),
                     cm.getAttributesMultiples(),
                     cm.getAttributesUniques(),
+                    cm.getAttributesNoCopies(),
                     cm.getAttributesVisibles(),
                     cm.getAttributesOrders());
             cache.addMeta(new LocalClassMetadata[]{res});
@@ -1346,6 +1353,7 @@ public class CommunicationsStub {
                         cm.getAttributesDescriptions().toArray(new String[0]),
                         cm.getAttributesMandatories(), cm.getAttributesMultiples(),
                         cm.getAttributesUniques(),
+                        cm.getAttributesNoCopies(),
                         cm.getAttributesVisibles(),
                         cm.getAttributesOrders());
             cache.addMeta(new LocalClassMetadata[]{ res });
@@ -1382,7 +1390,9 @@ public class CommunicationsStub {
                 attrInfo.getId(), attrInfo.getName(), attrInfo.getType(), 
                 attrInfo.getDisplayName(), attrInfo.getDescription(), attrInfo.isVisible(), attrInfo.isMandatory(), 
                 attrInfo.isMultiple(),
-                attrInfo.isUnique(), attrInfo.getOrder());
+                attrInfo.isUnique(), 
+                attrInfo.isNoCopy(), 
+                attrInfo.getOrder());
             
             return lam;
         } catch (Exception ex) {
@@ -1733,7 +1743,7 @@ public class CommunicationsStub {
                 
                 for (UserInfoLight user : remoteTask.getUsers())
                     users.add(new LocalUserObjectLight(user.getId(), user.getUserName(),
-                                        user.getFirstName(), user.getLastName(), user.isEnabled(), user.getType()));
+                                        user.getFirstName(), user.getLastName(), user.isEnabled(), user.getType(), user.getEmail()));
                 
                 localTasks.add(new LocalTask(remoteTask.getId(), remoteTask.getName(), 
                         remoteTask.getDescription(), remoteTask.isEnabled(), remoteTask.isCommitOnExecute(), remoteTask.getScript(), 
@@ -1759,7 +1769,7 @@ public class CommunicationsStub {
             
             for (UserInfoLight remoteSubscriber : remoteSubscribers)
                 subscribers.add(new LocalUserObjectLight(remoteSubscriber.getId(), remoteSubscriber.getUserName(),
-                                        remoteSubscriber.getFirstName(), remoteSubscriber.getLastName(), remoteSubscriber.isEnabled(), remoteSubscriber.getType()));
+                                        remoteSubscriber.getFirstName(), remoteSubscriber.getLastName(), remoteSubscriber.isEnabled(), remoteSubscriber.getType(), remoteSubscriber.getEmail()));
             
             return subscribers;
         }catch(Exception ex){
@@ -1805,7 +1815,7 @@ public class CommunicationsStub {
     }
     
     /**
-     * Unsubscribes a user from a task
+     * Unsubscribes a user from a task. That is, the results of the task won't be notified to this user anymore.
      * @param userId User id
      * @param taskId Task id
      * @return True if the operation was successful. False if not
@@ -2154,7 +2164,7 @@ public class CommunicationsStub {
                         mandatoryObjectAttributeInfo.getName(), mandatoryObjectAttributeInfo.getType(), 
                         mandatoryObjectAttributeInfo.getDisplayName(), mandatoryObjectAttributeInfo.getDescription(), 
                         mandatoryObjectAttributeInfo.isVisible(), mandatoryObjectAttributeInfo.isMandatory(), mandatoryObjectAttributeInfo.isMultiple(),
-                        mandatoryObjectAttributeInfo.isUnique(), mandatoryObjectAttributeInfo.getOrder()));
+                        mandatoryObjectAttributeInfo.isUnique(), mandatoryObjectAttributeInfo.isNoCopy(), mandatoryObjectAttributeInfo.getOrder()));
             return mandatoryObjectAttributes;
         }catch(Exception ex){
             this.error = ex.getMessage();
@@ -2224,10 +2234,41 @@ public class CommunicationsStub {
             return false;
         }
     }
+    /**
+     * Connect two ports using a mirrorMultiple relationship
+     * @param aObjectClass Port a class
+     * @param aObjectId Port a id
+     * @param bObjectClasses Port b classes
+     * @param bObjectIds Port b ids
+     */
+    public boolean connectMirrorMultiplePort(String aObjectClass, String aObjectId, 
+        List<String> bObjectClasses, List<String> bObjectIds) {
+        try {
+            service.connectMirrorMultiplePort(aObjectClass, aObjectId, bObjectClasses, bObjectIds, session.getSessionId());
+            return true;
+        } catch(Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
     
     public boolean releaseMirrorPort (String objectClass, String objectId) {
         try {
             service.releaseMirrorPort (objectClass, objectId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    /**
+     * Releases a port mirroring multiple relationship between two ports, receiving one of the ports as parameter
+     * @param objectClass Object class
+     * @param objectId Object id
+     */
+    public boolean releaseMirrorMultiplePort (String objectClass, String objectId) {
+        try {
+            service.releaseMirrorMultiplePort(objectClass, objectId, session.getSessionId());
             return true;
         }catch(Exception ex){
             this.error = ex.getMessage();
@@ -2252,6 +2293,46 @@ public class CommunicationsStub {
             String myObjectId = service.createPhysicalConnection(endpointAClass, endpointAId,
                     endpointBClass, endpointBId, name, connectionClass, templateId, this.session.getSessionId());
             return new LocalObjectLight(myObjectId, name, connectionClass);
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+        /**
+     * Creates a physical link (cable, fiber optics, mw link) or container (pipe, conduit, ditch)
+     * @param endpointsA source objects
+     * @param endpointsB target objects
+     * @param name Name of the new connection. Leave empty if you want to use the name in the template
+     * @param connectionClass Class for the corresponding connection to be created
+     * @param templateId Id of the template for the connectionClass. Use -1 to create a connection without template
+     * @return A local object light representing the new connection
+     */
+    public List<LocalObjectLight> createPhysicalConnections(List<LocalObjectLight> endpointsA,
+            List<LocalObjectLight> endpointsB, String name, String connectionClass, String templateId) {
+        try {
+            List<LocalObjectLight> result = new ArrayList<>();
+            List<String> endpointAClasses = new ArrayList<>();
+            List<String> endpointBClasses = new ArrayList<>();
+            List<String> endpointAIds = new ArrayList<>();
+            List<String> endpointBIds = new ArrayList<>();
+            for(int i = 0; i < endpointsA.size(); i ++){
+                endpointAClasses.add(endpointsA.get(i).getClassName());
+                endpointBClasses.add(endpointsB.get(i).getClassName());
+                endpointAIds.add(endpointsA.get(i).getId());
+                endpointBIds.add(endpointsB.get(i).getId());
+            }
+            
+            List<String> createdPhysicalConnectionsIds = service.createPhysicalConnections(endpointAClasses, 
+                    endpointAIds, endpointBClasses, endpointBIds, name, 
+                    connectionClass, templateId, this.session.getSessionId());
+            
+            for (String myObjectId : createdPhysicalConnectionsIds) {
+                result.add(new LocalObjectLight(myObjectId, name, connectionClass));
+            }
+             
+            return result;
+            
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -2349,7 +2430,12 @@ public class CommunicationsStub {
 //            return null;
 //        }
 //    }
-    
+    /**
+     * Gets the physical path of a given port
+     * @param objectClass physical port class name
+     * @param objectId physical port id
+     * @return the physical path
+     */
     public LocalObjectLight[] getPhysicalPath(String objectClass, String objectId) {
         try{
             List<RemoteObjectLight> trace = service.getPhysicalPath(objectClass, objectId, session.getSessionId());
@@ -2366,7 +2452,39 @@ public class CommunicationsStub {
             return null;
         }
     }
-    
+    /**
+     * Gets A tree representation of all physical paths as a hash map.
+     * @param objectClass The source port class
+     * @param objectId The source port id
+     * @return A tree representation of all physical paths as a hash map or null
+     *  If any of the objects involved in the path cannot be found
+     *  If any of the object classes involved in the path cannot be found
+     *  If any of the objects involved in the path has a malformed list type attribute
+     *  If any of the objects involved in the path has an invalid objectId or className
+     */   
+    public HashMap<LocalObjectLight, List<LocalObjectLight>> getPhysicalTree(String objectClass, String objectId) {
+        try {
+            HashMap<LocalObjectLight, List<LocalObjectLight>> tree = new LinkedHashMap();
+            RemoteObjectRelatedObjects remoteTree = service.getPhysicalTree(objectClass, objectId, session.getSessionId());
+            if (remoteTree.getObjs() != null && remoteTree.getRelatedObjects() != null &&
+                remoteTree.getObjs().size() == remoteTree.getRelatedObjects().size()) {
+                
+                for (int i = 0; i < remoteTree.getObjs().size(); i++) {
+                    RemoteObjectLight remoteObject = remoteTree.getObjs().get(i);
+                    LocalObjectLight object = new LocalObjectLight(remoteObject.getId(), remoteObject.getName(), remoteObject.getClassName());
+                    tree.put(object, new ArrayList());
+                    for (RemoteObjectLight nextRemoteObject : remoteTree.getRelatedObjects().get(i).getList()) {
+                        LocalObjectLight nextObject = new LocalObjectLight(nextRemoteObject.getId(), nextRemoteObject.getName(), nextRemoteObject.getClassName());
+                        tree.get(object).add(nextObject);
+                    }
+                }
+            }
+            return tree;
+        } catch(Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
     /**
      * Convenience method that returns the link connected to a port (if any). It serves to avoid calling {@link getSpecialAttribute} two times.
      * @param portClassName The class of the port
@@ -2751,6 +2869,7 @@ public class CommunicationsStub {
                             cm.getAttributesDescriptions().toArray(new String[0]),
                             cm.getAttributesMandatories(), cm.getAttributesMultiples(),
                             cm.getAttributesUniques(),
+                            cm.getAttributesNoCopies(),
                             cm.getAttributesVisibles(),
                             cm.getAttributesOrders());
                     
@@ -2961,7 +3080,7 @@ public class CommunicationsStub {
                 for (PrivilegeInfo remotePrivilege : user.getPrivileges())
                     localPrivileges.add(new LocalPrivilege(remotePrivilege.getFeatureToken(), remotePrivilege.getAccessLevel()));
                 localUsers.add(new LocalUserObject(user.getId(), user.getUserName(),
-                                        user.getFirstName(), user.getLastName(), user.isEnabled(), user.getType(), localPrivileges));
+                                        user.getFirstName(), user.getLastName(), user.isEnabled(), user.getType(), user.getEmail(), localPrivileges));
             }
             return localUsers;
         }catch(Exception ex){
@@ -2987,7 +3106,7 @@ public class CommunicationsStub {
                 
                 localUsers.add(new LocalUserObject(remoteUser.getId(), remoteUser.getUserName(),
                                         remoteUser.getFirstName(), remoteUser.getLastName(), 
-                                        remoteUser.isEnabled(), remoteUser.getType(), localPrivileges));
+                                        remoteUser.isEnabled(), remoteUser.getType(), remoteUser.getEmail(), localPrivileges));
             }
             return localUsers;
         } catch(Exception e){
@@ -3023,19 +3142,20 @@ public class CommunicationsStub {
      * @param password Password
      * @param enabled Will this user be enabled by default?
      * @param type User type. See LocalUserObjectLight.USER_TYPE* for possible values
+     * @param email User's email (optional)
      * @param defaultGroupId Id of the default group this user will be associated to. Users <b>always</b> belong to at least one group. Other groups can be added later.
      * @return The newly created user
      */
     public LocalUserObject createUser(String username, String firstName, String lastName, 
-            String password, boolean enabled, int type, long defaultGroupId) {
+            String password, boolean enabled, int type, String email, long defaultGroupId) {
         try{
             long newUserId = service.createUser(username, password, firstName, lastName, 
-                    true, type, null, defaultGroupId, this.session.getSessionId());
+                    true, type, email, null, defaultGroupId, this.session.getSessionId());
             
             UserInfo newUser = new UserInfo();
             newUser.setId(newUserId);
             newUser.setUserName(username);
-            return new LocalUserObject(newUserId, username, firstName, lastName, enabled, type, null);
+            return new LocalUserObject(newUserId, username, firstName, lastName, enabled, type, email, null);
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
@@ -3051,13 +3171,14 @@ public class CommunicationsStub {
      * @param lastName New user's last name. Use null to leave it unchanged
      * @param enabled 0 for false, 1 for true, -1 to leave it unchanged
      * @param type User type. See UserProfile.USER_TYPE* for possible values. Use -1 to leave it unchanged
+     * @param email New user's email. Use null to leave it unchanged
      * @return ServerSideException Thrown if the username is null or empty or the username already exists or if the user could not be found
      */
     public boolean setUserProperties(long oid, String username, String password, 
-            String firstName, String lastName, int enabled, int type) {
+            String firstName, String lastName, int enabled, int type, String email) {
         try {            
             service.setUserProperties(oid, username, firstName, lastName, password, 
-                    enabled, type, this.session.getSessionId());
+                    enabled, type, email, this.session.getSessionId());
         }catch(Exception ex){
             this.error = ex.getMessage();
             return false;
@@ -4781,7 +4902,7 @@ public class CommunicationsStub {
                 return false;
             }
         }
-        
+       
         /**
         * Disconnects a side or both sides of a mpls link connection
         * @param connectionId Id of the connection to be edited
@@ -5040,6 +5161,26 @@ public class CommunicationsStub {
     public List<LocalObjectLight> getProjectsAssociateToObject(String objectClass, String objectId) {
         try {
             List<RemoteObjectLight> remoteProjects = service.getProjectsAssociateToObject(objectClass, objectId, session.getSessionId());
+            
+            List<LocalObjectLight> projects = new ArrayList<>();
+            
+            for (RemoteObjectLight remoteProject : remoteProjects)
+                projects.add(new LocalObjectLight(remoteProject.getId(), remoteProject.getName(), remoteProject.getClassName()));
+            
+            return projects;                                    
+        } catch (Exception ex) {
+            error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets all the projects in the database.
+     * @return The list of projects.
+     */
+    public List<LocalObjectLight> getAllProjects() {
+        try {
+            List<RemoteObjectLight> remoteProjects = service.getAllProjects(session.getSessionId());
             
             List<LocalObjectLight> projects = new ArrayList<>();
             
@@ -6011,6 +6152,204 @@ public class CommunicationsStub {
         }
     }
     //</editor-fold>
+    //<editor-fold desc="Proxies" defaultstate="collapsed">
+    /**
+     * Creates an inventory proxy. Inventory proxies are used to integrate third party-applications with Kuwaiba. Sometimes these applications must refer to 
+     * assets managed by Kuwaiba from another perspective (financial, for example). In these applications, multiple Kuwaiba inventory assets might be represented by
+     * a single entity (e.g. a router with slots, boards and ports might just be something like "standard network device"). Proxies are used to map multiple inventory 
+     * elements into a single entity. It's a sort of "impedance matching" between systems that refer to the same real world object from different perspectives.
+     * @param proxyPoolId The parent pool id.
+     * @param proxyClass The proxy class. Must be subclass of GenericProxy.
+     * @param attributes The set of initial attributes. If no attribute <code>name</code> is specified, an empty string will be used.
+     * @return The id of the newly created proxy. Null otherwise.
+     */
+    public String createProxy(String proxyPoolId, String proxyClass, HashMap<String, String> attributes) {
+        try {
+            List<StringPair> attributesAsStringPairs = new ArrayList<>();
+            attributes.forEach( (attributeName, attributeValue) -> attributesAsStringPairs.add(new StringPair(attributeName, attributeValue)) );
+            return service.createProxy(proxyPoolId, proxyClass, attributesAsStringPairs, session.getSessionId());
+            
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Deletes a proxy and delete its association with the related inventory objects. These objects will remain untouched.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy
+     * @return Success of failure.
+     */
+    public boolean deleteProxy(String proxyClass, String proxyId) {
+        try {
+            service.deleteProxy(proxyClass, proxyId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    /**
+     * Updates one or many proxy attributes. Only one attribute can be update at a time.
+     * @param proxyId The parent pool id,
+     * @param proxyClass The class of the proxy.
+     * @param attributeName The name of the attribute to update.
+     * @param attributeValue The value of the new attribute.
+     * @return Success of failure.
+     */
+    public boolean updateProxy(String proxyClass, String proxyId, String attributeName, String attributeValue) {
+        try {
+            List<StringPair> attributesAsStringPairs = new ArrayList<>();
+            attributesAsStringPairs.add(new StringPair(attributeName, attributeValue));
+            service.updateProxy(proxyClass, proxyId, attributesAsStringPairs, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Creates a proxy pool.
+     * @param name The name of the pool.
+     * @param description The description of the pool
+     * @return The id of the newly created proxy.
+     */
+    public String createProxyPool(String name, String description) {
+        try {
+            return service.createProxyPool(name, description, session.getSessionId());
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Updates an attribute of a proxy pool.
+     * @param proxyPoolId The id of the pool to be updated.
+     * @param attributeName The name of the pool attribute to be updated. Valid values are "name" and "description"
+     * @param attributeValue The value of the attribute. Null values will be ignored.
+     * @return Success or failure.
+     */
+    public boolean updateProxyPool(String proxyPoolId, String attributeName, String attributeValue) {
+        try {
+            service.updateProxyPool(proxyPoolId, attributeName, attributeValue, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Deletes a proxy pool.
+     * @param proxyPoolId The id of the pool.
+     * @return Success or failure.
+     */
+    public boolean deleteProxyPool(String proxyPoolId) {
+        try {
+            service.deleteProxyPool(proxyPoolId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Retrieves the list of pools of proxies.
+     * @return The available pools of inventory proxies. Null otherwise.
+     */
+    public List<LocalPool> getProxyPools() {
+        try {
+            List<RemotePool> remoteProxyPools = service.getProxyPools(session.getSessionId());
+            List<LocalPool> res = new ArrayList<>();
+            remoteProxyPools.forEach( aRemotePool -> res.add(new LocalPool(aRemotePool.getId(), 
+                    aRemotePool.getName(), aRemotePool.getClassName(), aRemotePool.getDescription(), aRemotePool.getType())));
+            return res;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the list of inventory proxies in a given pool.
+     * @param proxyPoolId The id of the parent pool.
+     * @return The proxies or null in case of error.
+     */
+    public List<LocalInventoryProxy> getProxiesInPool(String proxyPoolId) {
+        try {
+            List<RemoteInventoryProxy> remoteProxies = service.getProxiesInPool(proxyPoolId, session.getSessionId());
+            List<LocalInventoryProxy> res = new ArrayList<>();
+            remoteProxies.forEach( aRemoteProxy -> {
+                LocalClassMetadata classMetadata = getMetaForClass(aRemoteProxy.getClassName(), false);
+                res.add(new LocalInventoryProxy(aRemoteProxy.getClassName(), aRemoteProxy.getId(), aRemoteProxy.getAttributes(), classMetadata));
+            });
+            return res;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets all proxies in the database.
+     * @return The list of proxies.
+     */
+    public List<LocalInventoryProxy> getAllProxies() {
+        try {
+            List<RemoteInventoryProxy> remoteProxies = service.getAllProxies(session.getSessionId());
+            List<LocalInventoryProxy> res = new ArrayList<>();
+            remoteProxies.forEach( aRemoteProxy -> {
+                LocalClassMetadata classMetadata = getMetaForClass(aRemoteProxy.getClassName(), false);
+                res.add(new LocalInventoryProxy(aRemoteProxy.getClassName(), aRemoteProxy.getId(), aRemoteProxy.getAttributes(), classMetadata));
+            });
+            return res;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Associates an inventory object to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @return false If the inventory object could not be found.
+     *               If the proxy could not be found.
+     *               If the two entities are already related.
+     */
+    public boolean associateObjectToProxy(String objectClass, String objectId, String proxyClass, String proxyId) {
+        try {
+            service.associateObjectToProxy(objectClass, objectId, proxyClass, proxyId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Releases an inventory previously related to an inventory proxy.
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param proxyClass The class of the proxy.
+     * @param proxyId The id of the proxy.
+     * @return false If the inventory object could not be found or
+     *         of the proxy could not be found.
+     */
+    public boolean releaseObjectFromProxy(String objectClass, String objectId, String proxyClass, String proxyId) {
+        try {
+            service.releaseObjectFromProxy(objectClass, objectId, proxyClass, proxyId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    //</editor-fold>
     
     //<editor-fold desc="Validators" defaultstate="collapsed">
     /**
@@ -6217,4 +6556,64 @@ public class CommunicationsStub {
     }
     
     //</editor-fold>
+    
+    /**
+     * Releate a set of ports to a VLAN
+     * @param ports a set of ports
+     * @param vlanId the VLAN id
+     * @return tru if the ports were related to the VLAN
+     */
+    public boolean relatePortsToVLAN(List<LocalObjectLight> ports, String vlanId){
+        try{
+            List<String> portsIds = new ArrayList<>();
+            List<String> portsClassNames = new ArrayList<>();
+            
+            for (LocalObjectLight port : ports) {
+                portsIds.add(port.getId());
+                portsClassNames.add(port.getClassName());
+            }
+            service.relatePortsToVlan(portsIds, portsClassNames, vlanId, this.session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Release the relationship between a port and a VLAN
+     * @param portId the port id
+     * @param vlanId the VLAN id
+     * @return true if the relationship was released
+     */
+    public boolean releasePortFromVLAN(String portId, String vlanId){
+        try{
+            List<String> portsIds = Arrays.asList(portId);
+            service.releasePortsFromVlan(portsIds, vlanId, this.session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Deletes a set ob selected VLANs
+     * @param oids the ids of the VLANs to be deleted
+     * @return true if the VLANs were deleted, false if not
+     */
+    public boolean deleteVLANs(List<String> oids){
+        try {
+            List<String> vlansClassNames = new ArrayList<>();
+            for (String oid : oids) {
+                vlansClassNames.add(Constants.CLASS_VLAN);
+            }
+            service.deleteObjects(vlansClassNames, oids, true, this.session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+
 }
