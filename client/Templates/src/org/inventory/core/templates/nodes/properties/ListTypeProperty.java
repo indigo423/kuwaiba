@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectListItem;
-import org.inventory.navigation.applicationnodes.objectnodes.properties.ItemListPropertyEditor;
 import org.openide.nodes.PropertySupport;
 
 /**
@@ -34,7 +33,7 @@ public class ListTypeProperty extends PropertySupport.ReadWrite<LocalObjectListI
     public ListTypeProperty(String name, String displayName, String shortDescription, 
             List<LocalObjectListItem> list, LocalObject businessObject) {
         super(name, LocalObjectListItem.class, displayName, shortDescription);
-        this.propertyEditor = new ItemListPropertyEditor(list);
+        this.propertyEditor = new ItemListPropertyEditor(list, this);
         this.businessObject = businessObject;
     }
 

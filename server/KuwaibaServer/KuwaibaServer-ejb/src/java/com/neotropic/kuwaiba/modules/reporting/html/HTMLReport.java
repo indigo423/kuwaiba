@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ public class HTMLReport extends InventoryReport {
     /**
      * Text of the embedded Javascript section.
      */
-    private String embeddedJavascript;
+    private List<String> embeddedJavascript;
     /**
      * List of the URL of the external js linked from the report document. Note that the location has to be reachable from whenever the report will be rendered.
      */
@@ -48,6 +48,8 @@ public class HTMLReport extends InventoryReport {
   
     public HTMLReport(String title, String author, String version) {
         super(title, author, version);
+        this.linkedJavascriptFiles = new ArrayList<>();
+        this.embeddedJavascript = new ArrayList<>();
         this.components = new ArrayList<>();
     }
 
@@ -68,12 +70,6 @@ public class HTMLReport extends InventoryReport {
                 builder.append("\">"); //NOI18N
             }
         }
-            
-        if (embeddedJavascript != null) {
-            builder.append("<script type=\"text/javascript\">"); //NOI18N
-            builder.append(embeddedJavascript);
-            builder.append("</script>"); //NOI18N
-        }
         
         if (linkedJavascriptFiles != null) {
             for (String linkedJavascriptFile : linkedJavascriptFiles) {
@@ -81,6 +77,15 @@ public class HTMLReport extends InventoryReport {
                 builder.append(linkedJavascriptFile);
                 builder.append("\"></script>"); //NOI18N
             }
+        }
+            
+        if (embeddedJavascript != null) {
+            builder.append("<script type=\"text/javascript\">"); //NOI18N
+            
+            for (String embedded : embeddedJavascript)
+                builder.append(embedded);
+            
+            builder.append("</script>"); //NOI18N
         }
         
         builder.append("<title>"); //NOI18N
@@ -110,21 +115,23 @@ public class HTMLReport extends InventoryReport {
     }
 
     public List<String> getLinkedStyleSheets() {
+        if (linkedStyleSheets == null)
+            linkedStyleSheets = new ArrayList();
         return linkedStyleSheets;
     }
 
     public void setLinkedStyleSheets(List<String> linkedStyleSheets) {
         this.linkedStyleSheets = linkedStyleSheets;
     }
-
-    public String getEmbeddedJavascript() {
+    
+    public List<String> getEmbeddedJavascript() {
         return embeddedJavascript;
     }
 
-    public void setEmbeddedJavascript(String embeddedJavascript) {
+    public void setEmbeddedJavascript(List<String> embeddedJavascript) {
         this.embeddedJavascript = embeddedJavascript;
     }
-
+    
     public List<String> getLinkedJavascriptFiles() {
         return linkedJavascriptFiles;
     }

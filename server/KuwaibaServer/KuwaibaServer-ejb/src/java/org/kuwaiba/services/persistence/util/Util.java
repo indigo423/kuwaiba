@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,10 +36,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
+import org.kuwaiba.apis.persistence.application.GroupProfileLight;
 import org.kuwaiba.apis.persistence.application.Pool;
 import org.kuwaiba.apis.persistence.application.Privilege;
 import org.kuwaiba.apis.persistence.application.Task;
 import org.kuwaiba.apis.persistence.application.UserProfile;
+import org.kuwaiba.apis.persistence.application.UserProfileLight;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
 import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
@@ -50,6 +53,7 @@ import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
+import org.kuwaiba.services.persistence.cache.CacheManager;
 import org.kuwaiba.services.persistence.impl.neo4j.RelTypes;
 import org.kuwaiba.ws.todeserialize.StringPair;
 import org.kuwaiba.ws.toserialize.application.RemotePool;
@@ -61,6 +65,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.kernel.impl.traversal.MonoDirectionalTraversalDescription;
 
@@ -108,35 +113,19 @@ public class Util {
 
     /**
      * Gets the requested nodes representing list type items
-     * @param values This list may contain the id of the associated objects or their names
+     * @param listTypeId The id of the list type
      * @param listType Node the list items are supposed to be instance of
-     * @return A list of nodes representing the list type items
+     * @return A node representing the list type item
      */
-    public static List<Node> getRealValue(List<String> values, Node listType) {
+    public static Node getRealValue(long listTypeId, Node listType) {
         Iterable<Relationship> listTypeItems = listType.getRelationships(RelTypes.INSTANCE_OF, Direction.INCOMING);
-        List<Node> res = new ArrayList<>();
         
-        for (String value : values) {
-            try { //If the value provided is a number, match the node id, if not, the name
-                long valueAsLong = Long.valueOf(value);
-                for (Relationship listTypeItem : listTypeItems){
-                    Node instance = listTypeItem.getStartNode();
-                    if (instance.getId() == valueAsLong) {
-                        res.add(instance);
-                        break;
-                    }
-                }
-            }catch(NumberFormatException ex) {
-                for (Relationship listTypeItem : listTypeItems){
-                    Node instance = listTypeItem.getStartNode();
-                    if (instance.getProperty(Constants.PROPERTY_NAME).equals(value)) {
-                        res.add(instance);
-                        break;
-                    }
-                }
-            }
+        for (Relationship listTypeRelationship : listTypeItems) {
+            if (listTypeRelationship.getStartNode().getId() == listTypeId)
+                return listTypeRelationship.getStartNode();
         }
-        return res;
+        
+        return null;
     }
 
     /**
@@ -225,7 +214,7 @@ public class Util {
 
     /**
      * Saves a file, receiving the file name and the contents as parameters. If the directory structure doesn't exist, it's created
-     * @param directory
+     * @param directory 
      * @param fileName
      * @param content
      * @throws FileNotFoundException
@@ -372,6 +361,18 @@ public class Util {
                 myClass.getPossibleChildren().add((String)rel.getEndNode().getProperty(Constants.PROPERTY_NAME));
             }
         }
+        // Possible Special Children
+        for (Relationship relationship : classNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_SPECIAL_CHILD)) {
+            if ((Boolean) relationship.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)) {
+                Iterable<Node> allSubClasses = Util.getAllSubclasses(relationship.getEndNode());
+                for (Node childNode : allSubClasses) {
+                    if (!(Boolean) childNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                        myClass.getPossibleSpecialChildren().add((String) childNode.getProperty(Constants.PROPERTY_NAME));
+                }
+            } else {
+                myClass.getPossibleSpecialChildren().add((String) relationship.getEndNode().getProperty(Constants.PROPERTY_NAME));
+            }
+        }
         return myClass;
     }
 
@@ -392,6 +393,7 @@ public class Util {
         attribute.setVisible((Boolean)attributeNode.getProperty(Constants.PROPERTY_VISIBLE));
         attribute.setAdministrative((Boolean)attributeNode.getProperty(Constants.PROPERTY_ADMINISTRATIVE));
         attribute.setNoCopy((Boolean)attributeNode.getProperty(Constants.PROPERTY_NO_COPY));
+        attribute.setMandatory(attributeNode.hasProperty(Constants.PROPERTY_MANDATORY) ? (Boolean)attributeNode.getProperty(Constants.PROPERTY_MANDATORY) : false );
         attribute.setUnique((Boolean)attributeNode.getProperty(Constants.PROPERTY_UNIQUE));
         attribute.setId(attributeNode.getId());
 
@@ -464,10 +466,10 @@ public class Util {
         TaskNotificationDescriptor notificationType = new TaskNotificationDescriptor(taskNode.hasProperty(Constants.PROPERTY_EMAIL) ? (String)taskNode.getProperty(Constants.PROPERTY_EMAIL) : "", 
                                                                             taskNode.hasProperty(Constants.PROPERTY_NOTIFICATION_TYPE) ? (int)taskNode.getProperty(Constants.PROPERTY_NOTIFICATION_TYPE) : 0);
         
-        List<UserProfile> subscribedUsers = new ArrayList<>();
+        List<UserProfileLight> subscribedUsers = new ArrayList<>();
         
         for (Relationship rel : taskNode.getRelationships(Direction.INCOMING, RelTypes.SUBSCRIBED_TO))
-            subscribedUsers.add(createUserProfileFromNode(rel.getStartNode()));
+            subscribedUsers.add(createUserProfileLightFromNode(rel.getStartNode()));
         
         return new Task(taskNode.getId(),
                                 (String)taskNode.getProperty(Constants.PROPERTY_NAME), 
@@ -535,47 +537,115 @@ public class Util {
     }
 
     /**
-     * Converts a node representing a user into a UserProfile object
-     * @param userNode
-     * @return UserProfile
+     * Creates a UserProfileLight object (a user object without privileges) from a node
+     * @param userNode The source user node
+     * @return The UserProfileLight object built with the information of the source node
      */
 
-    public static UserProfile createUserProfileFromNode(Node userNode){
-       List<GroupProfile> groups = new ArrayList<>();
+    public static UserProfileLight createUserProfileLightFromNode(Node userNode){
+       
+       return   new UserProfileLight(userNode.getId(),
+                (String)userNode.getProperty(UserProfile.PROPERTY_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
+                (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
+                (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
+                        (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI);
+    }
+    
+    /**
+     * Converts a node representing a user into a UserProfile object. The privileges inherited from the 
+     * group <b>will not</b> be taken into account. See also <code>createUserProfileFromNode</code>.
+     * @param userNode The source user node
+     * @return UserProfile The UserProfile object built with the information of the source node
+     */
+
+    public static UserProfile createUserProfileWithoutGroupPrivilegesFromNode(Node userNode){
        List<Privilege> privileges = new ArrayList<>();
-       Iterable<Relationship> groupRelationships = userNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING);
-       //groups
-       for (Relationship relationship : groupRelationships) {
+
+       for(Relationship relationship: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.OUTGOING))
+           privileges.add(createPrivilegeFromNode(relationship.getEndNode()));
+       
+       return   new UserProfile(userNode.getId(),
+                (String)userNode.getProperty(UserProfile.PROPERTY_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
+                (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
+                (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
+                        (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI, 
+                privileges);
+    }
+    
+    /**
+     * Converts a node representing a user into a UserProfile object. The privileges inherited from the 
+     * group <b>will</b> be computed. Note that the user privileges override the group privileges with the same feature token. 
+     * See also <code>createUserProfileWithoutGroupPrivilegesFromNode</code>.
+     * @param userNode The source user node
+     * @return UserProfile The UserProfile object built with the information of the source node
+     */
+    public static UserProfile createUserProfileWithGroupPrivilegesFromNode(Node userNode){
+       List<Privilege> privileges = new ArrayList<>();
+       
+       for (Relationship relationship : userNode.getRelationships(RelTypes.BELONGS_TO_GROUP, Direction.OUTGOING)) {
            //group Privileges         
            Node groupNode = relationship.getEndNode();
-           List<Privilege> groupPrivileges = new ArrayList<>();
-           for(Relationship rel: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
-                groupPrivileges.add(createPrivilegeFromNode(rel.getStartNode()));
-           //TODO get users
-           groups.add(new GroupProfile(groupNode.getId(),
-                        (String)groupNode.getProperty(Constants.PROPERTY_NAME),
-                        groupNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION) : "",
-                        (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                        null,groupPrivileges));
-            
-       }//end for
-       for(Relationship relationship: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
-           privileges.add(createPrivilegeFromNode(relationship.getStartNode()));
+           
+           for(Relationship rel: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.OUTGOING))
+                privileges.add(createPrivilegeFromNode(rel.getEndNode()));
+       }
+
+       for(Relationship relationship: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.OUTGOING)) {
+            Privilege userPrivilege = createPrivilegeFromNode(relationship.getEndNode());
+            //If the privilege already exists, override it
+            privileges.remove(userPrivilege); //Note that two privileges with the same feature token and different access level are equals.
+            privileges.add(userPrivilege);
+       }
        
-       UserProfile user =  new UserProfile(userNode.getId(),
-                (String)userNode.getProperty(Constants.PROPERTY_NAME),
-                (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
-                (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
-                (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
-                groups, privileges);
-        return user;
+       return   new UserProfile(userNode.getId(),
+                (String)userNode.getProperty(UserProfile.PROPERTY_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
+                (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
+                (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
+                (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
+                        (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) : UserProfile.USER_TYPE_GUI, 
+                privileges);
+    }
+    
+    /**
+     * Releases all the relationships associated to a user, and deletes the node corresponding to such user.
+     * should be released but the caller
+     * @param userNode The user node
+     * @param userIndex Index of users. Used to remove the user node before top actually delete it
+     * @throws InvalidArgumentException If you try to delete the default administrator
+     */
+    public static void deleteUserNode(Node userNode, Index<Node> userIndex) throws InvalidArgumentException {
+        String userName = (String)userNode.getProperty(Constants.PROPERTY_NAME);
+        if (UserProfile.DEFAULT_ADMIN.equals(userName))
+            throw new InvalidArgumentException("The default administrator can not be deleted");
+
+        //Delete the privilege nodes
+        for (Relationship hasPrivilegeRelationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) { 
+            Node privilegeNode = hasPrivilegeRelationship.getEndNode();
+            hasPrivilegeRelationship.delete();
+            privilegeNode.delete();
+        }
+
+        //Delete the rest of relationships
+        for (Relationship relationship : userNode.getRelationships()) 
+            relationship.delete();
+        
+        userIndex.remove(userNode);
+        userNode.delete();
+        CacheManager.getInstance().removeUser(userName);
     }
 
     /**
      * Converts a node representing a group into a GroupProfile object
-     * @param groupNode
-     * @return
+     * @param groupNode The source node
+     * @return A GroupProfile object built from the source node information
      */
     public static GroupProfile createGroupProfileFromNode(Node groupNode){
         
@@ -586,41 +656,51 @@ public class Util {
             Node userNode = relationship.getStartNode();
             //user Privileges
             List<Privilege> userPrivileges = new ArrayList<>();
-            for(Relationship rel: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING))
-                userPrivileges.add(createPrivilegeFromNode(rel.getStartNode()));
-            //TODO User Groups
+            for(Relationship rel: userNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.OUTGOING))
+                userPrivileges.add(createPrivilegeFromNode(rel.getEndNode()));
+
             users.add(new UserProfile(userNode.getId(),
-                        (String)userNode.getProperty(Constants.PROPERTY_NAME),
-                        (String)userNode.getProperty(Constants.PROPERTY_FIRST_NAME),
-                        (String)userNode.getProperty(Constants.PROPERTY_LAST_NAME),
-                        (Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED),
-                        (Long)userNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                        userPrivileges)
-                     );
-        }
-        List<Privilege> privileges = new ArrayList<>();
-        for(Relationship relationship: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.INCOMING)){
-           Node node = relationship.getStartNode();
-           privileges.add(createPrivilegeFromNode(node));
+                        (String)userNode.getProperty(UserProfile.PROPERTY_NAME),
+                        (String)userNode.getProperty(UserProfile.PROPERTY_FIRST_NAME),
+                        (String)userNode.getProperty(UserProfile.PROPERTY_LAST_NAME),
+                        (boolean)userNode.getProperty(UserProfile.PROPERTY_ENABLED),
+                        (long)userNode.getProperty(UserProfile.PROPERTY_CREATION_DATE),
+                        userNode.hasProperty(UserProfile.PROPERTY_TYPE) ?  //To keep backward compatibility
+                            (int)userNode.getProperty(UserProfile.PROPERTY_TYPE) :
+                            UserProfile.USER_TYPE_GUI, userPrivileges));
         }
         
-        GroupProfile group =  new GroupProfile(
-                groupNode.getId(),
+        List<Privilege> privileges = new ArrayList<>();
+        for(Relationship relationship: groupNode.getRelationships(RelTypes.HAS_PRIVILEGE, Direction.OUTGOING))
+           privileges.add(createPrivilegeFromNode(relationship.getEndNode()));
+        
+        
+        GroupProfile group =  new GroupProfile(groupNode.getId(),
                 (String)groupNode.getProperty(Constants.PROPERTY_NAME),
                 groupNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? 
                         (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION) : "",
                 (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE),
-                users,privileges);
+                users, privileges);
         return group;
+    }
+    
+    /**
+     * Converts a node representing a group into a GroupProfileLight object
+     * @param groupNode The source node
+     * @return A GroupProfileLight object built from the source node information
+     */
+    public static GroupProfileLight createGroupProfileLightFromNode(Node groupNode){        
+        return  new GroupProfileLight(groupNode.getId(),
+                (String)groupNode.getProperty(Constants.PROPERTY_NAME),
+                groupNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? 
+                        (String)groupNode.getProperty(Constants.PROPERTY_DESCRIPTION) : "",
+                (Long)groupNode.getProperty(Constants.PROPERTY_CREATION_DATE));
     }
     
     
     public static Privilege createPrivilegeFromNode(Node privilegeNode){
-        return new Privilege((Long)privilegeNode.getProperty(Constants.PROPERTY_CODE), 
-                (String)privilegeNode.getProperty(Constants.PROPERTY_METHOD_GROUP),
-                (String)privilegeNode.getProperty(Constants.PROPERTY_NAME), 
-                (String)privilegeNode.getProperty(Constants.PROPERTY_METHOD_MANAGER), 
-                (long[])privilegeNode.getProperty(Constants.PROPERTY_DEPENDS_OF));
+        return new Privilege((String)privilegeNode.getProperty(Privilege.PROPERTY_FEATURE_TOKEN), 
+                (int)privilegeNode.getProperty(Privilege.PROPERTY_ACCESS_LEVEL));
     }
     
     /**
@@ -671,7 +751,7 @@ public class Util {
         }
         return false;
     }
-
+    
     /**
      * Retrieves the subclasses of a given class metadata node within the class hierarchy
      * @param classMetadata The parent class metadata
@@ -690,13 +770,12 @@ public class Util {
      * Retrieves a String with the property value of the attribute if exists as
      * attribute of the node, if the property is a date it is formating into
      * yyyy-MM-DD, if does not exists it return an empty string.
-     * @param objectNode
-     * @param className
-     * @param attribute
-     * @return
+     * @param objectNode The object node
+     * @param attribute The name of the attribute. This works only for primitive types
+     * @return The string representation of the value of the given attribute
      */
     public static String getAttributeFromNode(Node objectNode, String attribute){
-        if(objectNode.hasProperty(attribute)){
+        if(objectNode.hasProperty(attribute)) { //It's a primitive type
             Object property = objectNode.getProperty(attribute);
             if(attribute.equals(Constants.PROPERTY_CREATION_DATE)){
                 Date creationDate = new Date((Long)property);
@@ -705,9 +784,14 @@ public class Util {
             }
             else
                 return property.toString();
-        }//end if node has no attribute yet
-        else
-           return "";
+        }
+        else {//It's a list type
+            for (Relationship listTypeRelationship : objectNode.getRelationships(RelTypes.RELATED_TO, Direction.OUTGOING)) {
+                if (listTypeRelationship.hasProperty(Constants.PROPERTY_NAME) && listTypeRelationship.getProperty(Constants.PROPERTY_NAME).equals(attribute))
+                    return (String)listTypeRelationship.getEndNode().getProperty(Constants.PROPERTY_NAME);
+            }
+        }
+        return ""; //The attribute does not exist or has been set to null
     }
 
     /**
@@ -730,7 +814,6 @@ public class Util {
     /**
      * Evaluates attribute type
      * @param attributeType
-     * @param attributeName
      * @param attributeValue
      * @return
      */
@@ -792,11 +875,11 @@ public class Util {
                 if (rel.getEndNode().getProperty(Constants.PROPERTY_NAME).equals(attributeDefinition.getName()))
                     throw new InvalidArgumentException(String.format("Class %s already has an attribute named %s", 
                             currentClassName, attributeDefinition.getName()));
-                
             }
             Label label = DynamicLabel.label(Constants.LABEL_ATTRIBUTE);
             Node attrNode = classNode.getGraphDatabase().createNode(label);
             attrNode.setProperty(Constants.PROPERTY_NAME, attributeDefinition.getName()); //This should not be null. That should be checked in the caller
+            attrNode.setProperty(Constants.PROPERTY_MANDATORY, attributeDefinition.isMandatory()== null ? false : attributeDefinition.isMandatory());
             attrNode.setProperty(Constants.PROPERTY_DESCRIPTION, attributeDefinition.getDescription() ==  null ? "" : attributeDefinition.getDescription());
             attrNode.setProperty(Constants.PROPERTY_DISPLAY_NAME, attributeDefinition.getDisplayName() == null ? "" : attributeDefinition.getDisplayName());
             attrNode.setProperty(Constants.PROPERTY_TYPE, attributeDefinition.getType() == null ? "String" : attributeDefinition.getType());
@@ -806,7 +889,7 @@ public class Util {
             attrNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
             attrNode.setProperty(Constants.PROPERTY_NO_COPY, attributeDefinition.isNoCopy() == null ? false : attributeDefinition.isNoCopy());
             attrNode.setProperty(Constants.PROPERTY_UNIQUE, attributeDefinition.isUnique() == null ? false : attributeDefinition.isUnique());
-
+            
             p.endNode().createRelationshipTo(attrNode, RelTypes.HAS_ATTRIBUTE);
         }
     }
@@ -815,7 +898,8 @@ public class Util {
      * Transactions are not handled here
      * @param classNode
      * @param attributeName
-     * @param attributeType 
+     * @param newAttributeType 
+     * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException 
      */
     public static void changeAttributeTypeIfPrimitive (Node classNode, String attributeName, String newAttributeType) throws InvalidArgumentException {
         final TraversalDescription UPDATE_TRAVERSAL = classNode.getGraphDatabase().traversalDescription().
@@ -884,8 +968,7 @@ public class Util {
      * 
      * @param classNode
      * @param oldAttributeName
-     * @param newAttributeName
-     * @throws InvalidArgumentException 
+     * @param newAttributeName 
      */
     public static void changeAttributeName(Node classNode, String oldAttributeName, String newAttributeName) {
         final TraversalDescription UPDATE_TRAVERSAL = classNode.getGraphDatabase().traversalDescription().
@@ -955,13 +1038,21 @@ public class Util {
     /**
      * Creates a new log entry upon an action performed by an user. Transactions are not managed here
      * @param object The object that was affected by the action. Provide the db's root node if it's a general activity log entry (that is, it's not related to any specific object)
-     * @param user User that performed the action
-     * @param logEntry The information to be logged
+     * @param logRoot
+     * @param userName User that performed the action
+     * @param type
+     * @param timestamp
+     * @param notes
+     * @param oldValue
+     * @param newValue
+     * @param affectedProperty
+     * @return 
      * @throws ApplicationObjectNotFoundException If the user or the root of all log entries can't be found
      */
     public static Node createActivityLogEntry(Node object, Node logRoot, String userName, 
-            int type, long timestamp, String affectedProperty, String oldValue, String newValue, String notes) throws ApplicationObjectNotFoundException {
-        
+            int type, long timestamp, String affectedProperty, String oldValue, String newValue, String notes) 
+            throws ApplicationObjectNotFoundException
+    {
         Node userNode = logRoot.getGraphDatabase().index().forNodes(Constants.INDEX_USERS).get(Constants.PROPERTY_NAME, userName).getSingle();
         
         if (userNode == null)
@@ -1013,5 +1104,29 @@ public class Util {
         }catch (NumberFormatException ex){} //Does nothing
         
         return null;
+    }
+    
+    /**
+     * Outputs as a string a list of inventory objects (usually a list of parents in the containment hierarchy)
+     * @param objectList The list of objects
+     * @param startFromTheLast The output string should start from the first or the last object?
+     * @param howManyToShow How many elements should be displayed? used -1 to show all
+     * @return A string with the names of the objects concatenated with a "/" as separator
+     */
+    public static String formatObjectList(List<RemoteBusinessObjectLight> objectList, boolean startFromTheLast, int howManyToShow) {
+        if (startFromTheLast)
+            Collections.reverse(objectList);
+        
+        String outputString = "";
+        int i;
+        
+        for (i = 0;  i <  ((howManyToShow == -1 || howManyToShow >= objectList.size()) ? objectList.size() - 1 : howManyToShow - 1); i++) {
+            if (!objectList.get(i).getName().equals(Constants.NODE_DUMMYROOT)) {
+                outputString += objectList.get(i) + " / ";
+            }
+        }
+        if (!objectList.get(i).getName().equals(Constants.NODE_DUMMYROOT))
+            outputString += objectList.get(i);
+        return outputString;
     }
 }

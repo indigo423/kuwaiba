@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,11 +17,8 @@ package com.neotropic.kuwaiba.modules.ipam;
 
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.kuwaiba.apis.persistence.application.ApplicationEntityManager;
 import org.kuwaiba.apis.persistence.application.Pool;
 import org.kuwaiba.apis.persistence.business.BusinessEntityManager;
@@ -58,19 +55,6 @@ public class IPAMModule implements GenericCommercialModule{
      * The ApplicationEntityManager instance
      */
     private ApplicationEntityManager aem;
-    
-    /**
-     * The subnets could belong grouped in order to improve the IP Address
-     * management, by default if no pool this set for a IPv4 subnet it belong 
-     * to this pool
-     */
-    private static final String DEFAULT_IPV4_POOL = "ipv4 Pool";
-    /**
-     * The subnets could belong grouped in order to improve the IP Address
-     * management, by default if no pool this set for a IPv6 subnet it belong 
-     * to this pool
-     */
-    private static final String DEFAULT_IPV6_POOL = "ipv6 Pool";
     /**
      * This relationship is used to connect a GenericCommunicationElement with
      * a subnet's IP address 
@@ -84,6 +68,11 @@ public class IPAMModule implements GenericCommercialModule{
      * This relationship is used to relate a VRF with a Subnet
      */
     public static final String RELATIONSHIP_IPAMBELONGSTOVRFINSTACE = "ipamBelongsToVrfInstance";
+    /**
+     * TODO: place this relationships in other place
+     * This relationship is used to relate a network element with extra logical configuration
+     */
+    public static final String RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE = "ipamportrelatedtointerface";
     
     @Override
     public String getName() {
@@ -129,7 +118,6 @@ public class IPAMModule implements GenericCommercialModule{
         //Registers the display names
         this.mem.setSpecialRelationshipDisplayName(RELATIONSHIP_IPAMBELONGSTOVLAN, "Belongs to a VLAN");
         this.mem.setSpecialRelationshipDisplayName(RELATIONSHIP_IPAMHASADDRESS, "Element's IP Address");
-
     }
     
     /**
@@ -284,7 +272,7 @@ public class IPAMModule implements GenericCommercialModule{
      * @throws OperationNotPermittedException 
      */
     public long createSubnet(long parentId, String className, String[] attributeNames, 
-            String[][] attributeValues) throws 
+            String[] attributeValues) throws 
             InvalidArgumentException, ArraySizeMismatchException, NotAuthorizedException, 
             MetadataObjectNotFoundException, OperationNotPermittedException, ObjectNotFoundException, ApplicationObjectNotFoundException
     {
@@ -292,10 +280,12 @@ public class IPAMModule implements GenericCommercialModule{
             aem.getPool(parentId);
             return bem.createPoolItem(parentId, className, attributeNames, attributeValues, 0);
         } catch (ApplicationObjectNotFoundException ex) {
-            HashMap<String,List<String>> attributes = new HashMap<>();
+            
+            HashMap<String, String> attributes = new HashMap<>();
             for (int i = 0; i < attributeNames.length; i++)
-                attributes.put(attributeNames[i], Arrays.asList(attributeValues[i]));
-            return bem.createSpecialObject(className, className, parentId, attributes, 0);
+                attributes.put(attributeNames[i], attributeValues[i]);
+            
+            return bem.createSpecialObject(className, className, parentId, attributes, -1);
         }
     }
     
@@ -308,15 +298,14 @@ public class IPAMModule implements GenericCommercialModule{
      * @throws ObjectNotFoundException
      * @throws MetadataObjectNotFoundException
      * @throws OperationNotPermittedException
-     * @throws NotAuthorizedException 
+     * @throws InvalidArgumentException
      */
-    public void deleteSubnets(long[] ids, String className, boolean releaseRelationships) 
+    public void deleteSubnets(String className, List<Long> ids, boolean releaseRelationships) 
             throws ObjectNotFoundException, MetadataObjectNotFoundException, 
-            OperationNotPermittedException, NotAuthorizedException
-    {
-        if(ids != null)
-            bem.deleteObject(className, ids[0], releaseRelationships);
-        
+            OperationNotPermittedException, InvalidArgumentException {
+        HashMap<String, List<Long>> objectsToBeDeleted = new HashMap<>();
+        objectsToBeDeleted.put(className, ids);
+        bem.deleteObjects(objectsToBeDeleted, releaseRelationships);
     }
     
     /**
@@ -349,11 +338,11 @@ public class IPAMModule implements GenericCommercialModule{
      * @throws OperationNotPermittedException
      * @throws DatabaseException 
      */
-    public long addIP(long parentId, String parentClassName, HashMap<String,List<String>> attributes) throws ApplicationObjectNotFoundException, 
+    public long addIP(long parentId, String parentClassName, HashMap<String, String> attributes) throws ApplicationObjectNotFoundException, 
             InvalidArgumentException, ArraySizeMismatchException, NotAuthorizedException, 
             MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException, DatabaseException
     {
-        return bem.createSpecialObject(Constants.CLASS_IP_ADDRESS, parentClassName, parentId, attributes, 0);
+        return bem.createSpecialObject(Constants.CLASS_IP_ADDRESS, parentClassName, parentId, attributes, -1);
     }
 
     /**
@@ -370,7 +359,6 @@ public class IPAMModule implements GenericCommercialModule{
             OperationNotPermittedException, NotAuthorizedException
     {
         if(ids != null)
-            
             bem.deleteObject(Constants.CLASS_IP_ADDRESS, ids[0], releaseRelationships);
     }
     
@@ -389,7 +377,8 @@ public class IPAMModule implements GenericCommercialModule{
     }
     
     /**
-     * Relate a Subnet with a VLAN
+     * Relate a Subnet with a VLAN, this method also allow to relate VLANs to 
+     * BDIs, VFRIs.
      * @param id subnet id
      * @param className if the subnet has IPv4 or IPv6 addresses
      * @param vlanId VLAN id
@@ -397,25 +386,41 @@ public class IPAMModule implements GenericCommercialModule{
      * @throws OperationNotPermittedException
      * @throws MetadataObjectNotFoundException 
      */
-    public void relateToVLAN(long id, String className, long vlanId)
+    public void relateSubnetToVLAN(long id, String className, long vlanId)
         throws ObjectNotFoundException,
             OperationNotPermittedException, MetadataObjectNotFoundException{
         bem.createSpecialRelationship(Constants.CLASS_VLAN, vlanId, className, id, RELATIONSHIP_IPAMBELONGSTOVLAN, true);
     }
     
     /**
+     * Release a relationship between a subnet and a VLAN, this method also 
+     * allow to relate VLANs to BDIs, VFRIs.
+     * @param vlanId the vlan Id
+     * @param id the subnet id
+     * @throws ObjectNotFoundException
+     * @throws MetadataObjectNotFoundException
+     * @throws ApplicationObjectNotFoundException
+     * @throws NotAuthorizedException 
+     */
+    public void releaseSubnetFromVLAN(long id, long vlanId)throws ObjectNotFoundException, MetadataObjectNotFoundException,
+            ApplicationObjectNotFoundException, NotAuthorizedException
+    {
+        bem.releaseSpecialRelationship(Constants.CLASS_VLAN, vlanId, id, RELATIONSHIP_IPAMBELONGSTOVLAN);
+    }
+    
+    /**
      * Relate a Subnet with a VRF
-     * @param id subnet id
+     * @param subnetId subnet id
      * @param className if the subnet has IPv4 or IPv6 addresses
      * @param vrfId VLAN id
      * @throws ObjectNotFoundException
      * @throws OperationNotPermittedException
      * @throws MetadataObjectNotFoundException 
      */
-    public void relateSubnetToVRF(long id, String className, long vrfId)
+    public void relateSubnetToVRF(long subnetId, String className, long vrfId)
         throws ObjectNotFoundException,
             OperationNotPermittedException, MetadataObjectNotFoundException{
-        bem.createSpecialRelationship(Constants.CLASS_VRF_INSTANCE, vrfId, className, id, RELATIONSHIP_IPAMBELONGSTOVRFINSTACE, true);
+        bem.createSpecialRelationship(Constants.CLASS_VRF_INSTANCE, vrfId, className, subnetId, RELATIONSHIP_IPAMBELONGSTOVRFINSTACE, true);
     }
     
     /**
@@ -439,34 +444,19 @@ public class IPAMModule implements GenericCommercialModule{
     
     /**
      * Release a relationship between a subnet and a VRF
+     * @param subnetId the subnet id
      * @param vrfId the VRF Id
-     * @param id the subnet id
      * @throws ObjectNotFoundException
      * @throws MetadataObjectNotFoundException
      * @throws ApplicationObjectNotFoundException
      * @throws NotAuthorizedException 
      */
-    public void releaseSubnetFromVRF(long vrfId, long id)throws ObjectNotFoundException, MetadataObjectNotFoundException,
+    public void releaseSubnetFromVRF(long subnetId, long vrfId) throws ObjectNotFoundException, MetadataObjectNotFoundException,
             ApplicationObjectNotFoundException, NotAuthorizedException
     {
-        bem.releaseSpecialRelationship(Constants.CLASS_VRF_INSTANCE, vrfId, id, RELATIONSHIP_IPAMBELONGSTOVRFINSTACE);
+        bem.releaseSpecialRelationship(Constants.CLASS_VRF_INSTANCE, vrfId, subnetId, RELATIONSHIP_IPAMBELONGSTOVRFINSTACE);
     }
-    
-    /**
-     * Release a relationship between a subnet and a VLAN
-     * @param vlanId the vlan Id
-     * @param id the subnet id
-     * @throws ObjectNotFoundException
-     * @throws MetadataObjectNotFoundException
-     * @throws ApplicationObjectNotFoundException
-     * @throws NotAuthorizedException 
-     */
-    public void releaseFromVLAN(long vlanId, long id)throws ObjectNotFoundException, MetadataObjectNotFoundException,
-            ApplicationObjectNotFoundException, NotAuthorizedException
-    {
-        bem.releaseSpecialRelationship(Constants.CLASS_VLAN, vlanId, id, RELATIONSHIP_IPAMBELONGSTOVLAN);
-    }
-    
+
     /**
      * Retrieves all the IP address created in a subnet
      * @param id subnet id
@@ -517,7 +507,39 @@ public class IPAMModule implements GenericCommercialModule{
     }
     
     /**
-     * checks if the new subnet overlaps with in the created subnets
+     * Relates an interface with a GenericCommunicationPort
+     * @param portId port id
+     * @param portClassName the classname of the configuration you want to relate with
+     * @param interfaceClassName interface's class
+     * @param interfaceId interface id
+     * @throws ObjectNotFoundException
+     * @throws OperationNotPermittedException
+     * @throws MetadataObjectNotFoundException 
+     */
+    public void relatePortToInterface(long portId, String portClassName, String interfaceClassName, long interfaceId) throws ObjectNotFoundException,
+            OperationNotPermittedException, MetadataObjectNotFoundException{
+        bem.createSpecialRelationship(interfaceClassName, interfaceId, portClassName, portId, RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE, true);
+    }
+    
+    /**
+     * Release the relationship between a GenericCommunicationPort and an interface
+     * @param interfaceClassName interface's class
+     * @param interfaceId interface id
+     * @param portId port id 
+     * @throws ObjectNotFoundException
+     * @throws MetadataObjectNotFoundException
+     * @throws ApplicationObjectNotFoundException
+     * @throws NotAuthorizedException 
+     */
+    public void releasePortFromInterface(String interfaceClassName, long interfaceId ,long portId)
+            throws ObjectNotFoundException, MetadataObjectNotFoundException,
+            ApplicationObjectNotFoundException, NotAuthorizedException
+    {
+        bem.releaseSpecialRelationship(interfaceClassName, interfaceId, portId, RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
+    }
+    
+    /**
+     * Checks if the new subnet overlaps with in the created subnets
      * @param networkIp
      * @param broadcastIp
      * @return true if overlaps, false of not

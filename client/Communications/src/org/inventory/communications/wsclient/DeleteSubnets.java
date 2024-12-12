@@ -19,8 +19,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="oid" type="{http://www.w3.org/2001/XMLSchema}long" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="oids" type="{http://www.w3.org/2001/XMLSchema}long" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="releaseRelationships" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -33,47 +33,18 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "deleteSubnets", propOrder = {
-    "oid",
     "className",
+    "oids",
     "releaseRelationships",
     "sessionId"
 })
 public class DeleteSubnets {
 
-    @XmlElement(nillable = true)
-    protected List<Long> oid;
     protected String className;
+    @XmlElement(type = Long.class)
+    protected List<Long> oids;
     protected boolean releaseRelationships;
     protected String sessionId;
-
-    /**
-     * Gets the value of the oid property.
-     * 
-     * <p>
-     * This accessor method returns a reference to the live list,
-     * not a snapshot. Therefore any modification you make to the
-     * returned list will be present inside the JAXB object.
-     * This is why there is not a <CODE>set</CODE> method for the oid property.
-     * 
-     * <p>
-     * For example, to add a new item, do as follows:
-     * <pre>
-     *    getOid().add(newItem);
-     * </pre>
-     * 
-     * 
-     * <p>
-     * Objects of the following type(s) are allowed in the list
-     * {@link Long }
-     * 
-     * 
-     */
-    public List<Long> getOid() {
-        if (oid == null) {
-            oid = new ArrayList<Long>();
-        }
-        return this.oid;
-    }
 
     /**
      * Gets the value of the className property.
@@ -97,6 +68,35 @@ public class DeleteSubnets {
      */
     public void setClassName(String value) {
         this.className = value;
+    }
+
+    /**
+     * Gets the value of the oids property.
+     * 
+     * <p>
+     * This accessor method returns a reference to the live list,
+     * not a snapshot. Therefore any modification you make to the
+     * returned list will be present inside the JAXB object.
+     * This is why there is not a <CODE>set</CODE> method for the oids property.
+     * 
+     * <p>
+     * For example, to add a new item, do as follows:
+     * <pre>
+     *    getOids().add(newItem);
+     * </pre>
+     * 
+     * 
+     * <p>
+     * Objects of the following type(s) are allowed in the list
+     * {@link Long }
+     * 
+     * 
+     */
+    public List<Long> getOids() {
+        if (oids == null) {
+            oids = new ArrayList<Long>();
+        }
+        return this.oids;
     }
 
     /**

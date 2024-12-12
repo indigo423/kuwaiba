@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,12 +21,20 @@ package com.neotropic.kuwaiba.modules.reporting.html;
  */
 public class HTMLColumn extends HTMLComponent {
     private Object content;
+    private String rowspan;
+    private String colspan;
 
     public HTMLColumn(Object content) {
         this.content = content;
     }
+    
+    public HTMLColumn(String style, String cssClass, Object content, String colspan, String rowspan) {
+        this(style, cssClass, content);
+        this.colspan = colspan;
+        this.rowspan = rowspan;
+    }
 
-    public HTMLColumn(String style, String cssClass, String content) {
+    public HTMLColumn(String style, String cssClass, Object content) {
         super(style, cssClass);
         this.content = content;
     }
@@ -38,11 +46,35 @@ public class HTMLColumn extends HTMLComponent {
     public void setContent(Object content) {
         this.content = content;
     }
+    
+    public String getRowspan() {
+        return rowspan;
+    }
+        
+    public void setRowspan(String rowspan) {
+        this.rowspan = rowspan;
+    }
+    
+    public String getColspan() {
+        return colspan;
+    }
+    
+    public void setColspan(String colspan) {
+        this.colspan = colspan;
+    }
 
     @Override
     public String asHTML() {
+        Object theContent = content;
+        
+        if (theContent instanceof HTMLComponent)
+            theContent = ((HTMLComponent) content).asHTML();
+        
         return new StringBuilder().append("<td").append(style == null ? "" : " style=\"" + style + "\"")   //NOI18N
-                                    .append(cssClass == null ? "" : " class=\"" + cssClass + "\"").append(">")  //NOI18N
-                                    .append(content).append("</td>").toString(); //NOI18N
+            .append(cssClass == null ? "" : " class=\"" + cssClass + "\"") //NOI18N
+            .append(rowspan == null ? "" : " rowspan=\"" + rowspan + "\"") //NOI18N
+            .append(colspan == null ? "" : " colspan=\"" + colspan + "\"") //NOI18N
+            .append(">")  //NOI18N
+            .append(theContent).append("</td>").toString(); //NOI18N
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,6 +51,10 @@ public class ClassMetadata extends ClassMetadataLight {
      */
     private List<String> possibleChildren;
     /**
+     * List of possible special children
+     */
+    private List<String> possibleSpecialChildren;
+    /**
      *  Classmetada's category
      */
     private String category;
@@ -66,6 +70,7 @@ public class ClassMetadata extends ClassMetadataLight {
     public ClassMetadata() {
         attributes = new HashSet<>();
         possibleChildren = new ArrayList<>();
+        possibleSpecialChildren = new ArrayList<>();
     }
     
    // <editor-fold defaultstate="collapsed" desc="getters and setters methods. Click on the + sign on the left to edit the code.">
@@ -131,7 +136,16 @@ public class ClassMetadata extends ClassMetadataLight {
 
     public void setPossibleChildren(List<String> possibleChildren) {
         this.possibleChildren = possibleChildren;
-    }// </editor-fold>
+    }
+    
+    public List<String> getPossibleSpecialChildren() {
+        return possibleSpecialChildren;
+    }
+    
+    public void setPossibleSpecialChildren(List<String> possibleSpecialChildren) {
+        this.possibleSpecialChildren = possibleSpecialChildren;
+    }
+    // </editor-fold>
 
     public AttributeMetadata getAttribute(String attributeName) {
         for (AttributeMetadata att : attributes) {
@@ -168,6 +182,22 @@ public class ClassMetadata extends ClassMetadataLight {
         for (AttributeMetadata eachAttribute : attributes){
             if (eachAttribute.getName().equals(attributeName))
                 return eachAttribute.getType();
+        }
+        throw new InvalidArgumentException(String.format ("Attribute %s could not be found in class %s", attributeName, getName()));
+    }
+    
+    public boolean isMandatory(String attributeName)  throws InvalidArgumentException{
+        for (AttributeMetadata eachAttribute : attributes){
+            if (eachAttribute.getName().equals(attributeName))
+                return eachAttribute.isMandatory();
+        }
+        throw new InvalidArgumentException(String.format ("Attribute %s could not be found in class %s", attributeName, getName()));
+    }
+    
+    public boolean isUnique(String attributeName)  throws InvalidArgumentException{
+        for (AttributeMetadata eachAttribute : attributes){
+            if (eachAttribute.getName().equals(attributeName))
+                return eachAttribute.isUnique();
         }
         throw new InvalidArgumentException(String.format ("Attribute %s could not be found in class %s", attributeName, getName()));
     }

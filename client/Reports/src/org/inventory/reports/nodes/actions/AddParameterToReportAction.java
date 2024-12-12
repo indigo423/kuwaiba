@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 package org.inventory.reports.nodes.actions;
 
 import java.awt.event.ActionEvent;
-import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
+import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalReportLight;
+import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.reports.nodes.ReportNode;
@@ -31,7 +32,7 @@ import org.openide.util.Utilities;
  * Adds a parameter to a report
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-class AddParameterToReportAction extends AbstractAction {
+class AddParameterToReportAction extends GenericInventoryAction {
     
     private CommunicationsStub com = CommunicationsStub.getInstance();
     
@@ -64,5 +65,10 @@ class AddParameterToReportAction extends AbstractAction {
             }
         }
         
+    }
+
+    @Override
+    public LocalPrivilege getPrivilege() {
+        return new LocalPrivilege(LocalPrivilege.PRIVILEGE_REPORTS, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
     }
 }

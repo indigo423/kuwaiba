@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ import org.openide.util.NbBundle.Messages;
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Window", id = "org.inventory.reports.ReportsTopComponent")
 @ActionReferences(value = {@ActionReference(path = "Menu/Tools"),
-    @ActionReference(path = "Toolbars/Tools")})
+    @ActionReference(path = "Toolbars/05_Tools", position = 2)})
 @TopComponent.OpenActionRegistration(
         displayName = "#CTL_ReportsAction",
         preferredID = "ReportsTopComponent"

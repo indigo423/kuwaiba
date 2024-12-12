@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -37,8 +37,7 @@ public class DataModelManagerService {
     }
     
     public LocalClassMetadataLight[] getRoots() {
-        if (roots == null)
-            roots = com.getAllLightMeta(true);
+        roots = com.getAllLightMeta(true);
         return roots;
     }
     

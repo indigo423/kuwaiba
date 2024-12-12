@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
+import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.util.ChangeDescriptor;
 import org.kuwaiba.ws.todeserialize.StringPair;
 
@@ -51,7 +52,7 @@ public interface BusinessEntityManager {
      * @throws ApplicationObjectNotFoundException If the specified template could not be found
      */
     public long createObject(String className, String parentClassName, long parentOid,
-            HashMap<String,List<String>> attributes,long template)
+            HashMap<String, String> attributes,long template)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException, 
                 OperationNotPermittedException, ApplicationObjectNotFoundException;
     
@@ -69,7 +70,7 @@ public interface BusinessEntityManager {
      * @throws OperationNotPermittedException If there's a business constraint that doesn't allow to create the object.
      * @throws ApplicationObjectNotFoundException If the specified template could not be found.
      */
-    public long createObject(String className, String parentClassName, String criteria, HashMap<String,List<String>> attributes, long template)
+    public long createObject(String className, String parentClassName, String criteria, HashMap<String,String> attributes, long template)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException, OperationNotPermittedException, ApplicationObjectNotFoundException;
     /**
      * Creates a new inventory object for a domain specific model (where the standard containment rules don't apply)
@@ -88,7 +89,7 @@ public interface BusinessEntityManager {
      * @throws ApplicationObjectNotFoundException If the specified template could not be found.
      */
     public long createSpecialObject(String className, String parentClassName, long parentOid,
-            HashMap<String,List<String>> attributes,long template)
+            HashMap<String,String> attributes,long template)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException, OperationNotPermittedException, ApplicationObjectNotFoundException;
     
     /**
@@ -102,26 +103,45 @@ public interface BusinessEntityManager {
      * @throws InvalidArgumentException If any of the attributes or its type is invalid
      * @return the id of the newly created object
      * @throws ArraySizeMismatchException If attributeNames and attributeValues have different sizes.
-     * @throws MetadataObjectNotFoundException If the class name could not be found
+     * @throws MetadataObjectNotFoundException If the class name could not be found 
      */
-    public long createPoolItem(long poolId, String className, String[] attributeNames, String[][] attributeValues, long templateId) 
+    public long createPoolItem(long poolId, String className, String[] attributeNames, String[] attributeValues, long templateId) 
             throws ApplicationObjectNotFoundException, InvalidArgumentException, ArraySizeMismatchException, MetadataObjectNotFoundException;
-    
     /**
-     * Create massively objects related to their parent using a child_of_special relationship.
-     * The name of the objects is automatically set numerically from1 to numberOfChildren
-     * @param objectClass Object class
-     * @param numberOfChildren
-     * @param parentClass Parent class
-     * @param parentId parent id
-     * @return A list of ids of the newly created objects 
-     * @throws MetadataObjectNotFoundException If any of the classes provided can't be found
-     * @throws ObjectNotFoundException if the parent can not be found
-     * @throws OperationNotPermittedException If due to business rules, the operation can't be performed
-     * @throws InvalidArgumentException If any of the attributes or its type is invalid.
+     * Creates multiple objects using a given name pattern
+     * @param className The class name for the new objects
+     * @param parentClassName The parent class name for the new objects
+     * @param parentOid The object id of the parent
+     * @param numberOfObjects Number of objects to be created
+     * @param namePattern A pattern to create the names for the new objects
+     * @return An arrays of ids for the new objects
+     * @throws MetadataObjectNotFoundException If the className or the parentClassName can not be found.
+     * @throws ObjectNotFoundException If the parent node can not be found.
+     * @throws InvalidArgumentException If the given name pattern not match with the regular expression to build the new object name.
+     * @throws OperationNotPermittedException If the className is not a possible children of parentClassName.
+     *                                        If the className is not in design or are abstract.
+     *                                        If the className is not an InventoryObject.
      */
-    public long[] createBulkSpecialObjects(String objectClass, int numberOfChildren, String parentClass, long parentId)
-           throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException, InvalidArgumentException;
+    public long [] createBulkObjects(String className, String parentClassName, long parentOid, int numberOfObjects, String namePattern) 
+        throws MetadataObjectNotFoundException, OperationNotPermittedException, ObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Creates multiple special objects using a given name pattern
+     * @param className The class name for the new special objects
+     * @param parentClassName The parent class name for the new special objects
+     * @param parentId The object id of the parent
+     * @param numberOfSpecialObjects Number of special objects to be created
+     * @param namePattern A pattern to create the names for the new special objects
+     * @return An array of ids for the new special objects
+     * @throws MetadataObjectNotFoundException If the className or the parentClassName can not be found.
+     * @throws ObjectNotFoundException If the parent node can not be found.
+     * @throws InvalidArgumentException If the given name pattern not match with the regular expression to build the new object name.
+     * @throws OperationNotPermittedException If the className is not a possible special children of parentClassName.
+     *                                        If the className is not in design or are abstract.
+     *                                        If the className is not an InventoryObject.
+     */
+    public long[] createBulkSpecialObjects(String className, String parentClassName, long parentId, int numberOfSpecialObjects, String namePattern) 
+        throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException, InvalidArgumentException;
+        
     /**
      * Gets the detailed information about an object
      * @param className Object class name
@@ -129,10 +149,21 @@ public interface BusinessEntityManager {
      * @return A detailed representation of the requested object
      * @throws MetadataObjectNotFoundException If the className class can't be found
      * @throws ObjectNotFoundException If the requested object can't be found
-     * @throws InvalidArgumentException If the database object could not be properly mapped into a serializable java object.
+     * @throws InvalidArgumentException If the object id can not be found.
      */
     public RemoteBusinessObject getObject(String className, long oid)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Gets the detailed information about an object using the id
+     * @param oid Object's oid
+     * @return A detailed representation of the requested object
+     * @throws MetadataObjectNotFoundException If the className class can't be found
+     * @throws ObjectNotFoundException If the requested object can't be found
+     * @throws InvalidArgumentException If the database object could not be properly mapped into a serializable java object.
+     */
+    public RemoteBusinessObject getObject(long oid) 
+        throws InvalidArgumentException, ObjectNotFoundException, MetadataObjectNotFoundException;
 
     /**
      * Gets the special children of a given object
@@ -155,6 +186,20 @@ public interface BusinessEntityManager {
      */
     public RemoteBusinessObjectLight getObjectLight(String className, long oid)
             throws MetadataObjectNotFoundException, ObjectNotFoundException;
+    
+    /**
+     * Gets the common parent between an a object and b object
+     * @param aObjectClass Object a class name
+     * @param aOid Object a id
+     * @param bObjectClass Object b class name
+     * @param bOid Object a id
+     * @return The common parent
+     * @throws ObjectNotFoundException If the requested object can't be found
+     * @throws MetadataObjectNotFoundException If any of the class nodes involved is malformed
+     * @throws InvalidArgumentException If the database object could not be properly mapped into a serializable java object.
+     */
+    public RemoteBusinessObjectLight getCommonParent(String aObjectClass, long aOid, String bObjectClass, long bOid)
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException;
 
     /**
      * Gets the parent of a given object in the containment hierarchy
@@ -165,7 +210,7 @@ public interface BusinessEntityManager {
      * @throws MetadataObjectNotFoundException If any of the class nodes involved is malformed
      * @throws InvalidArgumentException If the database object could not be properly mapped into a serializable java object.
      */
-    public RemoteBusinessObject getParent(String objectClass, long oid)
+    public RemoteBusinessObjectLight getParent(String objectClass, long oid)
             throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException;
     
     /**
@@ -177,6 +222,19 @@ public interface BusinessEntityManager {
      * @throws MetadataObjectNotFoundException if the class can not be found
      */
     public List<RemoteBusinessObjectLight> getParents(String objectClassName, long oid)
+        throws ObjectNotFoundException, MetadataObjectNotFoundException;
+    
+    /**
+     * Gets the list of parents (according to the special and standard containment hierarchy) until it finds an instance of class 
+     * objectToMatchClassName (for example "give me the parents of this port until you find the nearest rack")
+     * @param objectClassName Class of the object to get the parents from
+     * @param oid Id of the object to get the parents from
+     * @param objectToMatchClassName Class of the object that will limit the search. It can be a superclass, if you want to match many classes at once
+     * @return The list of parents until an instance of objectToMatchClassName is found. If no instance of that class is found, all parents until the Dummy Root will be returned
+     * @throws ObjectNotFoundException If the object to evaluate can not be found
+     * @throws MetadataObjectNotFoundException If any of the classes provided could not be found
+     */
+    public List<RemoteBusinessObjectLight> getParentsUntilFirstOfClass(String objectClassName, long oid, String objectToMatchClassName)
         throws ObjectNotFoundException, MetadataObjectNotFoundException;
 
     /**
@@ -198,9 +256,10 @@ public interface BusinessEntityManager {
      * @throws ObjectNotFoundException If the requested object can't be found
      * @throws MetadataObjectNotFoundException If the requested object class can't be found
      * @throws OperationNotPermittedException If the update can't be performed due a business rule or because the object is blocked or it has relationships and releaseRelationships is false
+     * @throws InvalidArgumentException If it was not possible to release the possible unique attributes
      */
     public void deleteObjects(HashMap<String, List<Long>> objects, boolean releaseRelationships)
-            throws ObjectNotFoundException, MetadataObjectNotFoundException, OperationNotPermittedException;
+            throws ObjectNotFoundException, MetadataObjectNotFoundException, OperationNotPermittedException, InvalidArgumentException;
 
     /**
      * Deletes a single object
@@ -227,7 +286,7 @@ public interface BusinessEntityManager {
      * @throws OperationNotPermittedException If the update can't be performed due a business rule or because the object is blocked
      * @throws InvalidArgumentException If any of the names provided does not exist or can't be set using this method or of the value of any of the attributes can not be mapped correctly.
      */
-    public ChangeDescriptor updateObject(String className, long oid, HashMap<String,List<String>> attributes)
+    public ChangeDescriptor updateObject(String className, long oid, HashMap<String, String> attributes)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException, InvalidArgumentException;
     /**
      * Updates an object binary attributes.
@@ -284,19 +343,6 @@ public interface BusinessEntityManager {
             throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
 
     /**
-     * Locks and object read-only or release the block. Not implemented yet.
-     * @param className object's class name
-     * @param oid object's oid
-     * @param value true to set the block, false to release it
-     * @return Success or failure
-     * @throws MetadataObjectNotFoundException If the object's can't be found
-     * @throws ObjectNotFoundException If the object or its new parent can't be found
-     * @throws OperationNotPermittedException If the update can't be performed due to a business rule
-     */
-    public boolean setObjectLockState(String className, long oid, Boolean value)
-            throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
-
-    /**
      * Gets the children of a given object
      * @param className Object's class name
      * @param oid Object's oid
@@ -329,11 +375,36 @@ public interface BusinessEntityManager {
      * @return A list of children of parentid/parentClass instance that are instances of classToFilter.
      * @throws MetadataObjectNotFoundException If any of the classes can not be found
      * @throws ObjectNotFoundException If parent object can not be found
-     * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException If the database objects can not be correctly mapped into serializable Java objects.
+     * @throws InvalidArgumentException If the database objects can not be correctly mapped into serializable Java objects.
      */
     public List<RemoteBusinessObject> getChildrenOfClass(long parentOid, String parentClass, String classToFilter, int maxResults)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException;
     
+    /**
+     * Gets all children of a given class to filter in a hierarchy with root in the given parent
+     * @param parentOid Object id of the root parent of the hierarchy
+     * @param parentClass Class name of the root parent of the hierarchy
+     * @param classToFilter Class name of the expected children
+     * @param maxResults Maximum number of results, -1 no limit
+     * @return The list of object instance of the given class to filter
+     * @throws MetadataObjectNotFoundException If the parent class is not found
+     * @throws ObjectNotFoundException If the parent is not found
+     */
+    public List<RemoteBusinessObjectLight> getChildrenOfClassLightRecursive(long parentOid, String parentClass, String classToFilter, int maxResults) 
+        throws MetadataObjectNotFoundException, ObjectNotFoundException;
+    /**
+     * Gets all special children of a given class to filter in a hierarchy with root in the given parent
+     * @param parentOid Object id of the root parent of the hierarchy
+     * @param parentClass Class name of the root parent of the hierarchy
+     * @param classToFilter Class name of the expected children
+     * @param maxResults Maximum number of results, -1 no limit
+     * @return The list of object instance of the given class to filter
+     * @throws MetadataObjectNotFoundException If the parent class is not found
+     * @throws ObjectNotFoundException If the parent is not found
+     */
+    public List<RemoteBusinessObjectLight> getSpecialChildrenOfClassLightRecursive(long parentOid, String parentClass, String classToFilter, int maxResults) 
+        throws MetadataObjectNotFoundException, ObjectNotFoundException;
+            
     /**
      * Same as getChildrenOfClass, but returns only the light version of the objects
      * @param parentOid parent id
@@ -470,11 +541,23 @@ public interface BusinessEntityManager {
      * @param numberOfRelationships Number of relationships
      * @return True if the object has numberOfRelationships relationships with another object
      * @throws ObjectNotFoundException If the object can not be found
-     * @throws MetadataObjectNotFoundException  if objectClass does not exist
+     * @throws MetadataObjectNotFoundException  If objectClass does not exist
      */
     public boolean hasRelationship(String objectClass, long objectId, String relationshipName, int numberOfRelationships) 
             throws ObjectNotFoundException, MetadataObjectNotFoundException;
 
+    /**
+     * Releases all the relationships with the given names associated to the object provided. If no relationships with such names exist, the method 
+     * will do nothing. <b>Use this method with extreme care, you can seriously affect the relational integrity of the system</b>
+     * @param objectClass The class of the target object
+     * @param objectId The id of the target object
+     * @param relationshipsToRelease An array with the relationships to be released
+     * @throws MetadataObjectNotFoundException If the class provided does not exist
+     * @throws ObjectNotFoundException If the object could not be found
+     * @throws InvalidArgumentException If any of the relationships is now allowed according to the defined data model
+     */
+    public void releaseRelationships(String objectClass, long objectId, List<String> relationshipsToRelease) throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException;
+    
     /**
      * Checks if an object has a given number of special relationships with another object
      * @param objectClass Object class
@@ -498,6 +581,28 @@ public interface BusinessEntityManager {
      * @return A list of the routes, including only the nodes as RemoteBusinessObjectLights
      */
     public List<RemoteBusinessObjectLightList> findRoutesThroughSpecialRelationships (String objectAClassName, long objectAId, String objectBClassName, long objectBId, String relationshipName);
+    
+    /**
+     * Retrieves the list of the attributes marked as mandatory
+     * @param className the class name
+     * @return a list of AttributeMetadata
+     * @throws MetadataObjectNotFoundException if the class doesn't exist
+     */
+    public List<AttributeMetadata> getMandatoryAttributesInClass(String className) throws 
+            MetadataObjectNotFoundException;
+             
+    /**
+     * Retrieves if an object has values in its attributes marked as mandatory
+     * @param className the object's class name
+     * @param objId object given id
+     * @throws ObjectNotFoundException if the object doesn't exist
+     * @throws MetadataObjectNotFoundException if the class doesn't exist
+     * @throws InvalidArgumentException if the mandatory attribute has no value
+     */         
+    public void objectHasValuesInMandatoryAttributes(String className, 
+            long objId) throws ObjectNotFoundException, 
+            MetadataObjectNotFoundException, InvalidArgumentException;
+    
     /**
      * Finds the physical path from one port to another
      * @param objectClass The source port class.
@@ -543,9 +648,10 @@ public interface BusinessEntityManager {
     /**
      * Deletes a report
      * @param reportId The id of the report.
+     * @return The summary of the changes
      * @throws ApplicationObjectNotFoundException If the report could not be found.
      */
-    public void deleteReport(long reportId) throws ApplicationObjectNotFoundException;
+    public ChangeDescriptor deleteReport(long reportId) throws ApplicationObjectNotFoundException;
     
     /**
      * Updates the properties of an existing class level report.
@@ -555,10 +661,11 @@ public interface BusinessEntityManager {
      * @param enabled Is the report enabled? . Null to leave it unchanged.
      * @param type Type of the output of the report. See LocalReportLight for possible values
      * @param script Text of the script. 
+     * @return The summary of the changes
      * @throws ApplicationObjectNotFoundException If the report could not be found.
      * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException If any of the report properties has a wrong or unexpected format.
      */
-    public void updateReport(long reportId, String reportName, String reportDescription, Boolean enabled,
+    public ChangeDescriptor updateReport(long reportId, String reportName, String reportDescription, Boolean enabled,
             Integer type, String script) 
             throws ApplicationObjectNotFoundException, InvalidArgumentException;
     
@@ -566,10 +673,11 @@ public interface BusinessEntityManager {
      * Updates the parameters of a report
      * @param reportId The id of the report
      * @param parameters The list of parameters and optional default values. Those with null values will be deleted and the ones that didn't exist previously will be created.
+     * @return The summary of the changes
      * @throws ApplicationObjectNotFoundException If the report was not found.
      * @throws InvalidArgumentException If the any of the parameters has an invalid name.
      */
-    public void updateReportParameters(long reportId, List<StringPair> parameters) 
+    public ChangeDescriptor updateReportParameters(long reportId, List<StringPair> parameters) 
             throws ApplicationObjectNotFoundException, InvalidArgumentException;
     
     /**

@@ -7,16 +7,16 @@ import javax.xml.bind.annotation.XmlType;
 
 
 /**
- * <p>Java class for releaseSubnetFromVrf complex type.
+ * <p>Java class for releaseSubnetFromVRF complex type.
  * 
  * <p>The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
- * &lt;complexType name="releaseSubnetFromVrf">
+ * &lt;complexType name="releaseSubnetFromVRF">
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="subnetId" type="{http://www.w3.org/2001/XMLSchema}long"/>
  *         &lt;element name="vrfId" type="{http://www.w3.org/2001/XMLSchema}long"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -28,31 +28,31 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "releaseSubnetFromVrf", propOrder = {
-    "id",
+@XmlType(name = "releaseSubnetFromVRF", propOrder = {
+    "subnetId",
     "vrfId",
     "sessionId"
 })
-public class ReleaseSubnetFromVrf {
+public class ReleaseSubnetFromVRF {
 
-    protected long id;
+    protected long subnetId;
     protected long vrfId;
     protected String sessionId;
 
     /**
-     * Gets the value of the id property.
+     * Gets the value of the subnetId property.
      * 
      */
-    public long getId() {
-        return id;
+    public long getSubnetId() {
+        return subnetId;
     }
 
     /**
-     * Sets the value of the id property.
+     * Sets the value of the subnetId property.
      * 
      */
-    public void setId(long value) {
-        this.id = value;
+    public void setSubnetId(long value) {
+        this.subnetId = value;
     }
 
     /**

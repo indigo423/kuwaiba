@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.neotropic.kuwaiba.modules.sdh;
 
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -178,8 +177,8 @@ public class SDHModule implements GenericCommercialModule {
             if (!mem.isSubClass("GenericSDHTransportLink", linkType)) //NOI18N
                 throw new ServerSideException(String.format("Class %s is not subclass of GenericSDHTransportLink", linkType));
 
-            HashMap<String, List<String>> attributesToBeSet = new HashMap<>();
-            attributesToBeSet.put(Constants.PROPERTY_NAME, Arrays.asList(new String[] { defaultName == null ? "" : defaultName }));
+            HashMap<String, String> attributesToBeSet = new HashMap<>();
+            attributesToBeSet.put(Constants.PROPERTY_NAME, defaultName == null ? "" : defaultName );
             
             RemoteBusinessObject communicationsEquipmentA = bem.getParentOfClass(classNameEndpointA, idEndpointA, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT);
             if (communicationsEquipmentA == null)
@@ -189,7 +188,7 @@ public class SDHModule implements GenericCommercialModule {
             if (communicationsEquipmentB == null)
                 throw new ServerSideException(String.format("The specified port (%s : %s) doesn't seem to be located in a communications equipment", classNameEndpointB, idEndpointB));
             
-            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, 0);                      
+            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, -1);                      
                        
             bem.createSpecialRelationship(linkType, newConnectionId, classNameEndpointA, idEndpointA, RELATIONSHIP_SDHTLENDPOINTA, true);
             bem.createSpecialRelationship(linkType, newConnectionId, classNameEndpointB, idEndpointB, RELATIONSHIP_SDHTLENDPOINTB, true);
@@ -245,11 +244,11 @@ public class SDHModule implements GenericCommercialModule {
             if (!mem.isSubClass("GenericCommunicationsElement", classNameEndpointA) || !mem.isSubClass("GenericCommunicationsElement", classNameEndpointB))
                 throw new ServerSideException("The endpoints must be subclasses of GenericCommunicationsElement");
                 
-            HashMap<String, List<String>> attributesToBeSet = new HashMap<>();
-            attributesToBeSet.put(Constants.PROPERTY_NAME, Arrays.asList(new String[] { defaultName == null ? "" : defaultName }));
+            HashMap<String, String> attributesToBeSet = new HashMap<>();
+            attributesToBeSet.put(Constants.PROPERTY_NAME, defaultName == null ? "" : defaultName );
             
             
-            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, 0);                      
+            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, -1);                      
             
             //We add a relationship between the shelves so we can easily find a route between two equipment when creatin low order connections
             //based on ContainerLink paths           
@@ -308,15 +307,15 @@ public class SDHModule implements GenericCommercialModule {
             if (!mem.isSubClass("GenericSDHTributaryLink", linkType)) //NOI18N
                 throw new ServerSideException("Class %s is not subclass of GenericSDHTributaryLink");
 
-            HashMap<String, List<String>> attributesToBeSet = new HashMap<>();
-            attributesToBeSet.put(Constants.PROPERTY_NAME, Arrays.asList(new String[] { defaultName == null ? "" : defaultName }));
+            HashMap<String, String> attributesToBeSet = new HashMap<>();
+            attributesToBeSet.put(Constants.PROPERTY_NAME, defaultName == null ? "" : defaultName);
             
             //All tributary links must be delivered using a container link
             String containerLinkType = linkType.replace("TributaryLink", ""); //The name of the correponding container link is the same as the tributary link without the suffix "TributaryLink"
-            newContainerLinkId = bem.createSpecialObject(containerLinkType, null, -1, attributesToBeSet, 0);
+            newContainerLinkId = bem.createSpecialObject(containerLinkType, null, -1, attributesToBeSet, -1);
             
             //The new tributary link
-            newTributaryLinkId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, 0);                      
+            newTributaryLinkId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, -1);
             
             //Relate the new tributary link to the endpoints (ports)
             bem.createSpecialRelationship(linkType, newTributaryLinkId, classNameEndpointA, idEndpointA, RELATIONSHIP_SDHTTLENDPOINTA, true);
@@ -453,7 +452,7 @@ public class SDHModule implements GenericCommercialModule {
      * @return A sorted list of RemoteObjectLights containing the route. This list includes the transport links and the nodes in between, including the very endpoints
      * @throws org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException
      * @throws org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException
-     * 
+     * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException If the given communication equipment is no subclass of GenericCommunicationsEquipment 
      */
     public List<RemoteBusinessObjectLightList> findSDHRoutesUsingTransportLinks(String communicationsEquipmentClassA, 
                                             long  communicationsEquipmentIdA, String communicationsEquipmentClassB, 
@@ -477,7 +476,7 @@ public class SDHModule implements GenericCommercialModule {
      * @return A sorted list of RemoteObjectLights containing the route. This list includes the transport links and the nodes in between, including the very endpoints
      * @throws org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException
      * @throws org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException
-     * 
+     * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException If the given communication equipment is no subclass of GenericCommunicationsEquipment 
      */
     public List<RemoteBusinessObjectLightList> findSDHRoutesUsingContainerLinks(String communicationsEquipmentClassA, 
                                             long  communicationsEquipmentIdA, String communicationsEquipmentClassB, 
@@ -499,7 +498,7 @@ public class SDHModule implements GenericCommercialModule {
      * @param transportLinkId Transportlink's id
      * @return The list of the containers that go through that transport link
      * @throws NotAuthorizedException if the user is nt authorized to inquire about the structure of a transport link
-     * @throws InvalidArgumentException I
+     * @throws InvalidArgumentException If the given transport link is no subclass of GenericSDHTransportLink
      * @throws ObjectNotFoundException
      * @throws MetadataObjectNotFoundException 
      */
@@ -518,13 +517,13 @@ public class SDHModule implements GenericCommercialModule {
             List<RemoteBusinessObjectLight> relatedLinks = bem.getSpecialAttribute(container.getObject().getClassName(), 
                     container.getObject().getId(), RELATIONSHIP_SDHDELIVERS);
                                    
-            if (!container.getProperties().containsKey("sdhPosition"))
+            if (!container.getProperties().containsKey("sdhPosition")) //NOI18N
                 throw new MetadataObjectNotFoundException(String.
                         format("The container %s (id %s) is related to the transport link with id %s, but no position is specified", 
                                 container.getObject().getName(), container.getObject().getId(), transportLinkId));
             
             List<SDHPosition> position = new ArrayList<>();
-            position.add(new SDHPosition(transportLinkClass, transportLinkId, (Integer)container.getProperties().get("sdhPosition")));
+            position.add(new SDHPosition(transportLinkClass, transportLinkId, (Integer)container.getProperties().get("sdhPosition"))); //NOI18N
             
             containers.add(new SDHContainerLinkDefinition(container.getObject(), relatedLinks.isEmpty(), position)); //an unstructured container would have just one SDHDELIVERS relationship
                                                                                                                       //Note that the "positions" array here is filled ONLY with the position used in this particular transport link and does not represents the whole path

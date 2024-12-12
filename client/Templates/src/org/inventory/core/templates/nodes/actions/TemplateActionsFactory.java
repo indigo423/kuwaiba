@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 package org.inventory.core.templates.nodes.actions;
 
+import org.inventory.core.services.api.actions.GenericInventoryAction;
+
 /**
  * Factory for all actions to be used by nodes in this module
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
@@ -24,22 +26,29 @@ public class TemplateActionsFactory {
     static CreateTemplateAction createTemplateAction;
     static CreateTemplateElementAction createTemplateElementAction;
     static DeleteTemplateElementAction deleteTemplateElementAction;
+    static CreateTemplateElementSpecialAction createTemplateElementSpecialAction;
     
-    public static CreateTemplateAction getCreateTemplateAction() {
+    public static GenericInventoryAction getCreateTemplateAction() {
         if (createTemplateAction == null)
             createTemplateAction = new CreateTemplateAction();
         return createTemplateAction;
     }
     
-    public static CreateTemplateElementAction getCreateTemplateElementAction() {
+    public static GenericInventoryAction getCreateTemplateElementAction() {
         if (createTemplateElementAction == null)
             createTemplateElementAction = new CreateTemplateElementAction();
         return createTemplateElementAction;
     }
     
-    public static DeleteTemplateElementAction getDeleteTemplateElementAction() {
+    public static GenericInventoryAction getDeleteTemplateElementAction() {
         if (deleteTemplateElementAction == null)
             deleteTemplateElementAction = new DeleteTemplateElementAction();
         return deleteTemplateElementAction;
+    }
+    
+    public static GenericInventoryAction getCreateTemplateElementSpecialAction() {
+        if (createTemplateElementSpecialAction == null) 
+            createTemplateElementSpecialAction = new CreateTemplateElementSpecialAction();
+        return createTemplateElementSpecialAction;
     }
 }

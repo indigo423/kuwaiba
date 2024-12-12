@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,7 +73,12 @@ public class ReportNode extends AbstractNode implements PropertyChangeListener {
     public boolean canRename() {
         return true;
     }
-       
+    
+    @Override
+    public String getName() {
+        return getLookup().lookup(LocalReportLight.class).getName();
+    }
+    
     @Override
     public void setName(String s) {
         propertyChange(new PropertyChangeEvent(new LocalReport(getLookup().lookup(LocalReportLight.class).getId(), 

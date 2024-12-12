@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -114,9 +114,11 @@ public class LocalObjectLight implements Transferable, Comparable<LocalObjectLig
         propertyChangeListeners.remove(listener);
     }
 
-    public void firePropertyChangeEvent(String property, Object oldValue, Object newValue){
-        for (PropertyChangeListener listener : propertyChangeListeners)
-            listener.propertyChange(new PropertyChangeEvent(this, property, oldValue, newValue));
+    public void firePropertyChangeEvent(String property, Object oldValue, Object newValue) {
+        synchronized(propertyChangeListeners) {
+            for (PropertyChangeListener listener : propertyChangeListeners)
+                listener.propertyChange(new PropertyChangeEvent(this, property, oldValue, newValue));
+        }
     }
 
    @Override

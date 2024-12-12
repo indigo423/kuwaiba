@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package com.neotropic.kuwaiba.modules.mpls;
 
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -25,12 +24,8 @@ import org.kuwaiba.apis.persistence.application.ApplicationEntityManager;
 import org.kuwaiba.apis.persistence.business.BusinessEntityManager;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
-import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.InventoryException;
-import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
-import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
-import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
 import org.kuwaiba.apis.persistence.metadata.MetadataEntityManager;
 import org.kuwaiba.exceptions.ServerSideException;
 import org.kuwaiba.services.persistence.util.Constants;
@@ -65,12 +60,7 @@ public class MPLSModule implements GenericCommercialModule {
      * This is used to ease the way to find routes between elements
      */
     public static String RELATIONSHIP_MPLSLINK = "mplsLink";
-    /**
-     * TODO: place this relationships in other place
-     * This relationship is used to relate a network element with extra logical configuration
-     */
-    public static final String RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE = "mplsportbelongtointerface";
-    
+        
     @Override
     public String getName() {
         return "MPLS Networks Module"; //NOI18N
@@ -112,7 +102,21 @@ public class MPLSModule implements GenericCommercialModule {
         this.bem = bem;
     }
     
-    //The actual methods
+    /**
+     * Creates a MPLS Link
+     * 
+     * @param classNameEndpointA
+     * @param idEndpointA
+     * @param classNameEndpointB
+     * @param idEndpointB
+     * @param linkType
+     * @param defaultName
+     * @return 
+     * @throws ServerSideException If the given linkType is no subclass of GenericLogicalConnection
+     *                             If any of the requested objects can't be found
+     *                             If any of the classes provided can not be found
+     *                             If any of the objects involved can't be connected
+     */
     public long createMPLSLink(String classNameEndpointA, long idEndpointA, 
             String classNameEndpointB, long idEndpointB, String linkType, String defaultName) throws ServerSideException {
         if (bem == null || mem == null)
@@ -122,8 +126,8 @@ public class MPLSModule implements GenericCommercialModule {
             if (!mem.isSubClass("GenericLogicalConnection", linkType)) //NOI18N
                 throw new ServerSideException(String.format("Class %s is not subclass of GenericLogicalConnection", linkType));
 
-            HashMap<String, List<String>> attributesToBeSet = new HashMap<>();
-            attributesToBeSet.put(Constants.PROPERTY_NAME, Arrays.asList(new String[] { defaultName == null ? "" : defaultName }));
+            HashMap<String, String> attributesToBeSet = new HashMap<>();
+            attributesToBeSet.put(Constants.PROPERTY_NAME, defaultName == null ? "" : defaultName );
             
             RemoteBusinessObject communicationsEquipmentA = bem.getParentOfClass(classNameEndpointA, idEndpointA, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT);
             if (communicationsEquipmentA == null)
@@ -133,7 +137,7 @@ public class MPLSModule implements GenericCommercialModule {
             if (communicationsEquipmentB == null)
                 throw new ServerSideException(String.format("The specified port (%s : %s) doesn't seem to be located in a communications equipment", classNameEndpointB, idEndpointB));
             
-            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, 0);                      
+            newConnectionId = bem.createSpecialObject(linkType, null, -1, attributesToBeSet, -1);                      
                        
             bem.createSpecialRelationship(linkType, newConnectionId, classNameEndpointA, idEndpointA, RELATIONSHIP_MPLSENDPOINTA, true);
             bem.createSpecialRelationship(linkType, newConnectionId, classNameEndpointB, idEndpointB, RELATIONSHIP_MPLSENDPOINTB, true);
@@ -164,7 +168,19 @@ public class MPLSModule implements GenericCommercialModule {
         }
     }
     
-    //The actual methods
+    /**
+     * Deletes a MPLS Link
+     * 
+     * @param linkClass
+     * @param linkId
+     * @param forceDelete
+     * @throws ServerSideException
+     * @throws InventoryException If the object can not be found
+     *                            If either the object class or the attribute can not be found
+     *                            If the class could not be found
+     *                            If the object could not be deleted because there's some business rules that avoids it or it has incoming relationships.
+     * @throws NotAuthorizedException
+     */
     public void deleteMPLSLink(String linkClass, long linkId, boolean forceDelete) 
             throws ServerSideException, InventoryException, NotAuthorizedException {
         if (bem == null || mem == null)
@@ -177,36 +193,4 @@ public class MPLSModule implements GenericCommercialModule {
         
         bem.deleteObject(linkClass, linkId, forceDelete);
     }
-    /**
-     * Relates an interface with a generic communication port
-     * @param portId port id
-     * @param portClassName the classname of the configuration you want to relate with
-     * @param interfaceClassName interface's class
-     * @param interfaceId interface id
-     * @throws ObjectNotFoundException
-     * @throws OperationNotPermittedException
-     * @throws MetadataObjectNotFoundException 
-     */
-    public void relatePortToInterface(long portId, String portClassName, String interfaceClassName, long interfaceId) throws ObjectNotFoundException,
-            OperationNotPermittedException, MetadataObjectNotFoundException{
-        bem.createSpecialRelationship(interfaceClassName, interfaceId, portClassName, portId, RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE, true);
-    }
-    
-    /**
-     * Release the relationship between a GenericPort and an interface
-     * @param interfaceClassName interface's class
-     * @param interfaceId interface id
-     * @param portId port id 
-     * @throws ObjectNotFoundException
-     * @throws MetadataObjectNotFoundException
-     * @throws ApplicationObjectNotFoundException
-     * @throws NotAuthorizedException 
-     */
-    public void releasePortFromInterface(String interfaceClassName, long interfaceId ,long portId)
-            throws ObjectNotFoundException, MetadataObjectNotFoundException,
-            ApplicationObjectNotFoundException, NotAuthorizedException
-    {
-        bem.releaseSpecialRelationship(interfaceClassName, interfaceId, portId, RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE);
-    }
-    
 }

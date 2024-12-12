@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ public class Constants {
     /**
      * Persistence Service version
      */
-    public static final String PERSISTENCE_SERVICE_VERSION = "1.1.1";
+    public static final String PERSISTENCE_SERVICE_VERSION = "1.5";
     /**
      * Class type for RootObject
      */
@@ -138,17 +138,13 @@ public class Constants {
      */
     public static final String INDEX_CLASS = "classes"; //NOI18N
     /**
-     * Label used for the category index
-     */
-    //public static final String INDEX_CATEGORY = "categories"; //NOI18N
-    /**
      * Label used for the special nodes index
      */
     public static final String INDEX_SPECIAL_NODES = "specialNodes"; //NOI18N
     /**
-     * Label used for the privilege nodes index
+     * Label used for the business rules index
      */
-    public static final String INDEX_PRIVILEGE_NODES = "privilegeNodes"; //NOI18N
+    public static final String INDEX_BUSINESS_RULES = "businessRules"; //NOI18N
     /**
      * Label used for the attributes nodes label
      */
@@ -184,6 +180,10 @@ public class Constants {
     public static final String PROPERTY_BACKGROUND = "background"; //NOI18N
     public static final String PROPERTY_PRIVILEGES = "privileges"; //NOI18N
     public static final String PROPERTY_NAME = "name"; //NOI18N
+    /** 
+     * Defines if the attribute of a class is mandatory or not
+     */
+    public static final String PROPERTY_MANDATORY = "mandatory"; //NOI18N
     public static final String PROPERTY_CREATION_DATE = "creationDate"; //NOI18N
     public static final String PROPERTY_DISPLAY_NAME = "displayName"; //NOI18N
     public static final String PROPERTY_TYPE = "type"; //NOI18N
@@ -216,14 +216,13 @@ public class Constants {
     public static final String PROPERTY_NEW_VALUE = "newValue"; //NOI18N
     public static final String PROPERTY_NOTES = "notes"; //NOI18N
     public static final String PROPERTY_AFFECTED_PROPERTY = "affectedProperty"; //NOI18N
-    public static final String PROPERTY_CODE = "code"; //NOI18N
-    public static final String PROPERTY_METHOD_GROUP = "methodGroup"; //NOI18N
-    public static final String PROPERTY_METHOD_MANAGER = "methodManager"; //NOI18N
-    public static final String PROPERTY_DEPENDS_OF = "dependsOf"; //NOI18N
     public static final String PROPERTY_CATEGORY = "category"; //NOI18N
     public static final String PROPERTY_SUPPORT_PHONE_NUMBER = "supportPhoneNumber"; //NOI18N
     public static final String PROPERTY_SUPPORT_EMAIL = "supportEmail"; //NOI18N
     public static final String PROPERTY_PARAMETERS = "parameters"; //NOI18N
+    public static final String PROPERTY_SCOPE = "scope"; //NOI18N
+    public static final String PROPERTY_VERSION = "version"; //NOI18N
+    public static final String PROPERTY_APPLIES_TO = "appliesTo"; //NOI18N
     
     /**
      * Root for all business classes
@@ -298,6 +297,14 @@ public class Constants {
      */
     public static final String CLASS_GENERICCONTRACT = "GenericContract"; //NOI18N
     /**
+     * Class Generic Project
+     */
+    public static final String CLASS_GENERICPROJECT = "GenericProject"; //NOI18N
+    /**
+     * Class Generic Activity
+     */
+    public static final String CLASS_GENERICACTIVITY = "GenericActivity"; //NOI18N
+    /**
      * Dummy root node name
      */
     public static final String NODE_DUMMYROOT = "DummyRoot"; //NOI18N
@@ -309,6 +316,10 @@ public class Constants {
      * IPv6 root node name
      */
     public static final String NODE_IPV6ROOT = "IPv6Root"; //NOI18N
+    /**
+     * Project root node name
+     */
+    public static final String NODE_PROJECTROOT = "ProjectRoot"; //NOI18N
     /**
      * General activity log root node name
      */

@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -78,6 +78,10 @@ public class Constants {
      */
     public static final String VALIDATOR_VLAN = "vlanrule";
     /**
+     * The validator to indicate if a given class is a Rack
+     */
+    public static final String VALIDATOR_RACK = "rack";
+    /**
      * DummyRoot constant. It's a pseudo class
      */
     public static final String DUMMYROOT = "DummyRoot";
@@ -109,6 +113,10 @@ public class Constants {
      * Root class to all ports
      */
     public static final String CLASS_GENERICPORT = "GenericPort";
+    /**
+     * Root class to all physical containers (wire, wireless, etc)
+     */
+    public static final String CLASS_GENERICPHYSICALCONTAINER = "GenericPhysicalContainer";
     /**
      * Root class to all physical links (cables, fibers, etc)
      */
@@ -149,6 +157,17 @@ public class Constants {
      * Name for class GenericContract
      */
     public static final String CLASS_GENERICCONTRACT = "GenericContract";
+    
+    /**
+     * Name for class GenericProject
+     */
+    public static final String CLASS_GENERICPROJECT = "GenericProject";
+    
+    /**
+     * Name for class GenericActivity
+     */
+    public static final String CLASS_GENERICACTIVITY = "GenericActivity";
+    
     /**
      * Not an actual class, but yet used by the service manager to identify a pool mapped to a LocalObjectLight
      */
@@ -212,7 +231,7 @@ public class Constants {
     /**
      * This relationship is used to connect a generic port(service instances) with an interface
      */
-    public static final String RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE = "mplsportbelongtointerface";
+    public static final String RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE = "ipamportrelatedtointerface";
     /**
      * A fixed label to indicate a given node doesn't have a name set
      */
@@ -323,6 +342,10 @@ public class Constants {
      * Property unique
      */
     public static final String PROPERTY_UNIQUE = "unique";
+    /** 
+     * Defines if the attribute of a class is mandatory or not
+     */
+    public static final String PROPERTY_MANDATORY = "mandatory"; //NOI18N
     /**
      * Property visible
      */
@@ -342,7 +365,11 @@ public class Constants {
     /**
      * Property rackUnits
      */
-    public static final String PROPERTY_RACKUNITS = "rackUnits";
+    public static final String PROPERTY_RACK_UNITS = "rackUnits";
+    /**
+     * Property numberingAscending
+     */
+    public static final String PROPERTY_RACK_UNITS_NUMBERING = "rackUnitsNumberingDescending";
     /**
      * Property startRackUnit
      */
@@ -373,57 +400,11 @@ public class Constants {
      */
     public static final String CLASS_GENERICCONNECTION="GenericConnection";
 
-    //TODO: Gotta send this to a config file
-    public static final String CLASS_WIRECONTAINER="WireContainer";
-    public static final String CLASS_WIRELESSCONTAINER="WirelessContainer";
-
-    /**
-     * Physical connection classes
-     */
-    public static final String CLASS_ELECTRICALLINK = "ElectricalLink";
-    public static final String CLASS_OPTICALLINK = "OpticalLink";
-    public static final String CLASS_WIRELESSLINK = "RadioLink";
-    public static final String CLASS_POWERLINK = "PowerLink";
-
-    /**
-     * Physical connection type classes
-     */
-    public static final String CLASS_ELECTRICALLINKTYPE = "ElectricalLinkType";
-    public static final String CLASS_OPTICALLINKTYPE = "OpticalLinkType";
-    public static final String CLASS_WIRELESSLINKTYPE = "WirelessLinkType";
-    public static final String CLASS_POWERLINKTYPE = "PowerLinkType";
-
-    /**
-     * Physical container type classes
-     */
-    public static final String CLASS_WIRECONTAINERTYPE = "WireContainerType";
-    public static final String CLASS_WIRELESSCONTAINERTYPE = "WirelessContainerType";
 
     //Misc versions
     /**
      * Version for the XML document to save views (see http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_Save_Object_Views for details)
      */
      public static final String VIEW_FORMAT_VERSION = "1.1";
-
-    /**
-     * Returns the connection type class for a given connection class
-     * @param connectionClass The connection to be used
-     * @return The type of connection corresponding to that connection class
-     */
-    public static String getConnectionType(String connectionClass){
-        if (connectionClass.equals(CLASS_ELECTRICALLINK))
-            return CLASS_ELECTRICALLINKTYPE;
-        if (connectionClass.equals(CLASS_OPTICALLINK))
-            return CLASS_OPTICALLINKTYPE;
-        if (connectionClass.equals(CLASS_WIRELESSLINK))
-            return CLASS_WIRELESSLINKTYPE;
-        if (connectionClass.equals(CLASS_POWERLINK))
-            return CLASS_POWERLINKTYPE;
-        if (connectionClass.equals(CLASS_WIRECONTAINER))
-            return CLASS_WIRECONTAINERTYPE;
-        if (connectionClass.equals(CLASS_WIRELESSCONTAINER))
-            return CLASS_WIRELESSCONTAINERTYPE;
-        return null;
-    }
     
 }

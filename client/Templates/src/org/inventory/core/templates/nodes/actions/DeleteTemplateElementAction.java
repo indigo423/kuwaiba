@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 package org.inventory.core.templates.nodes.actions;
 
 import java.awt.event.ActionEvent;
-import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.templates.nodes.TemplateElementNode;
-import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
+import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.openide.util.Utilities;
 
 /**
  * Deletes a template element or a template itself
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-class DeleteTemplateElementAction extends AbstractAction {
+class DeleteTemplateElementAction extends GenericInventoryAction {
     
     private CommunicationsStub com = CommunicationsStub.getInstance();
     
@@ -51,5 +52,10 @@ class DeleteTemplateElementAction extends AbstractAction {
             } else
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         }
+    }
+
+    @Override
+    public LocalPrivilege getPrivilege() {
+        return new LocalPrivilege(LocalPrivilege.PRIVILEGE_TEMPLATES, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
     }
 }

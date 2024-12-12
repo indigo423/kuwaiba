@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ public enum RelTypes implements RelationshipType {
     BELONGS_TO_GROUP, //Used to associate a user to a group (group of user)
     OWNS_QUERY, //Used to asociate a user to a query
     POSSIBLE_CHILD, //Used to build the containment hierarchy
+    POSSIBLE_SPECIAL_CHILD, //Used to build the containment hierarchy for special models
     HAS_VIEW, //Used to link an object to a particular view
     HAS_HISTORY_ENTRY, //Used to link an object to a particular historic entry
     RELATED_TO_SPECIAL, //Used to implement relationships for domain specific models
@@ -46,5 +47,7 @@ public enum RelTypes implements RelationshipType {
     SUBSCRIBED_TO, //Used to relate a user to a task, so it can be notified about the result of its execution
     HAS_TEMPLATE, //Used to related a class to a template (which is basically a normal object)
     HAS_REPORT, //Relates a class or the dummy root (depending on if it's a class or inventory level report) to a report
-    INSTANCE_OF_SPECIAL //Used to relate a class with an instance that makes part of a template. These instances are not indexed and can not be searched, that's why they need a special relationship
+    INSTANCE_OF_SPECIAL, //Used to relate a class with an instance that makes part of a template. These instances are not indexed and can not be searched, that's why they need a special relationship
+    HAS_BOOKMARK, //Used to relate a bookmark with an user
+    IS_BOOKMARK_ITEM_IN //Used to relate an object with a bookmark
 }

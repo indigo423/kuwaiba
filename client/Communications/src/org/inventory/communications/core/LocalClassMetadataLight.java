@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -128,7 +128,7 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
 
     @Override
     public String toString(){
-        return className;
+        return getDisplayName();
     }
 
     public boolean isAbstract() {
@@ -167,10 +167,7 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
     }
    
     public String getDisplayName(){
-        if (displayName == null) {
-            return className;
-        }
-        if (displayName.trim().equals("")) {
+        if (displayName == null || displayName.trim().equals("")) {
             return className;
         }
         return displayName;

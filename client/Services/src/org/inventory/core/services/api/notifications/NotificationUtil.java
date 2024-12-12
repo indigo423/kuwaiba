@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -60,23 +60,28 @@ public class NotificationUtil {
      */
     public void showSimplePopup(String title, int iconType, String text){
         ImageIcon popupIcon;
+        int delay; //Not all notifications will be displayed during the same time
         switch(iconType){
             case ERROR_MESSAGE:
                 popupIcon = ERROR_ICON;
+                delay = 20000;
                 break;
             case WARNING_MESSAGE:
                 popupIcon = WARNING_ICON;
+                delay = 10000;
                 break;
             case INFO_MESSAGE:
             default:
+                delay = 5000;
                 popupIcon = INFO_ICON;
         }
-        if (NotificationDisplayer.getDefault() != null){
+        
+        if (NotificationDisplayer.getDefault() != null) {
             final Notification lastNotification = NotificationDisplayer.getDefault().
                     notify(title, popupIcon, text, null);
 
             //Thanks to Luca Dazi for this suggestion
-            if (lastNotification != null){
+            if (lastNotification != null) {
                 if (null == controller)
                     controller = new Timer();
                 TimerTask tt = new TimerTask() {
@@ -85,7 +90,8 @@ public class NotificationUtil {
                             lastNotification.clear();
                         }
                     };
-                controller.schedule(tt, 10000);
+                
+                controller.schedule(tt, delay);
             }
         }
     }

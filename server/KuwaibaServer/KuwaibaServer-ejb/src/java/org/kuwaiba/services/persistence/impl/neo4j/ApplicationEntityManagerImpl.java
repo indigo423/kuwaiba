@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,10 +49,14 @@ import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
 import org.kuwaiba.apis.persistence.application.ApplicationEntityManager;
 import org.kuwaiba.apis.persistence.ConnectionManager;
 import org.kuwaiba.apis.persistence.application.ActivityLogEntry;
+import org.kuwaiba.apis.persistence.application.BusinessRule;
 import org.kuwaiba.apis.persistence.application.CompactQuery;
 import org.kuwaiba.apis.persistence.application.ExtendedQuery;
+import org.kuwaiba.apis.persistence.application.FavoritesFolder;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
+import org.kuwaiba.apis.persistence.application.GroupProfileLight;
 import org.kuwaiba.apis.persistence.application.Pool;
+import org.kuwaiba.apis.persistence.application.Privilege;
 import org.kuwaiba.apis.persistence.application.ResultRecord;
 import org.kuwaiba.apis.persistence.application.Session;
 import org.kuwaiba.apis.persistence.application.Task;
@@ -63,6 +67,8 @@ import org.kuwaiba.apis.persistence.application.ViewObjectLight;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLight;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectList;
+import org.kuwaiba.apis.persistence.exceptions.ArraySizeMismatchException;
+import org.kuwaiba.apis.persistence.exceptions.BusinessRuleException;
 import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
@@ -137,10 +143,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
      */
     private Index<Node> poolsIndex;
     /**
-     * Privilege index 
-     */
-    private Index<Node> privilegeIndex;
-    /**
      * Task index
      */
     private Index<Node> taskIndex;
@@ -152,6 +154,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
      * Index for special nodes(like group root node)
      */
     private Index<Node> specialNodesIndex;
+    /**
+     * Index for business rules
+     */
+    private Index<Node> businessRulesIndex;
     /**
      * Reference to the singleton instance of CacheManager
      */
@@ -183,10 +189,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             this.objectIndex = graphDb.index().forNodes(Constants.INDEX_OBJECTS);
             this.generalViewsIndex = graphDb.index().forNodes(Constants.INDEX_GENERAL_VIEWS);
             this.poolsIndex = graphDb.index().forNodes(Constants.INDEX_POOLS);
-            this.privilegeIndex = graphDb.index().forNodes(Constants.INDEX_PRIVILEGE_NODES);
             this.taskIndex = graphDb.index().forNodes(Constants.INDEX_TASKS);
             this.specialNodesIndex = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES);
-            for (Node listTypeNode : listTypeItemsIndex.query(Constants.PROPERTY_ID, "*")){
+            this.businessRulesIndex = graphDb.index().forNodes(Constants.INDEX_BUSINESS_RULES);
+            for (Node listTypeNode : listTypeItemsIndex.query(Constants.PROPERTY_ID, "*")) {
                 GenericObjectList aListType = Util.createGenericObjectListFromNode(listTypeNode);
                 cm.putListType(aListType);
             }
@@ -205,9 +211,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     //TODO add ipAddress, sessionId
     @Override
     public long createUser(String userName, String password, String firstName,
-            String lastName, boolean enabled, long[] privileges, long[] groups)
-            throws InvalidArgumentException 
-    {
+            String lastName, boolean enabled, int type, List<Privilege> privileges, long defaultGroupId)
+            throws InvalidArgumentException {
         if (userName == null)
             throw new InvalidArgumentException("User name can not be null");
         
@@ -223,6 +228,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         if (password.trim().isEmpty())
             throw new InvalidArgumentException("Password can not be an empty string");
         
+        if (type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
+            throw new InvalidArgumentException("Invalid user type");
+            
         try(Transaction tx = graphDb.beginTx()) {
             Node storedUser = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
             if (storedUser != null)
@@ -231,121 +239,120 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             Label label = DynamicLabel.label(Constants.INDEX_USERS);
             Node newUserNode = graphDb.createNode(label);
 
-            newUserNode.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
-            newUserNode.setProperty(Constants.PROPERTY_NAME, userName);
-            newUserNode.setProperty(Constants.PROPERTY_PASSWORD, BCrypt.hashpw(password, BCrypt.gensalt()));
-                
-            if(firstName == null)
-                firstName = "";
-            newUserNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
-            if(lastName == null)
-                lastName = "";
-            newUserNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-
+            newUserNode.setProperty(UserProfile.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis());
+            newUserNode.setProperty(UserProfile.PROPERTY_NAME, userName);
+            newUserNode.setProperty(UserProfile.PROPERTY_PASSWORD, BCrypt.hashpw(password, BCrypt.gensalt()));
+            newUserNode.setProperty(UserProfile.PROPERTY_FIRST_NAME, firstName == null ? "" : firstName);
+            newUserNode.setProperty(UserProfile.PROPERTY_LAST_NAME, lastName == null ? "" : lastName);
+            newUserNode.setProperty(UserProfile.PROPERTY_TYPE, type);
             newUserNode.setProperty(Constants.PROPERTY_ENABLED, enabled);
   
-            if (groups != null){
-                for (long groupId : groups){
-                    Node group = groupIndex.get(Constants.PROPERTY_ID,groupId).getSingle();
-                    if (group != null)
-                        newUserNode.createRelationshipTo(group, RelTypes.BELONGS_TO_GROUP);
-                    
-                    else{
-                        tx.failure();
-                        throw new InvalidArgumentException(String.format("Group with id %s can not be found",groupId));
-                    }
+
+            Node defaultGroupNode = groupIndex.get(Constants.PROPERTY_ID, defaultGroupId).getSingle();
+            if (defaultGroupNode != null)
+                newUserNode.createRelationshipTo(defaultGroupNode, RelTypes.BELONGS_TO_GROUP);
+
+            else{
+                tx.failure();
+                throw new InvalidArgumentException(String.format("Group with id %s can not be found", defaultGroupId));
+            }
+
+            if (privileges != null) {
+                for (Privilege privilege : privileges) {
+                    Node privilegeNode = graphDb.createNode();
+                    privilegeNode.setProperty(Privilege.PROPERTY_FEATURE_TOKEN, privilege.getFeatureToken());
+                    privilegeNode.setProperty(Privilege.PROPERTY_ACCESS_LEVEL, privilege.getAccessLevel());
+                    newUserNode.createRelationshipTo(privilegeNode, RelTypes.HAS_PRIVILEGE);
                 }
             }
+                
             userIndex.putIfAbsent(newUserNode, Constants.PROPERTY_ID, newUserNode.getId());
             userIndex.putIfAbsent(newUserNode, Constants.PROPERTY_NAME, userName);
                        
             tx.success();
             
-            cm.putUser(Util.createUserProfileFromNode(newUserNode));
+            cm.putUser(Util.createUserProfileWithGroupPrivilegesFromNode(newUserNode));
             return newUserNode.getId();
         }
     }
 
     @Override
     public void setUserProperties(long oid, String userName, String password, String firstName,
-            String lastName, boolean enabled, long[] privileges, long[] groups)
+            String lastName, int enabled, int type)
             throws InvalidArgumentException, ApplicationObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) {
             Node userNode = userIndex.get(Constants.PROPERTY_ID, oid).getSingle();
             if(userNode == null)
-                throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s",oid));
+                throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s", oid));
 
-            if(userName != null){
-                if (userName.trim().isEmpty())
-                    throw new InvalidArgumentException("User name can not be an empty string");
-
-                if (!userName.matches("^[a-zA-Z0-9_.]*$"))
-                    throw new InvalidArgumentException(String.format("The user name %s contains invalid characters", userName));
-
-                Node storedUser = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
-                if (storedUser != null)
-                    throw new InvalidArgumentException(String.format("User name %s already exists", userName));
-            }
-            if(password != null){
+            if(password != null) {
                 if (password.trim().isEmpty())
                     throw new InvalidArgumentException("Password can't be an empty string");
             }
-        
-            if (userName != null){
-                //refresh the userindex
-                userIndex.remove(userNode, Constants.PROPERTY_NAME, (String)userNode.getProperty(Constants.PROPERTY_NAME));
-                cm.removeUser(userName);
-                userNode.setProperty(Constants.PROPERTY_NAME, userName);
-                userIndex.putIfAbsent(userNode, Constants.PROPERTY_NAME, userName);
-            }
+            
             if (password != null)
                 userNode.setProperty(Constants.PROPERTY_PASSWORD, BCrypt.hashpw(password, BCrypt.gensalt()));
             if (firstName != null)
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
             if (lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-            if (groups != null){
-                Iterable<Relationship> relationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships)
-                    relationship.delete();
-                for (long id : groups) {
-                    Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
-                    userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
-                }
+            
+            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
+                throw new InvalidArgumentException("User type provided is not valid");
+            
+            if (type != -1)
+                userNode.setProperty(Constants.PROPERTY_TYPE, type);
+            
+            if (enabled != -1 && enabled != 0 && enabled != 1)
+                throw new InvalidArgumentException("User enabled state is not valid");
+            
+            if (enabled != -1)
+                userNode.setProperty(Constants.PROPERTY_ENABLED, enabled == 1 );
+            
+            if(userName != null) {
+                
+                if (userName.trim().isEmpty())
+                    throw new InvalidArgumentException("User name can not be an empty string");
+
+                if (!userName.matches("^[a-zA-Z0-9_.]*$"))
+                    throw new InvalidArgumentException(String.format("The user name %s contains invalid characters", userName));
+
+                if (UserProfile.DEFAULT_ADMIN.equals(userNode.getProperty(UserProfile.PROPERTY_NAME)))
+                    throw new InvalidArgumentException("The default administrator user name can not be changed");
+                
+                Node aUser = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
+                if (aUser != null)
+                    throw new InvalidArgumentException(String.format("User name %s already exists", userName));
+                
+                //Refresh the user index and update the user name
+                userIndex.remove(userNode, Constants.PROPERTY_NAME, userNode.getProperty(Constants.PROPERTY_NAME));
+                userNode.setProperty(Constants.PROPERTY_NAME, userName);
+                userIndex.putIfAbsent(userNode, Constants.PROPERTY_NAME, userName);
+                cm.removeUser(userName);
             }
-            if (privileges != null){
-                Iterable<Relationship> privilegesRelationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
-                for (Relationship relationship : privilegesRelationships)
-                    relationship.delete();
-                for(long privilegeCode : privileges){
-                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
-                    if(privilegeNode != null)
-                        privilegeNode.createRelationshipTo(userNode, RelTypes.HAS_PRIVILEGE);
-                    else{
-                        tx.failure();
-                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode));
-                    }
-                }
-            }
+
             tx.success();
-            cm.putUser(Util.createUserProfileFromNode(userNode));
+            
+            cm.putUser(Util.createUserProfileWithGroupPrivilegesFromNode(userNode));
         }
     }
 
     @Override
     public void setUserProperties(String formerUsername, String newUserName, String password, String firstName,
-            String lastName, boolean enabled, long[] privileges, long[] groups)
+            String lastName, int enabled, int type)
             throws InvalidArgumentException, ApplicationObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) { 
             Node userNode = userIndex.get(Constants.PROPERTY_NAME, formerUsername).getSingle();
             if(userNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find a user with name %s", formerUsername));
 
-            if(newUserName != null)
-            {
+            if(newUserName != null) {
                 if (newUserName.trim().isEmpty())
                     throw new InvalidArgumentException("User name can not be an empty string");
 
+                if (UserProfile.DEFAULT_ADMIN.equals(formerUsername))
+                    throw new InvalidArgumentException("The default administrator user name can not be changed");
+                
                 Node storedUser = userIndex.get(Constants.PROPERTY_NAME, newUserName).getSingle();
                 if (storedUser != null)
                     throw new InvalidArgumentException(String.format("User name %s already exists", newUserName));
@@ -371,49 +378,175 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 userNode.setProperty(Constants.PROPERTY_FIRST_NAME, firstName);
             if(lastName != null)
                 userNode.setProperty(Constants.PROPERTY_LAST_NAME, lastName);
-            if(groups != null){
-                Iterable<Relationship> relationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships)
-                    relationship.delete();
-                for (long id : groups) {
-                    Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
-                    userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
-                }
-            }
-            if (privileges != null){
-                Iterable<Relationship> privilegesRelationships = userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
-                for (Relationship relationship : privilegesRelationships)
-                    relationship.delete();
-                for(long privilegeCode : privileges){
-                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
-                    if(privilegeNode != null)
-                        privilegeNode.createRelationshipTo(userNode, RelTypes.HAS_PRIVILEGE);
-                    else{
-                        tx.failure();
-                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode));
-                    }
-                }
-            }
+            if (type != -1 && type != UserProfile.USER_TYPE_GUI && type != UserProfile.USER_TYPE_WEB_SERVICE && type != UserProfile.USER_TYPE_SOUTHBOUND)
+                throw new InvalidArgumentException("User type provided is not valid");
+            if (type != -1)
+                userNode.setProperty(Constants.PROPERTY_TYPE, type );
+            if (enabled != -1 && enabled != 0 && enabled != 1)
+                throw new InvalidArgumentException("User enabled state is not valid");
+            if (enabled != -1)
+                userNode.setProperty(Constants.PROPERTY_ENABLED, enabled == 1 );
+            
             tx.success();
-            cm.putUser(Util.createUserProfileFromNode(userNode));
+            
+            cm.putUser(Util.createUserProfileWithGroupPrivilegesFromNode(userNode));
+        }
+    }
+
+    @Override
+    public void addUserToGroup(long userId, long groupId) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node groupNode = groupIndex.get(Constants.PROPERTY_ID, groupId).getSingle();
+            if (groupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Group with id %s could not be found", groupId));
+            
+            for (Relationship belongsToGroupRelationship : groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP)) {
+                if (belongsToGroupRelationship.getStartNode().getId() == userId)
+                    throw new InvalidArgumentException(String.format("The user with id %s already belongs to group with id %s", userId, groupId));
+            }
+
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+            
+            userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
+            
+            tx.success();
+        }
+    }
+
+    @Override
+    public void removeUserFromGroup(long userId, long groupId) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node groupNode = groupIndex.get(Constants.PROPERTY_ID, groupId).getSingle();
+            if (groupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Group with id %s could not be found", groupId));
+            
+            for (Relationship belongsToGroupRelationship : groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP)) {
+                Node userNode = belongsToGroupRelationship.getStartNode();
+                if (userNode.getId() == userId) {
+                    belongsToGroupRelationship.delete();
+                    if (!userNode.hasRelationship(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP))
+                        throw new InvalidArgumentException("No orphan users are allowed. Put it in another group before removing it from this one");
+                    
+                    tx.success();
+                    return;
+                }
+            }
+            throw new ApplicationObjectNotFoundException(String.format("User with id %s is not related to group with id %s", userId, groupId));
+        }
+    }
+
+    @Override
+    public void setPrivilegeToUser(long userId, String featureToken, int accessLevel) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        //TODO: This method should check the new privilege against a list of predefined feature tokens to avoid setting/adding bogus items
+        if (accessLevel != Privilege.ACCESS_LEVEL_READ && accessLevel != Privilege.ACCESS_LEVEL_READ_WRITE)
+            throw new InvalidArgumentException(String.format("The access level privided is not valid: %s", accessLevel));
+            
+        try (Transaction tx = graphDb.beginTx()) {
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+
+            Node privilegeNode = null;
+            for (Relationship hasPrivilegeRelationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
+                if(featureToken.equals(hasPrivilegeRelationship.getEndNode().getProperty(Privilege.PROPERTY_FEATURE_TOKEN)))
+                    privilegeNode = hasPrivilegeRelationship.getEndNode();
+            }
+        
+            if (privilegeNode == null) {
+                privilegeNode = graphDb.createNode();
+                userNode.createRelationshipTo(privilegeNode, RelTypes.HAS_PRIVILEGE);
+                privilegeNode.setProperty(Privilege.PROPERTY_FEATURE_TOKEN, featureToken);
+            }
+            
+            privilegeNode.setProperty(Privilege.PROPERTY_ACCESS_LEVEL, accessLevel);
+            tx.success();
+        }
+    }
+
+    @Override
+    public void setPrivilegeToGroup(long groupId, String featureToken, int accessLevel) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        //TODO: This method should check the new privilege against a list of predefined feature tokens to avoid adding bogus items
+        if (accessLevel != Privilege.ACCESS_LEVEL_READ && accessLevel != Privilege.ACCESS_LEVEL_READ_WRITE)
+            throw new InvalidArgumentException(String.format("The access level privided is not valid: %s", accessLevel));
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node groupNode = groupIndex.get(Constants.PROPERTY_ID, groupId).getSingle();
+            if (groupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Group with id %s could not be found", groupId));
+
+            Node privilegeNode = null;
+            for (Relationship hasPrivilegeRelationship : groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
+                if(featureToken.equals(hasPrivilegeRelationship.getEndNode().getProperty(Privilege.PROPERTY_FEATURE_TOKEN)))
+                    privilegeNode = hasPrivilegeRelationship.getEndNode();
+            }
+        
+            if (privilegeNode == null) {
+                privilegeNode = graphDb.createNode();
+                groupNode.createRelationshipTo(privilegeNode, RelTypes.HAS_PRIVILEGE);
+                privilegeNode.setProperty(Privilege.PROPERTY_FEATURE_TOKEN, featureToken);
+            }
+            
+            privilegeNode.setProperty(Privilege.PROPERTY_ACCESS_LEVEL, accessLevel);
+            tx.success();
+        }
+    }
+
+    @Override
+    public void removePrivilegeFromUser(long userId, String featureToken) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+        
+            for (Relationship hasPrivilegeRelationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
+                if (featureToken.equals(hasPrivilegeRelationship.getEndNode().getProperty(Privilege.PROPERTY_FEATURE_TOKEN))) {
+                    hasPrivilegeRelationship.delete();
+                    hasPrivilegeRelationship.getEndNode().delete();
+                    tx.success();
+                    return; 
+                }
+            }
+            tx.failure();
+            throw new InvalidArgumentException(String.format("The user with id %s already does not have the privilege %s", userId, featureToken));
+        }
+    }
+
+    @Override
+    public void removePrivilegeFromGroup(long groupId, String featureToken) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node groupNode = groupIndex.get(Constants.PROPERTY_ID, groupId).getSingle();
+            if (groupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Group with id %s could not be found", groupId));
+        
+            for (Relationship hasPrivilegeRelationship : groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
+                if (featureToken.equals(hasPrivilegeRelationship.getEndNode().getProperty(Privilege.PROPERTY_FEATURE_TOKEN))) {
+                    hasPrivilegeRelationship.delete();
+                    hasPrivilegeRelationship.getEndNode().delete();
+                    tx.success();
+                    return; 
+                }
+            }
+            tx.failure();
+            throw new InvalidArgumentException(String.format("The group with id %s already does not have the privilege %s", groupId, featureToken));
         }
     }
     
     @Override
-    public long createGroup(String groupName, String description,
-            long[] privileges, long[] users) throws InvalidArgumentException {
+    public long createGroup(String groupName, String description, List<Long> users) throws InvalidArgumentException, 
+                    ApplicationObjectNotFoundException {
         if (groupName == null)
             throw new InvalidArgumentException("Group name can not be null");
         if (groupName.trim().isEmpty())
             throw new InvalidArgumentException("Group name can not be an empty string");
-        if (!groupName.matches("^[a-zA-Z0-9_.]*$"))
-            throw new InvalidArgumentException(String.format("Class %s contains invalid characters", groupName));
+        if (!groupName.matches("^[a-zA-Z0-9_. ]*$"))
+            throw new InvalidArgumentException(String.format("Group \"%s\" contains invalid characters", groupName));
         
-        try (Transaction tx = graphDb.beginTx())
-        {
-            Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME,groupName).getSingle();
+        try (Transaction tx = graphDb.beginTx()) {
+            Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME, groupName).getSingle();
             if (storedGroup != null)
-                throw new InvalidArgumentException(String.format("Group %s already exists", groupName));
+                throw new InvalidArgumentException(String.format("Group \"%s\" already exists", groupName));
 
             Label label = DynamicLabel.label(Constants.INDEX_GROUPS);
             Node newGroupNode = graphDb.createNode(label);
@@ -427,23 +560,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                     Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
                     if(userNode != null)
                         userNode.createRelationshipTo(newGroupNode, RelTypes.BELONGS_TO_GROUP);
-                    else{
+                    else {
                         tx.failure();
-                        throw new InvalidArgumentException(String.format("User with id %s can not be found",userId));
+                        throw new ApplicationObjectNotFoundException(String.format("User with id %s can not be found. Group creation aborted.", userId));
                     }
                 }
             }
-            if (privileges != null){
-                for(long privilegeCode : privileges){
-                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
-                    if(privilegeNode != null)
-                        privilegeNode.createRelationshipTo(newGroupNode, RelTypes.HAS_PRIVILEGE);
-                    else{
-                        tx.failure();
-                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode));
-                    }
-                }
-            }
+            
             specialNodesIndex.get(Constants.PROPERTY_NAME, Constants.NODE_GROUPS).getSingle().createRelationshipTo(newGroupNode, RelTypes.GROUP);
 
             groupIndex.putIfAbsent(newGroupNode, Constants.PROPERTY_ID, newGroupNode.getId());
@@ -457,12 +580,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
 
     @Override
     public List<UserProfile> getUsers() {
-        try(Transaction tx = graphDb.beginTx())
-        {
+        try(Transaction tx = graphDb.beginTx()) {
             IndexHits<Node> usersNodes = userIndex.query(Constants.PROPERTY_NAME, "*");
             List<UserProfile> users = new ArrayList<>();
             for (Node node : usersNodes)
-                users.add(Util.createUserProfileFromNode(node));
+                users.add(Util.createUserProfileWithGroupPrivilegesFromNode(node));
             return users;
         }
     }
@@ -470,18 +592,17 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     @Override
     public List<GroupProfile> getGroups() {
         try(Transaction tx = graphDb.beginTx()) {
-            IndexHits<Node> groupsNodes = groupIndex.query(Constants.PROPERTY_NAME, "*");
+            IndexHits<Node> groupNodes = groupIndex.query(Constants.PROPERTY_NAME, "*");
 
             List<GroupProfile> groups =  new ArrayList<>();
-            for (Node node : groupsNodes)
+            for (Node node : groupNodes)
                 groups.add((Util.createGroupProfileFromNode(node)));
             return groups;
         }
     }
 
     @Override
-    public void setGroupProperties(long id, String groupName, String description,
-            long[] privileges, long[] users)
+    public void setGroupProperties(long id, String groupName, String description)
             throws InvalidArgumentException, ApplicationObjectNotFoundException {
         
         try(Transaction tx = graphDb.beginTx()) {
@@ -489,11 +610,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             if(groupNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %s",id));
             
-            if(groupName != null){
-                if (groupName.isEmpty())
+            if(groupName != null) {
+                if (groupName.trim().isEmpty())
                     throw new InvalidArgumentException("Group name can not be an empty string");
-                if (!groupName.matches("^[a-zA-Z0-9_.]*$"))
-                    throw new InvalidArgumentException(String.format("Class %s contains invalid characters", groupName));
+                if (!groupName.matches("^[a-zA-Z0-9_. ]*$"))
+                    throw new InvalidArgumentException(String.format("Group %s contains invalid characters", groupName));
 
                 Node storedGroup = groupIndex.get(Constants.PROPERTY_NAME, groupName).getSingle();
                     if (storedGroup != null)
@@ -505,30 +626,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             }
             if(description != null)
                 groupNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
-            if(users != null && users.length != 0){
-                Iterable<Relationship> relationships = groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP);
-                for (Relationship relationship : relationships)
-                    relationship.delete();
-                for (long userId : users) {
-                    Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
-                    if(userNode != null)
-                        userNode.createRelationshipTo(groupNode, RelTypes.BELONGS_TO_GROUP);
-                    else
-                        throw new ApplicationObjectNotFoundException(String.format("User with id %s can not be found",userId));
-                }
-            }
-            if (privileges != null && privileges.length != 0){
-                Iterable<Relationship> privilegesRelationships = groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE);
-                for (Relationship relationship : privilegesRelationships)
-                    relationship.delete();
-                for(long privilegeCode : privileges){
-                    Node privilegeNode = privilegeIndex.get(Constants.PROPERTY_CODE, privilegeCode).getSingle();
-                    if(privilegeNode != null)
-                        privilegeNode.createRelationshipTo(groupNode, RelTypes.HAS_PRIVILEGE);
-                    else
-                        throw new InvalidArgumentException(String.format("Privilege with coded %s can not be found",privilegeCode));
-                }
-            }
             
             cm.putGroup(Util.createGroupProfileFromNode(groupNode));
             tx.success();
@@ -536,24 +633,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public void deleteUsers(long[] oids) throws ApplicationObjectNotFoundException {
+    public void deleteUsers(long[] oids) throws ApplicationObjectNotFoundException, InvalidArgumentException {
         
         try(Transaction tx = graphDb.beginTx()) {
             //TODO watch if there are relationships you can/should not delete
             if(oids != null){
-                for (long id : oids)
-                {
+                for (long id : oids) {
                     Node userNode = userIndex.get(Constants.PROPERTY_ID, id).getSingle();
-                    if(userNode == null){
-                        throw new ApplicationObjectNotFoundException(String.format("Can not find a user with id %s",id));
-                    }
-                    cm.removeUser((String)userNode.getProperty(Constants.PROPERTY_NAME));
-                    Iterable<Relationship> relationships = userNode.getRelationships();
-                    for (Relationship relationship : relationships) 
-                        relationship.delete();
-
-                    userIndex.remove(userNode);
-                    userNode.delete();
+                    Util.deleteUserNode(userNode, userIndex);
                 }
             }
             
@@ -562,26 +649,56 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public void deleteGroups(long[] oids) throws ApplicationObjectNotFoundException {
+    public void deleteGroups(long[] oids) throws ApplicationObjectNotFoundException, InvalidArgumentException {
         
         try(Transaction tx = graphDb.beginTx()) {
-            if(oids != null){
+            if(oids != null) {
                 for (long id : oids) {
                     Node groupNode = groupIndex.get(Constants.PROPERTY_ID, id).getSingle();
                     if(groupNode == null)
                         throw new ApplicationObjectNotFoundException(String.format("Can not find the group with id %s",id));
                     
-                    cm.removeGroup((String)groupNode.getProperty(Constants.PROPERTY_NAME));
+                    Node adminNode = userIndex.get(Constants.PROPERTY_NAME, UserProfile.DEFAULT_ADMIN).getSingle();                                        
+                    List<Node> adminGroupNodes = new ArrayList();
 
-                    Iterable<Relationship> relationships = groupNode.getRelationships();
-                    for (Relationship relationship : relationships) 
+                    for (Relationship relationship : adminNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP))
+                        adminGroupNodes.add(relationship.getEndNode());
+                    
+                    if (adminGroupNodes.size() == 1) {
+                        if (groupNode.getId() == adminGroupNodes.get(0).getId())
+                            throw new InvalidArgumentException("User admin can no be orphan. Put it in another group before removing this group");                                                                                    
+                    }
+                    
+                    for (Relationship relationship : groupNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_PRIVILEGE)) {
+                        Node privilegeNode = relationship.getEndNode();
                         relationship.delete();
+                        privilegeNode.delete();
+                    }
+                    
+                    for (Relationship relationship : groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP)) {
+                        Node userNode = relationship.getStartNode();
+                        
+                        if (adminNode.getId() == userNode.getId())
+                            continue;
+                                                
+                        relationship.delete();
+                        
+                        //This will delete all users associated *only* to this group. The users associated to other groups will be kept and the relationship with this group will be released
+                        if (userNode.hasRelationship(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP)) 
+                            Util.deleteUserNode(userNode, userIndex);
+                            
+                    }
+                    
+                    //Now we release the rest of the relationships
+                    for (Relationship otherRelationship : groupNode.getRelationships())
+                        otherRelationship.delete();
                     
                     groupIndex.remove(groupNode);
+                    cm.removeGroup((String)groupNode.getProperty(GroupProfile.PROPERTY_NAME));
                     groupNode.delete();
                 }
-                tx.success();
             }
+            tx.success();
         }
     }
     
@@ -663,6 +780,29 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             }
         }
         return children;
+    }
+    
+    @Override
+    public RemoteBusinessObjectLight getListTypeItem(String listTypeClassName, long listTypeItemId) throws 
+        MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, listTypeClassName).getSingle();
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s", listTypeClassName));
+            
+            if (!Util.isSubClass(Constants.CLASS_GENERICOBJECTLIST, classNode))
+                throw new InvalidArgumentException(String.format("Class %s is not a list type", listTypeClassName));
+            
+            for (Relationship childRel : classNode.getRelationships(RelTypes.INSTANCE_OF)) {
+                Node child = childRel.getStartNode();
+                if (child.getId() == listTypeItemId) {
+                    tx.success();
+                    return new RemoteBusinessObjectLight(child.getId(), (String) child.getProperty(Constants.PROPERTY_NAME), listTypeClassName);
+                }
+            }
+            throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+        }
     }
 
     @Override
@@ -851,9 +991,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 throw new ApplicationObjectNotFoundException(String.format("View with id %s could not be found", oid));
             if (name != null) {
                 affectedProperty += Constants.PROPERTY_NAME;
-                oldValue = String.valueOf(gView.getProperty(Constants.PROPERTY_NAME));
+                oldValue += String.valueOf(gView.getProperty(Constants.PROPERTY_NAME));
                 gView.setProperty(Constants.PROPERTY_NAME, name);
-                newValue = name;
+                newValue += name;
             }
             if (description != null) {
                 affectedProperty += " " + Constants.PROPERTY_DESCRIPTION;
@@ -1051,22 +1191,34 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public void saveQuery(long queryOid, String queryName, long ownerOid,
+    public ChangeDescriptor saveQuery(long queryOid, String queryName, long ownerOid,
             byte[] queryStructure, String description) throws ApplicationObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) {
             Node queryNode =  queryIndex.get(CompactQuery.PROPERTY_ID, queryOid).getSingle();
             if(queryNode == null)
                 throw new ApplicationObjectNotFoundException(String.format(
                         "Can not find the query with id %s", queryOid));
+            String affectedProperties = "", oldValues = "", newValues = "", notes = "";
 
             queryNode.setProperty(CompactQuery.PROPERTY_QUERYNAME, queryName);
-            if(description != null)
+            affectedProperties += CompactQuery.PROPERTY_QUERYNAME;
+            newValues += queryName;
+            
+            if(description != null) {
                 queryNode.setProperty(CompactQuery.PROPERTY_DESCRIPTION, description);
+                affectedProperties += " " + CompactQuery.PROPERTY_DESCRIPTION;
+                newValues += " " + description;
+            }
             
             queryNode.setProperty(CompactQuery.PROPERTY_QUERYSTRUCTURE, queryStructure);
+            affectedProperties += " " + CompactQuery.PROPERTY_QUERYSTRUCTURE;
             
             if(ownerOid != -1) {
                 queryNode.setProperty(CompactQuery.PROPERTY_IS_PUBLIC, false);
+                
+                affectedProperties += " " + CompactQuery.PROPERTY_IS_PUBLIC;
+                newValues += " " + "false";
+                
                 Node userNode = userIndex.get(Constants.PROPERTY_ID, ownerOid).getSingle();
                 if(userNode == null)
                     throw new ApplicationObjectNotFoundException(String.format(
@@ -1077,9 +1229,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 if(singleRelationship == null)
                     userNode.createRelationshipTo(queryNode, RelTypes.OWNS_QUERY);
             }
-            else
+            else {
                 queryNode.setProperty(CompactQuery.PROPERTY_IS_PUBLIC, true);
+                
+                affectedProperties += " " + CompactQuery.PROPERTY_IS_PUBLIC;
+                newValues += " " + "true";
+            }
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, notes);
         }
     }
 
@@ -1161,8 +1318,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public List<ResultRecord> executeQuery(ExtendedQuery query) 
-            throws MetadataObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
+    public List<ResultRecord> executeQuery(ExtendedQuery query) throws MetadataObjectNotFoundException {
         try(Transaction tx = graphDb.beginTx()) {
             CypherQueryBuilder cqb = new CypherQueryBuilder();
             cqb.setClassNodes(getNodesFromQuery(query));
@@ -1304,9 +1460,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             return poolNode.getId();
         }
     }
-    
-    @Override
-    public void deletePool(long id) throws ApplicationObjectNotFoundException, OperationNotPermittedException {
+        
+    private void deletePool(long id) throws ApplicationObjectNotFoundException, OperationNotPermittedException {
         try(Transaction tx = graphDb.beginTx()) {
             Node poolNode = poolsIndex.get(Constants.PROPERTY_ID, id).getSingle();
             if (poolNode == null)
@@ -1325,14 +1480,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
     
     @Override
-    public void setPoolProperties(long poolId, String name, String description) {
+    public ChangeDescriptor setPoolProperties(long poolId, String name, String description) {
         try (Transaction tx = graphDb.beginTx()) {
             Node poolNode = poolsIndex.get(Constants.PROPERTY_ID, poolId).getSingle();
-            if(name != null)
+            String affectedProperties = "", oldValues = "", newValues = "";
+            
+            if(name != null) {
+                oldValues += " " + (poolNode.hasProperty(Constants.PROPERTY_NAME) ? poolNode.getProperty(Constants.PROPERTY_NAME) : " ");
                 poolNode.setProperty(Constants.PROPERTY_NAME, name);
-            if(description != null)
+                affectedProperties += " " + Constants.PROPERTY_NAME;                
+                newValues += " " + name;   
+            }
+            if(description != null) {
+                oldValues += " " + (poolNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? poolNode.getProperty(Constants.PROPERTY_DESCRIPTION) : " ");
                 poolNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
+                affectedProperties += " " + Constants.PROPERTY_DESCRIPTION;                
+                newValues += " " + description;                
+            }
+            
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, String.format("Set %s pool properties", name));
         }
     }
        
@@ -1545,67 +1712,95 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
     
     @Override
-    public void validateCall(String methodName, String ipAddress, String sessionId)
-            throws NotAuthorizedException{
+    public void validateWebServiceCall(String methodName, String ipAddress, String sessionId)
+            throws NotAuthorizedException {
         Session aSession = sessions.get(sessionId);
-//        try {
-//        if(cm!=null){
-//            for (Privilege privilege : cm.getUser(user.getUserName()).getPrivileges()){
-//                if(privilege.getMethodName().contentEquals(methodName))
-//                    return;
-//            }
-//            for (GroupProfile groupProfile : cm.getUser(user.getUserName()).getGroups()) {
-//                for (Privilege privilege : groupProfile.getPrivileges()){
-//                    if(privilege.getMethodName().equals(methodName))
-//                        return;
-//                }
-//            }
-//        }
-            if(aSession == null)
-                throw new NotAuthorizedException("Invalid session ID");
-            if (!aSession.getIpAddress().equals(ipAddress))
-                throw new NotAuthorizedException(String.format("The IP %s does not match with the one registered for this session", ipAddress));
-    }
+        
+        if(aSession == null)
+                throw new NotAuthorizedException("Invalid session");
+        
+        if (!aSession.getIpAddress().equals(ipAddress))
+            throw new NotAuthorizedException(String.format("The IP %s does not match with the one registered for this session", ipAddress));
 
+//        We won't be using this for now, since the desktop client still uses the web service. This will work as of version 2.0        
+//        if (aSession.getUser().getType() != UserProfile.USER_TYPE_WEB_SERVICE)
+//            throw new NotAuthorizedException(String.format("The user %s is not authorized to call web service methods", aSession.getUser().getUserName()));
+        
+//        for (Privilege privilege : aSession.getUser().getPrivileges()) { //The featureToken for web service users is the method name itself
+//            if (methodName.equals(privilege.getFeatureToken()))
+//                return;
+//        }
+//                
+//        throw new NotAuthorizedException(String.format("The user %s is not authorized to call web service method %s", aSession.getUser().getUserName(), methodName));
+            
+    }
+    
     @Override
-    public Session createSession(String userName, String password, String IPAddress) throws ApplicationObjectNotFoundException 
-    {
+    public Session createSession(String userName, String password, String IPAddress) throws ApplicationObjectNotFoundException, NotAuthorizedException {
         if (userName == null || password == null)
             throw  new ApplicationObjectNotFoundException("User or Password can not be null");
+        
         try(Transaction tx = graphDb.beginTx()) {
             Node userNode = userIndex.get(Constants.PROPERTY_NAME, userName).getSingle();
-            
+
             if (userNode == null)
                 throw new ApplicationObjectNotFoundException("User does not exist");
 
             if (!(Boolean)userNode.getProperty(Constants.PROPERTY_ENABLED))
-                throw new ApplicationObjectNotFoundException("This user is not enabled");
+                throw new NotAuthorizedException("This user is not enabled");
 
             if (BCrypt.checkpw(password, (String)userNode.getProperty(Constants.PROPERTY_PASSWORD))){
-                UserProfile user = Util.createUserProfileFromNode(userNode);
-                cm.putUser(user);
-            }
-            else
-                throw new ApplicationObjectNotFoundException("User or password incorrect");
+                UserProfile user = Util.createUserProfileWithGroupPrivilegesFromNode(userNode);
 
-            for (Session aSession : sessions.values()){
-                if (aSession.getUser().getUserName().equals(userName)){
-                    Logger.getLogger("createSession").log(Level.INFO, String.format("An existing session for user %s has been dropped", aSession.getUser().getUserName()));
-                    sessions.remove(aSession.getToken());
-                    break;
+                for (Session aSession : sessions.values()){
+                    if (aSession.getUser().getUserName().equals(userName)){
+                        Logger.getLogger("createSession").log(Level.INFO, String.format("An existing session for user %s has been dropped", aSession.getUser().getUserName()));
+                        sessions.remove(aSession.getToken());
+                        break;
+                    }
                 }
-            }
-            Session newSession = new Session(Util.createUserProfileFromNode(userNode), IPAddress);
-            sessions.put(newSession.getToken(), newSession);
-            
-            return newSession;
+                Session newSession = new Session(user, IPAddress);
+                sessions.put(newSession.getToken(), newSession);
+                cm.putUser(user);
+                return newSession;
+            } else
+                throw new NotAuthorizedException("User or password incorrect");
         }
     }
     
     @Override
-    public UserProfile getUserInSession(String IPAddress, String sessionId) throws NotAuthorizedException{
-        validateCall("getUserInSession", IPAddress, sessionId);
+    public UserProfile getUserInSession(String sessionId) {
         return sessions.get(sessionId).getUser();
+    }
+    
+    @Override
+    public List<UserProfile> getUsersInGroup(long groupId) throws ApplicationObjectNotFoundException {
+        try(Transaction tx = graphDb.beginTx()) {
+            Node groupNode = groupIndex.get(Constants.PROPERTY_ID, groupId).getSingle();
+            if (groupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Group with id %s could not be found", groupId));
+
+            List<UserProfile> usersInGroup = new ArrayList<>();
+            for (Relationship userInGroupRelationship : groupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP))
+                usersInGroup.add(Util.createUserProfileWithoutGroupPrivilegesFromNode(userInGroupRelationship.getStartNode()));
+
+            return usersInGroup;
+        }
+    }
+    
+    @Override
+    public List<GroupProfileLight> getGroupsForUser(long userId) throws ApplicationObjectNotFoundException {
+        try(Transaction tx = graphDb.beginTx()) {
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+
+            List<GroupProfileLight> groupsForUser = new ArrayList<>();
+            for (Relationship groupForUserRelationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP))
+                groupsForUser.add(Util.createGroupProfileLightFromNode(groupForUserRelationship.getEndNode()));
+
+            return groupsForUser;
+        }
     }
 
     @Override
@@ -1675,7 +1870,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             Node generalActivityLogNode = specialNodesIndex.get(Constants.PROPERTY_NAME, Constants.NODE_GENERAL_ACTIVITY_LOG).getSingle();
 
             if (generalActivityLogNode == null)
-                throw new ApplicationObjectNotFoundException("The general activity log node can not be found. The databse could be corrupted");
+                throw new ApplicationObjectNotFoundException("The general activity log node can not be found. The database could be corrupted");
 
             Util.createActivityLogEntry(null, generalActivityLogNode, userName, type,
                     Calendar.getInstance().getTimeInMillis(), null, null, null, notes);
@@ -1758,35 +1953,50 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public void updateTaskProperties(long taskId, String propertyName, String propertyValue) 
+    public ChangeDescriptor updateTaskProperties(long taskId, String propertyName, String propertyValue) 
             throws ApplicationObjectNotFoundException, InvalidArgumentException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
+            String affectedProperties = "", oldValues = "", newValues = "";
 
             switch (propertyName) {
                 case Constants.PROPERTY_NAME:
                 case Constants.PROPERTY_DESCRIPTION:
                 case Constants.PROPERTY_SCRIPT:
+                    oldValues += " " + (taskNode.hasProperty(propertyName) ? taskNode.getProperty(propertyName) : " ");
+                    
                     taskNode.setProperty(propertyName, propertyValue);
+                    
+                    affectedProperties += " " + Constants.PROPERTY_SCRIPT;
+                    newValues += " " + propertyValue;
                     break;
                 case Constants.PROPERTY_ENABLED:
+                    oldValues += " " + (taskNode.hasProperty(propertyName) ? taskNode.getProperty(propertyName) : " ");
+                    
                     taskNode.setProperty(propertyName, Boolean.valueOf(propertyValue));
+                    
+                    affectedProperties += " " + Constants.PROPERTY_ENABLED;
+                    newValues += " " + propertyValue;
                     break;
                 default:
                     throw new InvalidArgumentException(String.format("%s is not a valid task property", propertyName));
             }
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : " ";
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, 
+                String.format("Updated properties in Task with name %s and id %s ", taskName, taskId));
         }
     }
 
     @Override
-    public void updateTaskParameters(long taskId, List<StringPair> parameters) throws ApplicationObjectNotFoundException {
+    public ChangeDescriptor updateTaskParameters(long taskId, List<StringPair> parameters) throws ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
+            String affectedProperties = "", oldValues = "", newValues = "";
 
             for (StringPair parameter : parameters) {
                 String actualParameterName = "PARAM_" + parameter.getKey();
@@ -1794,40 +2004,74 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 //params set to null, must be deleted
                 if (taskNode.hasProperty(actualParameterName) && parameter.getValue() == null)
                     taskNode.removeProperty(actualParameterName);
-                else
+                else {                    
+                    oldValues += " " + (taskNode.hasProperty(actualParameterName) ? taskNode.getProperty(actualParameterName) : " ");
+                    
                     taskNode.setProperty(actualParameterName, parameter.getValue());
+                    
+                    affectedProperties += " " + parameter.getKey();
+                    newValues += " " + parameter.getValue();
+                }
             }
-            
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : " ";
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, 
+                String.format("Updated parameters in Task with name %s and id %s ", taskName, taskId));
         }
     }
 
     @Override
-    public void updateTaskSchedule(long taskId, TaskScheduleDescriptor schedule) throws ApplicationObjectNotFoundException {
+    public ChangeDescriptor updateTaskSchedule(long taskId, TaskScheduleDescriptor schedule) throws ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
-
+            String affectedProperties = "", oldValues = "", newValues = "";
+            
+            affectedProperties += " " + Constants.PROPERTY_EXECUTION_TYPE;
+            oldValues += " " + (taskNode.hasProperty(Constants.PROPERTY_EXECUTION_TYPE) ? taskNode.getProperty(Constants.PROPERTY_EXECUTION_TYPE) : " ");
             taskNode.setProperty(Constants.PROPERTY_EXECUTION_TYPE, schedule.getExecutionType());
-            taskNode.setProperty(Constants.PROPERTY_EVERY_X_MINUTES, schedule.getEveryXMinutes());
-            taskNode.setProperty(Constants.PROPERTY_START_TIME, schedule.getStartTime());
+            newValues += " " + schedule.getExecutionType();
             
+            affectedProperties += " " + Constants.PROPERTY_EVERY_X_MINUTES;
+            oldValues += " " + (taskNode.hasProperty(Constants.PROPERTY_EVERY_X_MINUTES) ? taskNode.getProperty(Constants.PROPERTY_EVERY_X_MINUTES) : " ");
+            taskNode.setProperty(Constants.PROPERTY_EVERY_X_MINUTES, schedule.getEveryXMinutes());
+            newValues += " " + schedule.getEveryXMinutes();
+            
+            affectedProperties += " " + Constants.PROPERTY_START_TIME;
+            oldValues += " " + (taskNode.hasProperty(Constants.PROPERTY_START_TIME) ? taskNode.getProperty(Constants.PROPERTY_START_TIME) : " ");
+            taskNode.setProperty(Constants.PROPERTY_START_TIME, schedule.getStartTime());
+            newValues += " " + schedule.getStartTime();
+            
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : " ";
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, 
+                String.format("Updated schedule in Task with name %s and id %s ", taskName, taskId));
         }
     }
 
     @Override
-    public void updateTaskNotificationType(long taskId, TaskNotificationDescriptor notificationType) throws ApplicationObjectNotFoundException {
+    public ChangeDescriptor updateTaskNotificationType(long taskId, TaskNotificationDescriptor notificationType) throws ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
-
-            taskNode.setProperty(Constants.PROPERTY_NOTIFICATION_TYPE, notificationType.getNotificationType());
-            taskNode.setProperty(Constants.PROPERTY_EMAIL, notificationType.getEmail() == null ? "" : notificationType.getEmail());
+            String affectedProperties = "", oldValues = "", newValues = "";
             
+            affectedProperties += " " + Constants.PROPERTY_NOTIFICATION_TYPE;
+            oldValues += " " + (taskNode.hasProperty(Constants.PROPERTY_NOTIFICATION_TYPE) ? taskNode.getProperty(Constants.PROPERTY_NOTIFICATION_TYPE) : " ");
+            taskNode.setProperty(Constants.PROPERTY_NOTIFICATION_TYPE, notificationType.getNotificationType());
+            newValues += " " + notificationType.getNotificationType();
+            
+            affectedProperties += " " + Constants.PROPERTY_EMAIL;
+            oldValues += " " + (taskNode.hasProperty(Constants.PROPERTY_EMAIL) ? taskNode.getProperty(Constants.PROPERTY_EMAIL) : " ");
+            taskNode.setProperty(Constants.PROPERTY_EMAIL, notificationType.getEmail() == null ? "" : notificationType.getEmail());
+            newValues += " " + notificationType.getEmail() == null ? "" : notificationType.getEmail();
+            
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : " ";
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, 
+                String.format("Updated notification type in Task with name %s and id %s ", taskName, taskId));
         }
     }
 
@@ -1850,7 +2094,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public void subscribeUserToTask(long userId, long taskId) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+    public ChangeDescriptor subscribeUserToTask(long userId, long taskId) throws ApplicationObjectNotFoundException, InvalidArgumentException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
@@ -1875,21 +2119,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             Relationship rel = userNode.createRelationshipTo(taskNode, RelTypes.SUBSCRIBED_TO);
             rel.setProperty(Constants.PROPERTY_NAME, "task"); //NOI18N
             
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : "";
+            String userName = userNode.hasProperty(Constants.PROPERTY_NAME) ? (String) userNode.getProperty(Constants.PROPERTY_NAME) : "";
             tx.success();
+            return new ChangeDescriptor("", "", "", String.format("Subscribed user %s to task %s", userName, taskName));
         }
     }
 
     @Override
-    public void unsubscribeUserFromTask(long userId, long taskId) throws ApplicationObjectNotFoundException {
+    public ChangeDescriptor unsubscribeUserFromTask(long userId, long taskId) throws ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
             
             boolean found = false;
+            String userName = null;
             
             for (Relationship rel : taskNode.getRelationships(Direction.INCOMING, RelTypes.SUBSCRIBED_TO)) {
                 if (rel.getStartNode().getId() == userId) {
+                    userName = rel.getStartNode().hasProperty(Constants.PROPERTY_NAME) ? (String) rel.getStartNode().getProperty(Constants.PROPERTY_NAME) : "";
                     rel.delete();
                     found = true;
                     break;
@@ -1898,8 +2147,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             
             if (!found)
                 throw new ApplicationObjectNotFoundException(String.format("A user with id %s could not be found", taskId));
-
+            String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : "";            
             tx.success();
+            return new ChangeDescriptor("", "", "", String.format("Unsubscribed user %s from task %s", userName, taskName));
         }
     }
 
@@ -2008,7 +2258,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
     
     //Templates
-
     @Override
     public long createTemplate(String templateClass, String templateName) throws MetadataObjectNotFoundException, OperationNotPermittedException {  
         try (Transaction tx = graphDb.beginTx()) {
@@ -2021,10 +2270,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             
             Node templateNode = graphDb.createNode();
             templateNode.setProperty(Constants.PROPERTY_NAME, templateName == null ? "" : templateName);
-            
-            classNode.createRelationshipTo(templateNode,RelTypes.HAS_TEMPLATE);
+                        
+            classNode.createRelationshipTo(templateNode, RelTypes.HAS_TEMPLATE);
             Relationship specialInstanceRelationship = templateNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF_SPECIAL);
-            specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template");
+            specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template"); //NOI18N
+
             
             tx.success();
             return templateNode.getId();
@@ -2032,7 +2282,9 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public long createTemplateElement(String templateElementClass, String templateElementParentClassName, long templateElementParentId, String templateElementName) throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException, OperationNotPermittedException {
+    public long createTemplateElement(String templateElementClass, String templateElementParentClassName, long templateElementParentId, String templateElementName) throws 
+        MetadataObjectNotFoundException, ApplicationObjectNotFoundException, OperationNotPermittedException {
+        
         if (!cm.getPossibleChildren(templateElementParentClassName).contains(templateElementClass)) 
             throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as child of %s", templateElementClass, templateElementParentClassName == null ? Constants.NODE_DUMMYROOT : templateElementParentClassName));
         
@@ -2041,13 +2293,11 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             Node classNode = classIndex.get(Constants.PROPERTY_NAME, templateElementClass).getSingle();
             if (classNode == null)
                 throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", templateElementClass));
-
+            
             Node parentClassNode = classIndex.get(Constants.PROPERTY_NAME, templateElementParentClassName).getSingle();
             if (parentClassNode == null)
                 throw new MetadataObjectNotFoundException(String.format("Parent class %s can not be found", templateElementParentClassName));
             
-            ClassMetadata classMetadata = Util.createClassMetadataFromNode(classNode);
-
             if (classNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT))
                 throw new OperationNotPermittedException(String.format("Abstract class %s can not be instantiated", templateElementClass));
             
@@ -2067,16 +2317,61 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             templateObjectNode.setProperty(Constants.PROPERTY_NAME, templateElementName == null ? "" : templateElementName);
             
             templateObjectNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF);
+            
             Relationship specialInstanceRelationship = templateObjectNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF_SPECIAL);
-            specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template");
+            specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template"); //NOI18N 
             
             tx.success();
             return templateObjectNode.getId();
         }
     }
-
+    
+    @Override    
+    public long createTemplateSpecialElement(String tsElementClass, String tsElementParentClassName, long tsElementParentId, String tsElementName) 
+        throws OperationNotPermittedException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException {
+        if (!cm.getPossibleSpecialChildren(tsElementParentClassName).contains(tsElementClass))
+            throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as special child of %s", tsElementClass, tsElementParentClassName == null ? Constants.NODE_DUMMYROOT : tsElementParentClassName));
+            
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, tsElementClass).getSingle();
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", tsElementClass));
+            
+            Node parentClassNode = classIndex.get(Constants.PROPERTY_NAME, tsElementParentClassName).getSingle();
+            if (parentClassNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Parent class %s can not be found", tsElementParentClassName));
+            
+            if (classNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                throw new OperationNotPermittedException(String.format("Abstract class %s can not be instantiated", tsElementClass));
+            
+            Node parentNode = null;
+            
+            for(Relationship instanceOfSpecialRelationship : parentClassNode.getRelationships(Direction.INCOMING, RelTypes.INSTANCE_OF_SPECIAL)) {
+                if (instanceOfSpecialRelationship.getStartNode().getId() == tsElementParentId) {
+                    parentNode = instanceOfSpecialRelationship.getStartNode();
+                    break;
+                }
+            }
+            
+            if (parentNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Parent object %s of class %s not found", tsElementParentId, tsElementParentClassName));
+            
+            Node templateObjectNode = graphDb.createNode();
+            templateObjectNode.setProperty(Constants.PROPERTY_NAME, tsElementName == null ? "" : tsElementName);
+            
+            templateObjectNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF_SPECIAL);
+            
+            Relationship specialInstanceRelationship = templateObjectNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF_SPECIAL);
+            specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template"); //NOI18N 
+            
+            tx.success();
+            return templateObjectNode.getId();
+        }
+    }
+    
     @Override
-    public void updateTemplateElement(String templateElementClass, long templateElementId, String[] attributeNames, 
+    public ChangeDescriptor updateTemplateElement(String templateElementClass, long templateElementId, String[] attributeNames, 
             String[] attributeValues) throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
         
         if (attributeNames.length != attributeValues.length)
@@ -2098,23 +2393,31 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             
             if (objectNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Template object %s of class %s could not be found", templateElementId, templateElementClass));
-
+            
+            String affectedProperties = "", oldValues = "", newValues = "", notes = "";
             ClassMetadata classMetadata = cm.getClass(templateElementClass);
             
             for (int i = 0; i < attributeNames.length; i++) {
                 if (!classMetadata.hasAttribute(attributeNames[i]))
                     throw new MetadataObjectNotFoundException(String.format("Class %s does not have any attribute named %s", templateElementClass, attributeNames[i]));
                 
+                affectedProperties += " " + attributeNames[i];
+                
                 String attributeType = classMetadata.getType(attributeNames[i]);
                 if (AttributeMetadata.isPrimitive(attributeType)) {
+                    oldValues += " " + (objectNode.hasProperty(attributeNames[i]) ? objectNode.getProperty(attributeNames[i]) : "null");
+                    
                     if (attributeValues[i] == null) {
                         if (objectNode.hasProperty(attributeNames[i]))
                             objectNode.removeProperty(attributeNames[i]);
-                    } else 
+                    } else {                        
                         objectNode.setProperty(attributeNames[i], Util.getRealValue(attributeValues[i], attributeType));
+                        newValues += " " + objectNode.getProperty(attributeNames[i]);
+                    }
                 } else { //It's a list type
                     for (Relationship relatedToRelationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.RELATED_TO)) {
                         if (relatedToRelationship.hasProperty(Constants.PROPERTY_NAME) && relatedToRelationship.getProperty(Constants.PROPERTY_NAME).equals(attributeNames[i])) {
+                            oldValues += " " + (relatedToRelationship.getEndNode().hasProperty(Constants.PROPERTY_NAME) ? relatedToRelationship.getEndNode().getProperty(Constants.PROPERTY_NAME) : "null");
                             relatedToRelationship.delete();
                             break;
                         }
@@ -2128,16 +2431,19 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                         
                         Relationship relatedToRelationship = objectNode.createRelationshipTo(listTypeItemNode, RelTypes.RELATED_TO);
                         relatedToRelationship.setProperty(Constants.PROPERTY_NAME, attributeNames[i]);
+                        
+                        newValues += " " + (listTypeItemNode.hasProperty(Constants.PROPERTY_NAME) ? listTypeItemNode.getProperty(Constants.PROPERTY_NAME) : "null");
                     } 
                 }
             }
-            
+            String templateElementName = objectNode.hasProperty(Constants.PROPERTY_NAME) ? (String) objectNode.getProperty(Constants.PROPERTY_NAME) : "null";
             tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, String.format("Updated template element %s [%s]", templateElementName, templateElementClass));
         }
     }
 
     @Override
-    public void deleteTemplateElement(String templateElementClass, long templateElementId) 
+    public ChangeDescriptor deleteTemplateElement(String templateElementClass, long templateElementId) 
             throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             Node classNode = classIndex.get(Constants.PROPERTY_NAME, templateElementClass).getSingle();
@@ -2158,10 +2464,12 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             if (templateObjectNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("Template object %s of class %s could not be found", templateElementId, templateElementClass));
             
+            String templateObjectName = templateObjectNode.hasProperty(Constants.PROPERTY_NAME) ? (String) templateObjectNode.getProperty(Constants.PROPERTY_NAME) : "null";
             //Delete the template element recursively
             Util.deleteTemplateObject(templateObjectNode);
             
             tx.success();
+            return new ChangeDescriptor("", "", "", String.format("Deleted template element %s [%s]", templateObjectName, templateElementClass));
         }
     }
 
@@ -2169,12 +2477,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     public List<RemoteBusinessObjectLight> getTemplatesForClass(String className) throws MetadataObjectNotFoundException {
         try (Transaction tx = graphDb.beginTx()) {
             List<RemoteBusinessObjectLight> templates = new ArrayList<>();
+                        
             String query = "MATCH (classNode)-[:" + RelTypes.HAS_TEMPLATE + "]->(templateObject) WHERE classNode.name={className} RETURN templateObject ORDER BY templateObject.name ASC"; //NOI18N
             HashMap<String, Object> parameters = new HashMap<>();
             parameters.put("className", className); //NOI18N
             ResourceIterator<Node> queryResult = graphDb.execute(query, parameters).columnAs("templateObject");
             
-            while (queryResult.hasNext()) 
+            while (queryResult.hasNext())
                 templates.add(Util.createTemplateElementLightFromNode(queryResult.next()));
             return templates;
         }
@@ -2183,6 +2492,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     @Override
     public List<RemoteBusinessObjectLight> getTemplateElementChildren(String templateElementClass, long templateElementId)  {
         try (Transaction tx = graphDb.beginTx()) {
+            
             String query = "MATCH (classNode)<-[:" + RelTypes.INSTANCE_OF_SPECIAL + 
                     "]-(templateElement)<-[:" + RelTypes.CHILD_OF + "]-(templateElementChild) "
                     + "WHERE classNode.name={templateElementClass} AND id(templateElement) = {templateElementId} "
@@ -2195,7 +2505,30 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             List<RemoteBusinessObjectLight> templateElementChildren = new ArrayList<>();
             while (queryResult.hasNext()) 
                 templateElementChildren.add(Util.createTemplateElementLightFromNode(queryResult.next()));
+            
             return templateElementChildren; 
+        }
+    }
+    
+    @Override
+    public List<RemoteBusinessObjectLight> getTemplateSpecialElementChildren(String tsElementClass, long tsElementId) {
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            
+            String query = "MATCH (classNode)<-[:" + RelTypes.INSTANCE_OF_SPECIAL + 
+                    "]-(templateElement)<-[:" + RelTypes.CHILD_OF_SPECIAL + "]-(templateElementChild) "
+                    + "WHERE classNode.name={templateElementClass} AND id(templateElement) = {templateElementId} "
+                    + "RETURN templateElementChild ORDER BY templateElementChild.name ASC"; //NOI18N
+            HashMap<String, Object> parameters = new HashMap<>();
+            parameters.put("templateElementClass", tsElementClass); //NOI18N
+            parameters.put("templateElementId", tsElementId); //NOI18N
+            ResourceIterator<Node> queryResult = graphDb.execute(query, parameters).columnAs("templateElementChild");
+            
+            List<RemoteBusinessObjectLight> templateElementChildren = new ArrayList<>();
+            while (queryResult.hasNext()) 
+                templateElementChildren.add(Util.createTemplateElementLightFromNode(queryResult.next()));
+            
+            return templateElementChildren;  
         }
     }
     
@@ -2227,10 +2560,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
 
     @Override
     public long[] copyTemplateElements(String[] sourceObjectsClassNames, long[] sourceObjectsIds, String newParentClassName, 
-            long newParentId) throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
+            long newParentId) throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException, ArraySizeMismatchException {
         
         if (sourceObjectsClassNames.length != sourceObjectsIds.length)
-            throw new InvalidArgumentException("The sourceObjectsClassNames and sourceObjectsIds arrays have different sizes");
+            throw new ArraySizeMismatchException("The sourceObjectsClassNames and sourceObjectsIds arrays have different sizes");
         try (Transaction tx = graphDb.beginTx()) {
             long[] newTemplateElements = new long[sourceObjectsClassNames.length];
             
@@ -2247,6 +2580,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         }
     }
     
+    @Override
+    public long [] copyTemplateSpecialElement(String[] sourceObjectsClassNames, long [] sourceObjectsIds, String newParentClassName, long newParentId) 
+     throws ArraySizeMismatchException, ApplicationObjectNotFoundException, MetadataObjectNotFoundException {
+        if(sourceObjectsClassNames.length != sourceObjectsIds.length)
+            throw new ArraySizeMismatchException("The sourceObjectsClassNames and sourceObjectsIds arrays have different sizes");
+        try (Transaction tx = graphDb.beginTx()) {
+            long [] newTemplateSpecialElements = new long[sourceObjectsClassNames.length];
+            
+            Node newParentNode = getTemplateElementInstance(newParentClassName, newParentId);
+            
+            for (int i = 0; i < sourceObjectsClassNames.length; i += 1) {
+                Node templateObjectNode = getTemplateElementInstance(sourceObjectsClassNames[i], sourceObjectsIds[i]);
+                Node newTemplateSpecialElementInstance = copyTemplateElement(templateObjectNode, true);
+                newTemplateSpecialElementInstance.createRelationshipTo(newParentNode, RelTypes.CHILD_OF_SPECIAL);
+                newTemplateSpecialElements[i] = newTemplateSpecialElementInstance.getId();
+            }
+            tx.success();
+            return newTemplateSpecialElements;
+        }
+    }
     
     @Override
     public void registerCommercialModule(GenericCommercialModule module) throws NotAuthorizedException {
@@ -2264,24 +2617,33 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
     
     @Override
-    public HashMap<String, RemoteBusinessObjectList> executeCustomDbCode(String dbCode) throws NotAuthorizedException {
+    public HashMap<String, RemoteBusinessObjectList> executeCustomDbCode(String dbCode, boolean needReturn) throws NotAuthorizedException {
         try (Transaction tx = graphDb.beginTx()) {
         
-            Result theResult = graphDb.execute(dbCode);
-            HashMap<String, RemoteBusinessObjectList> thePaths = new HashMap<>();
+            Map<String, Object> params = new HashMap<>();
+            params.put("false", false);//NOI18N
+            params.put("true", true);//NOI18N
+            Result theResult = graphDb.execute(dbCode, params);
+            if(needReturn){
+                HashMap<String, RemoteBusinessObjectList> thePaths = new HashMap<>();
             
-            for (String column : theResult.columns())
-                thePaths.put(column, new RemoteBusinessObjectList());
-            
-            try {
-                while (theResult.hasNext()) {
-                    Map<String, Object> row = theResult.next();
-                    for (String column : row.keySet()) 
-                        thePaths.get(column).add(Util.createRemoteObjectFromNode((Node)row.get(column)));
-                }
-            } catch (InvalidArgumentException ex) {} //this should not happen
-            
-            return thePaths;
+                for (String column : theResult.columns())
+                    thePaths.put(column, new RemoteBusinessObjectList());
+
+                try {
+                    while (theResult.hasNext()) {
+                        Map<String, Object> row = theResult.next();
+                        for (String column : row.keySet()) 
+                            thePaths.get(column).add(Util.createRemoteObjectFromNode((Node)row.get(column)));
+                    }
+                } catch (InvalidArgumentException ex) {} //this should not happen
+
+                return thePaths;
+            }
+            else {
+                tx.success();
+                return null;
+            }
         }
     }
     
@@ -2479,25 +2841,359 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 Node newChild = copyTemplateElement(rel.getStartNode(), true);
                 newChild.createRelationshipTo(newTemplateElementInstance, RelTypes.CHILD_OF);
             }
+            for (Relationship rel : templateObject.getRelationships(RelTypes.CHILD_OF_SPECIAL, Direction.INCOMING)){
+                Node newChild = copyTemplateElement(rel.getStartNode(), true);
+                newChild.createRelationshipTo(newTemplateElementInstance, RelTypes.CHILD_OF_SPECIAL);
+            }
         }
         return newTemplateElementInstance;
     }
     
-    private Node getReportInstance(Node relatedNode, long reportId) throws ApplicationObjectNotFoundException {
-        Node reportNode = null;
-        for (Relationship hasReportRelationship : relatedNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_REPORT)) {
-            Node endNode = hasReportRelationship.getEndNode();
-            if (endNode.getId() == reportId) {
-                reportNode = endNode;
-                break;
+    //End of Helpers  
+    
+    // Bookmarks
+    @Override
+    public void addObjectTofavoritesFolder(String objectClass, long objectId, long favoritesFolderId, long userId)
+            throws ApplicationObjectNotFoundException, MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
+            if (favoritesFolderNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s", favoritesFolderId));
+            
+            Node objectNode = getInstanceOfClass(objectClass, objectId);
+            
+            if (objectNode.hasRelationship(Direction.OUTGOING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                for (Relationship relationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                    if (favoritesFolderNode.getId() == relationship.getEndNode().getId())
+                        throw new OperationNotPermittedException("An object can not be added twice to the same favorites folder");
+                }
             }
+            objectNode.createRelationshipTo(favoritesFolderNode, RelTypes.IS_BOOKMARK_ITEM_IN);
+            
+            tx.success();
         }
-        
-        if (reportNode == null)
-            throw new ApplicationObjectNotFoundException(String.format("The report with with id %s could not be found.", reportId));
-        
-        return reportNode;
     }
     
-    //End of Helpers   
+    @Override
+    public void removeObjectFromfavoritesFolder(String objectClass, long objectId, long favoritesFolderId, long userId) 
+        throws ApplicationObjectNotFoundException, MetadataObjectNotFoundException, ObjectNotFoundException {
+                
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            Node objectNode = getInstanceOfClass(objectClass, objectId);
+            
+            if (objectNode.hasRelationship(Direction.OUTGOING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                
+                Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
+                if (favoritesFolderNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s", favoritesFolderId));
+                
+                Relationship relationshipToDelete = null;
+                
+                for (Relationship relationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                    
+                    if (favoritesFolderNode.getId() == relationship.getEndNode().getId())
+                        relationshipToDelete = relationship;
+                }
+                if (relationshipToDelete != null) {
+                    relationshipToDelete.delete();
+                    tx.success();
+                }
+            }
+        }
+    }
+    
+    @Override
+    public long createFavoritesFolderForUser(String name, long userId) 
+        throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        
+        if (name == null || name.trim().isEmpty())
+                throw new InvalidArgumentException("The name of the favorites folder can not be empty");
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+            
+            Node favoritesFolderNode = graphDb.createNode();
+            favoritesFolderNode.setProperty(Constants.PROPERTY_NAME, name);            
+            
+            userNode.createRelationshipTo(favoritesFolderNode, RelTypes.HAS_BOOKMARK);
+            
+            tx.success();
+            return favoritesFolderNode.getId();
+        }
+    }
+    
+    @Override
+    public void deleteFavoritesFolders (long[] favoritesFolderId, long userId)
+        throws ApplicationObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            if (favoritesFolderId != null) {
+                for (long id : favoritesFolderId) {
+                    Node favoritesFolderNode = getFavoritesFolderForUser(id, userId);
+                    
+                    if (favoritesFolderNode == null)
+                        throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s",id));
+                    
+                    for (Relationship relationship : favoritesFolderNode.getRelationships(Direction.INCOMING, RelTypes.HAS_BOOKMARK))
+                        relationship.delete();
+                    
+                    for (Relationship relationship : favoritesFolderNode.getRelationships(Direction.INCOMING, RelTypes.IS_BOOKMARK_ITEM_IN))
+                        relationship.delete();
+                    
+                    favoritesFolderNode.delete();
+                    tx.success();
+                }
+            }
+        }
+    }
+    
+    @Override
+    public List<FavoritesFolder> getFavoritesFoldersForUser(long userId) 
+        throws ApplicationObjectNotFoundException {
+                
+        try (Transaction tx = graphDb.beginTx()) {
+            Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+            
+            if (userNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("User with id %s could not be found", userId));
+            
+            List<FavoritesFolder> favoritesFolders = new ArrayList(); 
+            
+            if (userNode.hasRelationship(Direction.OUTGOING, RelTypes.HAS_BOOKMARK)) {
+                
+                for (Relationship relationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_BOOKMARK)) {
+                    Node favoritesFolderNode = relationship.getEndNode();
+                    String name = favoritesFolderNode.hasProperty(Constants.PROPERTY_NAME) ? (String) favoritesFolderNode.getProperty(Constants.PROPERTY_NAME) : null;
+                    
+                    favoritesFolders.add(new FavoritesFolder(favoritesFolderNode.getId(), name));
+                }
+            }
+            return favoritesFolders;
+        }
+    }
+    
+    @Override
+    public List<RemoteBusinessObjectLight> getObjectsInFavoritesFolder(long favoritesFolderId, long userId, int limit) 
+        throws ApplicationObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
+            
+            if (favoritesFolderNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s", favoritesFolderId));
+            
+            List<RemoteBusinessObjectLight> bookmarkItems = new ArrayList<>();
+            
+            int i = 0;
+            for (Relationship relationship : favoritesFolderNode.getRelationships(Direction.INCOMING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                if (limit != -1) {
+                    if (i >= limit)
+                        break;
+                    i++;
+                }
+                Node bookmarkItem = relationship.getStartNode();
+                
+                RemoteBusinessObjectLight rbol = new RemoteBusinessObjectLight(
+                    bookmarkItem.getId(), 
+                    bookmarkItem.hasProperty(Constants.PROPERTY_NAME) ? (String) bookmarkItem.getProperty(Constants.PROPERTY_NAME) : null, 
+                    Util.getClassName(bookmarkItem));
+                
+                bookmarkItems.add(rbol);
+            }
+            return bookmarkItems;
+        }
+    }
+    
+    @Override
+    public List<FavoritesFolder> getFavoritesFoldersForObject(long userId, String objectClass, long objectId) 
+        throws MetadataObjectNotFoundException, ObjectNotFoundException, ApplicationObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node objectNode = getInstanceOfClass(objectClass, objectId);
+                        
+            List<FavoritesFolder> favoritesFolders = new ArrayList(); 
+                
+            for (Relationship relationship : objectNode.getRelationships(Direction.OUTGOING, RelTypes.IS_BOOKMARK_ITEM_IN)) {
+                Node favoritesFolderNode = relationship.getEndNode();
+
+                if (getFavoritesFolderForUser(favoritesFolderNode.getId(), userId) != null) //If null, the object is in a favorites folder, but that folder does not belong to the current user, so it's safe to omiit it
+                    favoritesFolders.add(new FavoritesFolder(favoritesFolderNode.getId(), (String) favoritesFolderNode.getProperty(Constants.PROPERTY_NAME)));
+            }
+            return favoritesFolders;
+        }
+    }
+    
+    @Override
+    public FavoritesFolder getFavoritesFolder(long favoritesFolderId, long userId) 
+        throws ApplicationObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
+            
+            if (favoritesFolderNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s", favoritesFolderId));
+            
+            String name = favoritesFolderNode.hasProperty(Constants.PROPERTY_NAME) ? (String) favoritesFolderNode.getProperty(Constants.PROPERTY_NAME) : null;
+                    
+            return new FavoritesFolder(favoritesFolderNode.getId(), name);
+        }
+    }
+    
+    @Override
+    public void updateFavoritesFolder(long favoritesFolderId, long userId, String favoritesFolderName) 
+        throws ApplicationObjectNotFoundException, IllegalArgumentException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
+            
+            if (favoritesFolderNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find a favorites folder with id %s", favoritesFolderId));
+            
+            if (favoritesFolderName != null && !favoritesFolderName.trim().isEmpty()) {
+                favoritesFolderNode.setProperty(Constants.PROPERTY_NAME, favoritesFolderName);
+                tx.success();
+            } else 
+                throw new IllegalArgumentException("Favorites folder name can not be empty");
+        }
+    }
+    
+    //<editor-fold desc="Business Rules" defaultstate="collapsed">
+    @Override
+    public long createBusinessRule(String ruleName, String ruleDescription, int ruleType, 
+            int ruleScope, String appliesTo, String ruleVersion, List<String> constraints) throws InvalidArgumentException {
+        
+        if (ruleName == null || ruleDescription == null || ruleVersion == null || appliesTo == null || ruleType < 1 || ruleScope < 1)
+            throw new InvalidArgumentException("Invalid parameter. Make sure all parameters are different from null and greater than 1");
+        
+        if (constraints == null || constraints.isEmpty())
+            throw new InvalidArgumentException("The rule must have at least one constraint");
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node businessRuleNode = graphDb.createNode();
+            
+            businessRuleNode.setProperty(Constants.PROPERTY_NAME, ruleName);
+            businessRuleNode.setProperty(Constants.PROPERTY_DESCRIPTION, ruleDescription);
+            businessRuleNode.setProperty(Constants.PROPERTY_TYPE, ruleType);
+            businessRuleNode.setProperty(Constants.PROPERTY_SCOPE, ruleScope);
+            businessRuleNode.setProperty(Constants.PROPERTY_APPLIES_TO, appliesTo);
+            businessRuleNode.setProperty(Constants.PROPERTY_VERSION, ruleVersion);
+            
+            for (int i = 0; i < constraints.size(); i++)
+                businessRuleNode.setProperty("constraint" + (i + 1), constraints.get(i)); //NOI18N
+
+            businessRulesIndex.add(businessRuleNode, Constants.PROPERTY_ID, businessRuleNode.getId());
+            
+            tx.success();
+            return businessRuleNode.getId();
+        }
+    }
+    
+    @Override
+    public void deleteBusinessRule(long businessRuleId) throws ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            Node businessRuleNode = businessRulesIndex.get(Constants.PROPERTY_ID, businessRuleId).getSingle();
+            
+            if (businessRuleNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Business rule with id %s not found", businessRuleId));
+            
+            businessRulesIndex.remove(businessRuleNode);
+            businessRuleNode.delete();
+            
+            tx.success();
+        }
+    }
+    
+    @Override
+    public List<BusinessRule> getBusinessRules(int type) {
+        try (Transaction tx = graphDb.beginTx()) {
+            List<BusinessRule> res = new ArrayList<>();
+            
+            for (Node businessRuleNode : businessRulesIndex.query(Constants.PROPERTY_ID, "*")) {
+                if (type == -1 || type == (int)businessRuleNode.getProperty(Constants.PROPERTY_TYPE))
+                    res.add(new BusinessRule(businessRuleNode.getId(), businessRuleNode.getAllProperties()));
+            }
+            return res;
+        }
+    }
+    
+    @Override
+    public void checkRelationshipByAttributeValueBusinessRules(String sourceObjectClassName, long sourceObjectId ,
+            String targetObjectClassName, long targetObjectId) throws BusinessRuleException, InvalidArgumentException  {
+        
+        if (!Boolean.valueOf(getConfiguration().getProperty("enforceBusinessRules", "false")))
+            return;
+        
+        try (Transaction tx = graphDb.beginTx()) {    
+            for (Node businessRuleNode : businessRulesIndex.query(Constants.PROPERTY_ID, "*")) {
+                                
+                if (sourceObjectClassName.equals(businessRuleNode.getProperty(Constants.PROPERTY_APPLIES_TO))) {
+                    /**
+                     * In this type of business rules:
+                     * constraint1 is the class name of the target object
+                     * constraint2 is the name of the attribute name of the source object
+                     * constraint3 is the name of the attribute name of the target object
+                     * constraint4 is the name of the attribute value of the source object
+                     * constraint5 is the name of the attribute value of the target object
+                     */
+                    if (!businessRuleNode.hasProperty("constraint1") || !businessRuleNode.hasProperty("constraint2") || !businessRuleNode.hasProperty("constraint3") 
+                            || !businessRuleNode.hasProperty("constraint4") || !businessRuleNode.hasProperty("constraint5"))
+                        throw new InvalidArgumentException("Malformed busines rule. One of the 5 required constraints is not present");
+                    
+                    if (businessRuleNode.getProperty("constraint1").equals(targetObjectClassName)) {
+                        
+                        String sourceObjectAttributeConstraint = (String)businessRuleNode.getProperty("constraint4");
+                        String targetObjectAttributeConstraint = (String)businessRuleNode.getProperty("constraint5");
+                        if (sourceObjectAttributeConstraint.isEmpty() || targetObjectAttributeConstraint.isEmpty()) //This link can be connected to any object
+                            return;
+                        
+                        Node sourceInstance = graphDb.index().forNodes(Constants.INDEX_OBJECTS).get(Constants.PROPERTY_ID, sourceObjectId).getSingle();
+                        String sourceInstanceAttributeValue = Util.getAttributeFromNode(sourceInstance, (String)businessRuleNode.getProperty("constraint2"));
+                        
+                        if (sourceObjectAttributeConstraint.equals(sourceInstanceAttributeValue)) {
+                            Node targetInstance = graphDb.index().forNodes(Constants.INDEX_OBJECTS).get(Constants.PROPERTY_ID, targetObjectId).getSingle();
+                            String targetInstanceAttributeValue = Util.getAttributeFromNode(targetInstance, (String)businessRuleNode.getProperty("constraint3"));
+                            
+                            if (!targetObjectAttributeConstraint.equals(targetInstanceAttributeValue))
+                                throw new BusinessRuleException(String.format("Value of %s in %s does not match %s in %s", 
+                                                                        businessRuleNode.getProperty("constraint3"),
+                                                                        targetObjectClassName, businessRuleNode.getProperty("constraint2"), sourceObjectClassName));
+                            else
+                                return; //After finding the first matching rule, return. This behavora might change in further releases
+                        }
+                    } else 
+                        throw new BusinessRuleException(String.format("Objects of class %s can not be connected to objects of class %s", sourceObjectClassName, targetObjectClassName));
+                }
+            }
+            throw new BusinessRuleException(String.format("No matching rule was found for %s and %s", sourceObjectClassName, targetObjectClassName));
+        }
+    }
+    
+    //</editor-fold>
+    //Helpers
+    
+    private Node getFavoritesFolderForUser(long favoritesFolderId, long userId) {
+        Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();
+
+        if (userNode == null)
+            return null; // user not found
+
+
+        if (userNode.hasRelationship(Direction.OUTGOING, RelTypes.HAS_BOOKMARK)) {
+            for (Relationship relationship : userNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_BOOKMARK)) {
+
+                Node favoritesFolderNode = relationship.getEndNode();
+
+                if (favoritesFolderNode.getId() == favoritesFolderId)
+                    return favoritesFolderNode;
+
+            }
+        }
+        return null; //The user doesn't seem to have a favorites folder with that id
+    }
 }

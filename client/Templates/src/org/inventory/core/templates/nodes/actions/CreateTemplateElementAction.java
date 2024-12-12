@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package org.inventory.core.templates.nodes.actions;
 
 import java.awt.event.ActionEvent;
 import java.util.List;
-import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -26,11 +25,13 @@ import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.core.templates.nodes.TemplateElementNode;
-import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
+import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.openide.util.Utilities;
 import org.openide.util.actions.Presenter;
 
@@ -38,12 +39,12 @@ import org.openide.util.actions.Presenter;
  * Creates a template element
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-class CreateTemplateElementAction extends AbstractAction implements Presenter.Popup {
+class CreateTemplateElementAction extends GenericInventoryAction implements Presenter.Popup {
     
-    private CommunicationsStub com = CommunicationsStub.getInstance();
+    private final CommunicationsStub com = CommunicationsStub.getInstance();
     
     CreateTemplateElementAction() {
-        putValue(NAME, "New Template Element");
+        putValue(NAME, "New Object");
     }
     
     @Override
@@ -75,11 +76,11 @@ class CreateTemplateElementAction extends AbstractAction implements Presenter.Po
 
     @Override
     public JMenuItem getPopupPresenter() {
-        JMenu mnuPossibleChildren = new JMenu("New Object");
+        JMenu mnuPossibleChildren = new JMenu((String) getValue(NAME));
 
         LocalObjectLight selectedObject = Utilities.actionsGlobalContext().lookup(LocalObjectLight.class);
         
-        List<LocalClassMetadataLight> items = com.getPossibleChildren(selectedObject.getClassName(), false);
+        List<LocalClassMetadataLight> items = com.getPossibleChildren(selectedObject.getClassName(), true);
         
         if (items == null) {
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE,
@@ -101,5 +102,9 @@ class CreateTemplateElementAction extends AbstractAction implements Presenter.Po
         }
         return mnuPossibleChildren;
     }
-    
+
+    @Override
+    public LocalPrivilege getPrivilege() {
+        return new LocalPrivilege(LocalPrivilege.PRIVILEGE_TEMPLATES, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
 }

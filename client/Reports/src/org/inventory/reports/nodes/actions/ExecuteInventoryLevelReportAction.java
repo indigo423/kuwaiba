@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,12 +24,13 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
-import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
+import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalReport;
 import org.inventory.communications.core.LocalReportLight;
+import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.openide.util.Utilities;
@@ -38,7 +39,7 @@ import org.openide.util.Utilities;
  * Executes a class level report
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-class ExecuteInventoryLevelReportAction extends AbstractAction {
+class ExecuteInventoryLevelReportAction extends GenericInventoryAction {
     
     private CommunicationsStub com = CommunicationsStub.getInstance();
     
@@ -87,23 +88,28 @@ class ExecuteInventoryLevelReportAction extends AbstractAction {
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else {           
             try {
-            File tempFile = File.createTempFile("inventory_report_" + reportId + "_" + Calendar.getInstance().getTimeInMillis(), ".html"); //NOI18N
+                File tempFile = File.createTempFile("inventory_report_" + reportId + "_" + Calendar.getInstance().getTimeInMillis(), ".html"); //NOI18N
 
-            try (FileOutputStream faos = new FileOutputStream(tempFile)) {
-                faos.write(reportAsByteArray);
-                faos.flush();
-            }
-            if(Desktop.isDesktopSupported()) 
-            try {
-                Desktop.getDesktop().browse(Utilities.toURI(tempFile));
+                try (FileOutputStream faos = new FileOutputStream(tempFile)) {
+                    faos.write(reportAsByteArray);
+                    faos.flush();
+                }
+                if (Desktop.isDesktopSupported()) 
+                try {
+                    Desktop.getDesktop().browse(Utilities.toURI(tempFile));
+                } catch (IOException ex) {
+                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                }
+
             } catch (IOException ex) {
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
             }
-
-        } catch (IOException ex) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
-        }
         }
            
+    }
+
+    @Override
+    public LocalPrivilege getPrivilege() {
+        return new LocalPrivilege(LocalPrivilege.PRIVILEGE_REPORTS, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
     }
 }

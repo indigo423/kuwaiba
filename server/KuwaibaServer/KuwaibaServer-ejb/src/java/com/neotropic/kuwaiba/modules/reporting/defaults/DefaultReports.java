@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package com.neotropic.kuwaiba.modules.reporting.defaults;
 
 import com.neotropic.kuwaiba.modules.ipam.IPAMModule;
-import com.neotropic.kuwaiba.modules.mpls.MPLSModule;
 import com.neotropic.kuwaiba.modules.sdh.SDHContainerLinkDefinition;
 import com.neotropic.kuwaiba.modules.sdh.SDHModule;
 import java.text.SimpleDateFormat;
@@ -67,7 +66,7 @@ public class DefaultReports {
         String query = String.format("MATCH (rack)<-[:%s*1..2]-(rackable)-[:%s]->(childClass)-[:%s*]->(superClass) "
                 + "WHERE id(rack) = %s AND (superClass.name=\"%s\" OR superClass.name=\"%s\") "
                 + "RETURN rackable", RelTypes.CHILD_OF, RelTypes.INSTANCE_OF, RelTypes.EXTENDS, rackId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT, Constants.CLASS_GENERICBOX);
-        HashMap<String, RemoteBusinessObjectList> result = aem.executeCustomDbCode(query);
+        HashMap<String, RemoteBusinessObjectList> result = aem.executeCustomDbCode(query, true);
 
         String rackUsageReportBody = "<!DOCTYPE html>\n" +
                                 "<html lang=\"en\">\n" +
@@ -87,7 +86,7 @@ public class DefaultReports {
 
 
         List<RemoteBusinessObjectLight> parents = bem.getParents(theRack.getClassName(), theRack.getId());
-        String location = formatLocation(parents);
+        String location = Util.formatLocation(parents);
 
         totalRackUnits = theRack.getAttributes().get("rackUnits") == null ? 0 : Integer.valueOf(theRack.getAttributes().get("rackUnits").get(0));
 
@@ -170,7 +169,7 @@ public class DefaultReports {
                                     RelTypes.INSTANCE_OF, RelTypes.EXTENDS, aPort.getId(), "endpointA", "endpointB", "endpointA", "endpointB", 
                                     Constants.CLASS_GENERICCOMMUNICATIONSELEMENT, Constants.CLASS_GENERICBOX);
                 
-                HashMap<String, RemoteBusinessObjectList> nextEquipmentResult = aem.executeCustomDbCode(query);
+                HashMap<String, RemoteBusinessObjectList> nextEquipmentResult = aem.executeCustomDbCode(query, true);
                 
                 if (nextEquipmentResult.get("equipment").getList().isEmpty())
                     connectedEquipmentString  = "Free";
@@ -186,7 +185,7 @@ public class DefaultReports {
                                 RelTypes.CHILD_OF_SPECIAL, RelTypes.INSTANCE_OF, RelTypes.EXTENDS, 
                                 aPort.getId(), "uses", Constants.CLASS_GENERICCUSTOMER);
                 
-                HashMap<String, RemoteBusinessObjectList> serviceResult = aem.executeCustomDbCode(query);
+                HashMap<String, RemoteBusinessObjectList> serviceResult = aem.executeCustomDbCode(query, true);
                 
                 for (int j = 0; j < serviceResult.get("service").getList().size(); j++)
                     serviceString += "<b>" + serviceResult.get("service").getList().get(j) + "</b> - " + serviceResult.get("customer").getList().get(j) + "<br/>";
@@ -195,7 +194,7 @@ public class DefaultReports {
                 query = String.format("MATCH (framePort)-[relation:%s]->(listType) "
                         + "WHERE id(framePort) = %s AND relation.name=\"%s\" RETURN listType", RelTypes.RELATED_TO, aPort.getId(), "state");
                 
-                HashMap<String, RemoteBusinessObjectList> operationalStateResult = aem.executeCustomDbCode(query);
+                HashMap<String, RemoteBusinessObjectList> operationalStateResult = aem.executeCustomDbCode(query, true);
                 
                 String operationalStateString = "<span class=\"error\">Not Set</span>";
                 
@@ -211,7 +210,7 @@ public class DefaultReports {
             portList += "</table>\n";
             
             List<RemoteBusinessObjectLight> parents = bem.getParents(theFrame.getClassName(), theFrame.getId());
-            String location = formatLocation(parents);
+            String location = Util.formatLocation(parents);
             float usePercentage = frameChildren.isEmpty() ? 0 : (usedPorts * 100 / frameChildren.size());
             
             frameUsageReportText += "<table><tr><td class=\"generalInfoLabel\">Name</td><td class=\"generalInfoValue\">" + theFrame.getName() + "</td></tr>"
@@ -237,7 +236,7 @@ public class DefaultReports {
                     + "RETURN transportLink, equipment, port",  RelTypes.RELATED_TO_SPECIAL, RelTypes.CHILD_OF, RelTypes.INSTANCE_OF, 
                             RelTypes.EXTENDS, transportLinkId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT, 
                             SDHModule.RELATIONSHIP_SDHTLENDPOINTA, SDHModule.RELATIONSHIP_SDHTLENDPOINTB);
-        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query);
+        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query, true);
         
         String title, transportLinkUsageReportText;
         RemoteBusinessObject theTransportLink;
@@ -302,7 +301,7 @@ public class DefaultReports {
                     RelTypes.EXTENDS, RelTypes.INSTANCE_OF, RelTypes.CHILD_OF_SPECIAL, RelTypes.RELATED_TO_SPECIAL, RelTypes.RELATED_TO_SPECIAL, 
                     RelTypes.CHILD_OF, RelTypes.INSTANCE_OF, RelTypes.EXTENDS, tributaryLinkId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT, "uses", 
                     SDHModule.RELATIONSHIP_SDHTTLENDPOINTA, SDHModule.RELATIONSHIP_SDHTTLENDPOINTB, Constants.CLASS_GENERICCUSTOMER);
-        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query);
+        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query, true);
         
         String title, tributaryLinkUsageReportText;
         RemoteBusinessObject theTributaryLink;
@@ -329,7 +328,7 @@ public class DefaultReports {
                                     tributaryLinkId, SDHModule.RELATIONSHIP_SDHTTLENDPOINTA, SDHModule.RELATIONSHIP_SDHTTLENDPOINTB,
                                     "endpointA", "endpointB", "endpointA", "endpointB", Constants.CLASS_GENERICDISTRIBUTIONFRAME);
             
-            HashMap<String, RemoteBusinessObjectList> demarcationPoints = aem.executeCustomDbCode(query);
+            HashMap<String, RemoteBusinessObjectList> demarcationPoints = aem.executeCustomDbCode(query,true);
             String demarcationPointsAsSring = "";
             for (int i = 0; i < demarcationPoints.get("nextEquipmentPort").getList().size(); i++)
                 demarcationPointsAsSring += "<b>" + demarcationPoints.get("nextEquipment").getList().get(i) + "</b>:" + demarcationPoints.get("nextEquipmentPort").getList().get(i) + "<br/>";
@@ -384,7 +383,7 @@ public class DefaultReports {
                     RelTypes.EXTENDS, RelTypes.INSTANCE_OF, RelTypes.CHILD_OF_SPECIAL, RelTypes.RELATED_TO_SPECIAL, RelTypes.RELATED_TO_SPECIAL, 
                     RelTypes.CHILD_OF, RelTypes.INSTANCE_OF, RelTypes.EXTENDS, tributaryLinkId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT, "uses", 
                     SDHModule.RELATIONSHIP_SDHTTLENDPOINTA, SDHModule.RELATIONSHIP_SDHTTLENDPOINTB, Constants.CLASS_GENERICCUSTOMER);
-        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query);
+        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query, true);
         
         String title, tributaryLinkUsageReportText;
         RemoteBusinessObject theTributaryLink;
@@ -411,7 +410,7 @@ public class DefaultReports {
                                     tributaryLinkId, SDHModule.RELATIONSHIP_SDHTTLENDPOINTA, SDHModule.RELATIONSHIP_SDHTTLENDPOINTB,
                                     "endpointA", "endpointB", "endpointA", "endpointB", Constants.CLASS_GENERICDISTRIBUTIONFRAME);
             
-            HashMap<String, RemoteBusinessObjectList> demarcationPoints = aem.executeCustomDbCode(query);
+            HashMap<String, RemoteBusinessObjectList> demarcationPoints = aem.executeCustomDbCode(query, true);
             String demarcationPointsAsSring = "";
             for (int i = 0; i < demarcationPoints.get("nextEquipmentPort").getList().size(); i++)
                 demarcationPointsAsSring += "<b>" + demarcationPoints.get("nextEquipment").getList().get(i) + "</b>:" + demarcationPoints.get("nextEquipmentPort").getList().get(i) + "<br/>";
@@ -456,7 +455,7 @@ public class DefaultReports {
                 + "WHERE id(location) = %s AND superclass.name = \"%s\" "
                 + "RETURN networkEquipment", RelTypes.CHILD_OF, RelTypes.INSTANCE_OF, RelTypes.EXTENDS, 
                                                             locationId, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT);
-        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query);
+        HashMap<String, RemoteBusinessObjectList> theResult = aem.executeCustomDbCode(query, true);
         
         String title, networkEquipmentInLocationReportText;
         
@@ -469,7 +468,7 @@ public class DefaultReports {
 
         networkEquipmentInLocationReportText += "<table><tr><td class=\"generalInfoLabel\">Name</td><td>" + location.getName() + "</td></tr>\n"
                 + "<tr><td class=\"generalInfoLabel\">Type</td><td>" + location.getClassName() + "</td></tr>\n"
-                + "<tr><td class=\"generalInfoLabel\">Location</td><td>" + formatLocation(bem.getParents(location.getClassName(), location.getId())) + "</td></tr>\n</table>\n";
+                + "<tr><td class=\"generalInfoLabel\">Location</td><td>" + Util.formatLocation(bem.getParents(location.getClassName(), location.getId())) + "</td></tr>\n</table>\n";
 
         if (theResult.get("networkEquipment").getList().isEmpty())
             networkEquipmentInLocationReportText += "<div class=\"warning\">This location does not have any network equipment</div>";
@@ -481,7 +480,7 @@ public class DefaultReports {
                                                             + "<td>" + networkEquipment.getName() + "</td>"
                                                             + "<td>" + networkEquipment.getClassName() + "</td>"
                                                             + "<td>" + (networkEquipment.getAttributes().get("serialNumber") == null ? asError("Not Set") : networkEquipment.getAttributes().get("serialNumber").get(0)) + "</td>"
-                                                            + "<td>" + formatLocation(bem.getParents(networkEquipment.getClassName(), networkEquipment.getId())) + "</td>"
+                                                            + "<td>" + Util.formatLocation(bem.getParents(networkEquipment.getClassName(), networkEquipment.getId())) + "</td>"
                                                             + "<td>" + (networkEquipment.getAttributes().get("vendor") == null ? asError("Not Set") : bem.getObjectLight("EquipmentVendor", Long.valueOf(networkEquipment.getAttributes().get("vendor").get(0))).getName() ) + "</td>"
                                                             + "<td>" + (networkEquipment.getAttributes().get("state") == null ? asError("Not Set") : bem.getObjectLight("OperationalState", Long.valueOf(networkEquipment.getAttributes().get("state").get(0))).getName() ) + "</td></tr>";
                 i ++;
@@ -504,7 +503,7 @@ public class DefaultReports {
 
         serviceResourcesReportText += "<table><tr><td class=\"generalInfoLabel\">Name</td><td>" + service.getName() + "</td></tr>\n"
                 + "<tr><td class=\"generalInfoLabel\">Type</td><td>" + service.getClassName() + "</td></tr>\n"
-                + "<tr><td class=\"generalInfoLabel\">Location</td><td>" + formatLocation(bem.getParents(service.getClassName(), service.getId())) + "</td></tr>\n</table>\n";
+                + "<tr><td class=\"generalInfoLabel\">Location</td><td>" + Util.formatLocation(bem.getParents(service.getClassName(), service.getId())) + "</td></tr>\n</table>\n";
         List<RemoteBusinessObjectLight> resources = bem.getSpecialAttribute(service.getClassName(), service.getId(), "uses");
         if (resources.isEmpty()) {
             serviceResourcesReportText += "<div class=\"warning\">This service does not use any network resources</div>";
@@ -515,7 +514,7 @@ public class DefaultReports {
                 serviceResourcesReportText += "<tr class=\"" + (i % 2 == 0 ? "even" :"odd") + "\">"
                                                             + "<td>" + resource.getName() + "</td>"
                                                             + "<td>" + resource.getClassName() + "</td>"
-                                                            + "<td>" + formatLocation(bem.getParents(resource.getClassName(), resource.getId())) + "</td></tr>";
+                                                            + "<td>" + Util.formatLocation(bem.getParents(resource.getClassName(), resource.getId())) + "</td></tr>";
                 i ++;
             }
             serviceResourcesReportText += "</table>";
@@ -549,16 +548,16 @@ public class DefaultReports {
         }
         
         for (RemoteBusinessObjectLight ip : ips) {
-            if(ip.getClassName().equals(Constants.CLASS_IP_ADDRESS)){
-                List<RemoteBusinessObjectLight> ipDevices = bem.getSpecialAttribute(Constants.CLASS_IP_ADDRESS, ip.getId(), IPAMModule.RELATIONSHIP_IPAMHASADDRESS);
-                if(!ipDevices.isEmpty())
-                    usedIps++;
-            }
+            List<RemoteBusinessObjectLight> ipDevices = bem.getSpecialAttribute(Constants.CLASS_IP_ADDRESS, ip.getId(), IPAMModule.RELATIONSHIP_IPAMHASADDRESS);
+            if(!ipDevices.isEmpty())
+                usedIps++;
         }
-
-        if(hosts == 0 && usedIps == 0){
+        // There are not host but the
+        // gateway and the broadcast
+        // are in use
+        if (hosts == 0 && usedIps == 0){
             usedIps = ips.size();
-            if(usedIps>hosts);
+            if (usedIps>hosts)
                 hosts += 2;
         }
         int freeIps = hosts - usedIps;
@@ -570,7 +569,7 @@ public class DefaultReports {
         
         if(!vlans.isEmpty())
             vlan = "<b>" + vlans.get(0).getName() + " ["+ vlans.get(0).getClassName()+ "]</b> |"+
-            formatLocation(bem.getParents(vlans.get(0).getClassName(), vlans.get(0).getId()));
+            Util.formatLocation(bem.getParents(vlans.get(0).getClassName(), vlans.get(0).getId()));
         
         if(!vrfs.isEmpty())
             vrf = "<b>" + vrfs.get(0).getName() + " ["+ vrfs.get(0).getClassName()+ "]</b>";
@@ -614,10 +613,8 @@ public class DefaultReports {
             int i = 0;
             for (RemoteBusinessObjectLight nestedSubnet : subnets) {
                 service = "";
-                
-                String subSubnet = nestedSubnet.getName() + " [" + nestedSubnet.getClassName()+"]";
-                
-                List<RemoteBusinessObjectLight> subnetServices = bem.getSpecialAttribute(nestedSubnet.getClassName(), nestedSubnet.getId(), "uses");
+                                
+                List<RemoteBusinessObjectLight> subnetServices = bem.getSpecialAttribute(nestedSubnet.getClassName(), nestedSubnet.getId(), "uses"); //NOI18N
                 if(!subnetServices.isEmpty())
                     service = subnetServices.get(0).getName() + "[" +  subnetServices.get(0).getClassName() + "]";
                 
@@ -649,7 +646,7 @@ public class DefaultReports {
                 if(!ipDevices.isEmpty()){
                     device = ipDevices.get(0).getName() + " [" + ipDevices.get(0).getClassName()+"]";
                     List<RemoteBusinessObjectLight> parents = bem.getParents(ipDevices.get(0).getClassName(), ipDevices.get(0).getId());
-                    location =  formatLocation(parents);
+                    location =  Util.formatLocation(parents);
                 }
                 
                 List<RemoteBusinessObjectLight> ipServices = bem.getSpecialAttribute(Constants.CLASS_IP_ADDRESS, ip.getId(), "uses");
@@ -803,7 +800,7 @@ public class DefaultReports {
                 if(ports != null){
                     device = ports.getName() + " [" + ports.getClassName()+"]";
                     List<RemoteBusinessObjectLight> parents = bem.getParents(ports.getClassName(), ports.getId());
-                    location =  formatLocation(parents);
+                    location =  Util.formatLocation(parents);
                 }
                 
                 instance += "<tr class=\"" + (i % 2 == 0 ? "even" : "odd") +"\"><td>" + serviceInstance.getName() + " [" + serviceInstance.getClassName()+"] </td>"
@@ -837,7 +834,7 @@ public class DefaultReports {
             RemoteBusinessObject logicalConfigurationObject = bem.getObject(listOflogicalConfiguration.getClassName(), listOflogicalConfiguration.getId());
             
             HashMap<String, List<String>> attributes = logicalConfigurationObject.getAttributes();
-            List<RemoteBusinessObjectLight> ports = bem.getSpecialAttribute(listOflogicalConfiguration.getClassName(), listOflogicalConfiguration.getId(), MPLSModule.RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE);
+            List<RemoteBusinessObjectLight> ports = bem.getSpecialAttribute(listOflogicalConfiguration.getClassName(), listOflogicalConfiguration.getId(), IPAMModule.RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
             
             if (ports == null) 
                 DetailReportText += "<div class=\"error\">No information for" + listOflogicalConfiguration.getName() + " could be found</div>";
@@ -869,7 +866,7 @@ public class DefaultReports {
                     if(port != null){
                         device = port.getName() + " [" + port.getClassName()+"]";
                         List<RemoteBusinessObjectLight> parents = bem.getParents(port.getClassName(), port.getId());
-                        location =  formatLocation(parents);
+                        location =  Util.formatLocation(parents);
                     }
 
                     String ips = "  ";
@@ -962,7 +959,7 @@ public class DefaultReports {
                 if(inventoryObject != null){
                     objectName = inventoryObject.getName() + " [" + inventoryObject.getClassName()+"]";
                     List<RemoteBusinessObjectLight> parents = bem.getParents(inventoryObject.getClassName(), inventoryObject.getId());
-                    location =  formatLocation(parents);
+                    location = Util.formatLocation(parents);
                 }
                 
                 instance += "<tr class=\"" + (i % 2 == 0 ? "even" : "odd") +"\"><td>" + serviceInstance.getName() + " [" + serviceInstance.getClassName()+"] </td>"
@@ -1065,17 +1062,6 @@ public class DefaultReports {
     private String getFooter() {
         return "  <div class=\"footer\">This report is powered by <a href=\"http://www.kuwaiba.org\">Kuwaiba Open Network Inventory</a></div></body>\n" +
                                 "</html>";
-    }
-    
-    private String formatLocation (List<RemoteBusinessObjectLight> containmentHierarchy) {
-        String location = "";
-        if (containmentHierarchy.size() == 1 && !(Constants.NODE_DUMMYROOT).equals((containmentHierarchy.get(0).getClassName())))
-            location += containmentHierarchy.get(0).toString();
-        else{
-            for (int i = 0; i < containmentHierarchy.size() - 1; i ++)
-                location += containmentHierarchy.get(i).toString() + " | ";
-        }
-        return location;
     }
     
     private String asOk(String text) {

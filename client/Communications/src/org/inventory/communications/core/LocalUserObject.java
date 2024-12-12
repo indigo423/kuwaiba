@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,53 +16,72 @@
 
 package org.inventory.communications.core;
 
-import org.inventory.communications.wsclient.GroupInfoLight;
-import org.inventory.communications.wsclient.UserInfo;
+import java.beans.PropertyVetoException;
+import java.util.List;
 
 /**
  * Implementation for the local representation of an application user
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class LocalUserObject extends LocalUserObjectLight {
-    private String firstName;
-    private String lastName;
-    private LocalUserGroupObjectLight[] groups;
+    
+    public static final String PROPERTY_PRIVILEGES = "privileges";
+    private List<LocalPrivilege> privileges;
 
-    public LocalUserObject(UserInfo user) {
-        super(user.getId(), user.getUserName());
-        this.firstName = user.getFirstName();
-        this.lastName = user.getLastName();
-        if (user.getGroups() == null)
-            this.groups = null;
-        else{
-            groups = new LocalUserGroupObjectLight[user.getGroups().size()];
+    public LocalUserObject(long userId, String username, String firstName, String lastName, 
+            boolean enabled, int type, List<LocalPrivilege> privileges) {
+        super(userId, username, firstName, lastName, enabled, type);
+        this.privileges = privileges;
+    }
 
-            int i = 0;
-            for(GroupInfoLight group : user.getGroups()){
-                groups[i] = new LocalUserGroupObjectLight(group);
-                i++;
-            }
+    public List<LocalPrivilege> getPrivileges() {
+        return privileges;
+    }
+
+    public void setPrivileges(List<LocalPrivilege> privileges) {
+        this.privileges = privileges;
+    }
+    
+    public LocalPrivilege getPrivilege(String featureToken) {
+        for (LocalPrivilege privilege : privileges) {
+            if (privilege.getFeatureToken().equals(featureToken))
+                return privilege;
         }
+        return null;
     }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public LocalUserGroupObjectLight[] getGroups() {
-        return groups;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setGroups(LocalUserGroupObjectLight[] groups) {
-        this.groups = groups;
+    
+    /**
+     * Sets a privilege. If the privilege already exists, the access level is updated, otherwise, a new privilege is created
+     * @param featureToken
+     * @param accessLevel New access level. Check ACCESS_LEVEL* for possible values. Use ACCESS_LEVEL_UNSET to remove an existing privilege 
+     */
+    public void setPrivilege(String featureToken, int accessLevel) {
+        LocalPrivilege privilege = new LocalPrivilege(featureToken, accessLevel);
+        
+        if (accessLevel == LocalPrivilege.ACCESS_LEVEL_UNSET) { //Delete an existing privilege
+            try {       
+                firePropertyChange(PROPERTY_PRIVILEGES, privilege, null);
+                privileges.remove(privilege);
+            } catch (PropertyVetoException ex) { }
+        } else {
+            try {
+                LocalPrivilege newPrivilege = new LocalPrivilege(featureToken, accessLevel);
+                int existingPrivilegeIndex = privileges.contains(privilege) ? privileges.indexOf(privilege) : -1;
+                if (existingPrivilegeIndex != -1) {
+                    LocalPrivilege existingPrivilege = privileges.get(existingPrivilegeIndex);
+                    
+                    firePropertyChange(PROPERTY_PRIVILEGES, existingPrivilege, newPrivilege);
+                    privileges.set(existingPrivilegeIndex, newPrivilege);
+                } else {
+                    firePropertyChange(PROPERTY_PRIVILEGES, null, newPrivilege);
+                    privileges.add(newPrivilege);
+                }
+            } catch (PropertyVetoException ex) { }
+        }
     }
     
     @Override
     public String toString() {
-        return firstName == null || lastName == null ? getUserName() : String.format("%s, %s - %s", lastName, firstName, getUserName());
+        return getFirstName() == null || getLastName() == null || getFirstName().isEmpty() || getLastName().isEmpty() ? getUserName() : String.format("%s, %s  (%s)", getLastName(), getFirstName(), getUserName());
     }
 }

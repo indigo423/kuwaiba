@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -87,14 +87,22 @@ public class QueryManagerService implements ActionListener {
         return res;
     }
 
-    public LocalResultRecord[] executeQuery(int page) {
-        currentTransientQuery = qbtc.getQueryScene().getTransientQuery(qbtc.getQueryScene().getCurrentSearchedClass(),
-                        qbtc.getChkAnd().isSelected() ? LocalTransientQuery.CONNECTOR_AND : LocalTransientQuery.CONNECTOR_OR,
-                        Integer.valueOf(qbtc.getTxtResultLimit().getText()), page, false);
-        LocalResultRecord[] res = com.executeQuery(currentTransientQuery);
+    public LocalResultRecord[] executeQuery(LocalTransientQuery oldTrasientQuery) {
+        LocalResultRecord[] res = com.executeQuery(oldTrasientQuery == null ? currentTransientQuery : oldTrasientQuery);
         if (res == null)
             qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         return res;
+    }
+    
+    public void createQuery(int page){
+         LocalTransientQuery temp = qbtc.getQueryScene().getTransientQuery(qbtc.getQueryScene().getCurrentSearchedClass(),
+                        qbtc.getChkAnd().isSelected() ? LocalTransientQuery.CONNECTOR_AND : LocalTransientQuery.CONNECTOR_OR,
+                        Integer.valueOf(qbtc.getTxtResultLimit().getText()), page, false);
+        //this keep the last TrasientQuery in case that the top component it been closed
+        if(temp != null)
+            currentTransientQuery = temp;
+        else
+            currentTransientQuery.setPage(page);
     }
 
     public LocalQueryLight[] getQueries(boolean showAll){
@@ -272,7 +280,7 @@ public class QueryManagerService implements ActionListener {
             case QueryEditorScene.SCENE_FILTERDISABLED:
                 if (insideCheck.getClientProperty("related-node") == null)
                     return;
-                ((QueryEditorScene)qbtc.getQueryScene()).removeAllRelatedNodes(insideCheck.getClientProperty("related-node"));
+                qbtc.getQueryScene().removeAllRelatedNodes(insideCheck.getClientProperty("related-node"));
                 insideCheck.putClientProperty("related-node",null);
         }
         qbtc.getQueryScene().validate();

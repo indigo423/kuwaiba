@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,11 +16,8 @@
  */
 package org.inventory.customization.classhierarchy;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import javax.xml.stream.XMLInputFactory;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -34,11 +31,12 @@ import org.netbeans.api.visual.vmd.VMDNodeWidget;
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
 public class ClassHierarchyService {
-    private ClassHierarchyScene scene;
+    private final ClassHierarchyScene scene;
     private LocalClassMetadata root;
     private List<LocalClassMetadata> roots;
         
-    public ClassHierarchyService() {
+    public ClassHierarchyService(ClassHierarchyScene scene) {
+        this.scene = scene;
         initClassHierarchy();
     }
     
@@ -68,10 +66,6 @@ public class ClassHierarchyService {
         }
     }
     
-    public void setScene(ClassHierarchyScene scene) {
-        this.scene = scene;
-    }
-    
     public void expandClassHierarchy() {
         LocalClassMetadata rootClass = root;
         addSubclasses(rootClass, true);
@@ -84,16 +78,12 @@ public class ClassHierarchyService {
         scene.reorganizeNodes();
     }
     
-    public void addRootClass() {
-        scene.addRootNodeClass(root);
-    }
-    
     public LocalClassMetadata getRootClass() {
         return root;
     }
-        
+            
     private List<LocalClassMetadata> getSubclasses(LocalClassMetadata parent) {
-        List children = new ArrayList();
+        List<LocalClassMetadata> children = new ArrayList();
         for (LocalClassMetadata possibleChild : roots) {
             if (parent.getClassName().equals(possibleChild.getParentName()))
                 children.add(possibleChild);
@@ -125,4 +115,65 @@ public class ClassHierarchyService {
             ((VMDNodeWidget) scene.findWidget(node)).expandWidget();
         scene.reorganizeNodes();
     }
+    
+
+
+    public void refreshScene(List<LocalClassMetadata> classes) {
+        if (classes.remove(root)) {
+            scene.clear();
+            initClassHierarchy(); // Updating the class hierarchy
+            
+            scene.render(root);
+            updateHierarchyRecursive(root, classes);            
+        }
+    }
+    
+    private void findAddedOrRemovedClasses(LocalClassMetadata parent, List<LocalClassMetadata> children, List<LocalClassMetadata> classes) {
+        List<LocalClassMetadata> added = new ArrayList();
+        List<LocalClassMetadata> removed = new ArrayList();
+        // Added
+        for (LocalClassMetadata child : children) {
+            if (!classes.contains(child))
+                added.add(child);
+        }
+        // Removed
+        for (LocalClassMetadata _class : classes) {
+            if (parent.getClassName().equals(_class.getParentName())) {
+                if (!children.contains(_class))
+                    removed.add(_class);
+            }                                                
+        }
+        
+        for (LocalClassMetadata _class : added)
+            classes.add(_class);
+            
+        for (LocalClassMetadata _class : removed)
+            classes.remove(_class);
+    }
+    
+    private void updateHierarchyRecursive(LocalClassMetadata parent, List<LocalClassMetadata> classes) {
+        boolean showSubclasses = false;
+        
+        for (LocalClassMetadata _class : classes) {
+            if (parent.getClassName().equals(_class.getParentName())) {
+                showSubclasses = true;
+                break;
+            }
+        }        
+            
+        if (showSubclasses) {
+            List<LocalClassMetadata> subclasses = getSubclasses(parent);
+            
+            findAddedOrRemovedClasses(root, subclasses, classes);
+            
+            for (LocalClassMetadata subclass : subclasses)
+                classes.remove(subclass);                
+            
+            addSubclasses(parent, false);
+            
+            for (LocalClassMetadata subclass : subclasses)
+                updateHierarchyRecursive(subclass, classes);
+        }
+    }
 }
+

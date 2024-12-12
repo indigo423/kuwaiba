@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -23,7 +23,7 @@ import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.customization.classhierarchy.ClassHierarchyTopComponent;
-import org.inventory.navigation.applicationnodes.classmetadatanodes.ClassMetadataChildren;
+import org.inventory.customization.classhierarchy.nodes.ClassMetadataChildren;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
@@ -50,15 +50,15 @@ iconBase = "org/inventory/customization/datamodelmanager/res/icon.png",
 persistenceType = TopComponent.PERSISTENCE_NEVER)
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Tools", id = "org.inventory.customization.datamodelmanager.DataModelManagerTopComponent")
-@ActionReferences(value = {@ActionReference(path = "Menu/Tools/Administrative/Class Management"),
-    @ActionReference(path = "Toolbars/Tools")} /*, position = 333 */)
+@ActionReferences(value = {@ActionReference(path = "Menu/Tools/Administration"),
+    @ActionReference(path = "Toolbars/04_Customization", position = 1)})
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_DataModelManagerAction",
 preferredID = "DataModelManagerTopComponent")
 @Messages({
     "CTL_DataModelManagerAction=Data Model Manager",
-    "CTL_DataModelManagerTopComponent=DataModel Manager",
-    "HINT_DataModelManagerTopComponent=Update the data model"
+    "CTL_DataModelManagerTopComponent=Data Model Manager",
+    "HINT_DataModelManagerTopComponent=Manage the inventory's data model"
 })
 public final class DataModelManagerTopComponent extends TopComponent 
         implements ExplorerManager.Provider, Refreshable, ActionListener {
@@ -133,21 +133,53 @@ public final class DataModelManagerTopComponent extends TopComponent
         lblSearch.setPreferredSize(new java.awt.Dimension(70, 15));
         toolBarMain.add(lblSearch);
 
+        cmbClassList.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                cmbClassListMouseClicked(evt);
+            }
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                cmbClassListMouseEntered(evt);
+            }
+        });
         toolBarMain.add(cmbClassList);
 
         add(toolBarMain, java.awt.BorderLayout.PAGE_START);
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnshowClassHierarchyViewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnshowClassHierarchyViewActionPerformed
-        TopComponent tc = new ClassHierarchyTopComponent();
-        tc.open();
-        tc.requestActive();
-        tc.requestAttention(true);
+        ClassHierarchyTopComponent classHierarchyTC = (ClassHierarchyTopComponent) 
+            WindowManager.getDefault().findTopComponent("ClassHierarchyTopComponent");
+            
+            if (classHierarchyTC == null) {
+                classHierarchyTC = new ClassHierarchyTopComponent();
+                classHierarchyTC.open();
+            } else {
+                if (classHierarchyTC.isOpened())
+                    classHierarchyTC.requestAttention(true);
+                else { //Even after closed, the TCs (even the no-singletons) continue to exist in the NBP's PersistenceManager registry, 
+                       //so we will reuse the instance, refreshing the vierw first
+                    classHierarchyTC.refresh();
+                    classHierarchyTC.open();
+                }
+            }
+            classHierarchyTC.requestActive();
     }//GEN-LAST:event_btnshowClassHierarchyViewActionPerformed
 
     private void btndefaultDataModelManagetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btndefaultDataModelManagetActionPerformed
-        cmbClassList.setSelectedItem(null);
+        LocalClassMetadataLight[] allMeta = dmms.getRootChildren();
+        em.setRootContext(new AbstractNode(new ClassMetadataChildren(allMeta)));
     }//GEN-LAST:event_btndefaultDataModelManagetActionPerformed
+
+    private void cmbClassListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_cmbClassListMouseClicked
+        cmbClassList.removeAllItems();
+        cmbClassList.addItem(null);
+        for (LocalClassMetadataLight node : dmms.getRoots())
+            cmbClassList.addItem(node);
+    }//GEN-LAST:event_cmbClassListMouseClicked
+
+    private void cmbClassListMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_cmbClassListMouseEntered
+        
+    }//GEN-LAST:event_cmbClassListMouseEntered
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btndefaultDataModelManaget;
@@ -220,12 +252,7 @@ public final class DataModelManagerTopComponent extends TopComponent
     
     public void comboBoxChanged(ActionEvent e) {
         LocalClassMetadataLight selectedItem = (LocalClassMetadataLight) ((JComboBox)e.getSource()).getSelectedItem();
-        if (selectedItem != null) 
+        if (selectedItem != null)
             em.setRootContext(new AbstractNode(new ClassMetadataChildren(new LocalClassMetadataLight []{selectedItem})));
-        else {
-            LocalClassMetadataLight[] allMeta = dmms.getRootChildren();
-            em.setRootContext(new AbstractNode(new ClassMetadataChildren(allMeta)));
-        }
-            
     }
 }

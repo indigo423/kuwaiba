@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.templates.nodes.actions.TemplateActionsFactory;
-import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
+import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Node;
 import org.openide.util.lookup.Lookups;
 
 /**
- * A simple node representing an instanceable inventory class
+ * A simple node representing an instanceable inventory class for the Templates module
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class TemplatesModuleClassNode extends AbstractNode {
@@ -59,26 +59,27 @@ public class TemplatesModuleClassNode extends AbstractNode {
         return defaultIcon;
     }
     
-    
-    
     public static class ClassChildren extends AbstractChildren {
 
         @Override
         public void addNotify() {
             LocalClassMetadataLight classMetadata = getNode().getLookup().lookup(LocalClassMetadataLight.class);
-            List<LocalObjectLight> templatesForClass = CommunicationsStub.getInstance().
-                    getTemplatesForClass(classMetadata.getClassName());
-            
-            if (templatesForClass == null) {
+                        
+            List<LocalObjectLight> templates = CommunicationsStub.getInstance()
+                .getTemplatesForClass(classMetadata.getClassName(), true);
+                        
+            if (templates == null) {
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                 setKeys(Collections.EMPTY_SET);
-            } else
-                setKeys(templatesForClass);
+            } else {
+                Collections.sort(templates);
+                setKeys(templates);
+            }
         }
     
         @Override
         protected Node[] createNodes(LocalObjectLight t) {
-            return new Node[] {new TemplateElementNode(t)};
+            return new Node[] { new TemplateElementNode(t) };
         }
     }
 }

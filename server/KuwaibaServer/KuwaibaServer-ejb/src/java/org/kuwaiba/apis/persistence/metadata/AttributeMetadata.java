@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,6 +17,9 @@
 package org.kuwaiba.apis.persistence.metadata;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import org.kuwaiba.ws.toserialize.metadata.AttributeInfo;
 
 /**
  * Contains the detailed metadata information about a class attribute
@@ -26,7 +29,7 @@ public class AttributeMetadata implements Serializable {
     /**
      * Integer, Float, Long, Boolean, String or Text
      */
-    public static final int MAPPING_PRIMITIVE = 1;
+    //public static final int MAPPING_PRIMITIVE = 1;
     /**
      * Dates
      */
@@ -68,6 +71,10 @@ public class AttributeMetadata implements Serializable {
      */
     private String description;
     /**
+     * Marks the attribute as mandatory
+     */
+    private Boolean mandatory; 
+    /**
      * Marks the attribute as unique
      */
     private Boolean unique;
@@ -89,8 +96,9 @@ public class AttributeMetadata implements Serializable {
     private Boolean locked;
     /**
      * The attribute mapping, that is, how should it be interpreted by a parser. See MAPPING_XXXX  constants for possible values
+     * @return If this attribute is marked as administrative or not
      */
-    private int mapping;
+    //private int mapping;
     // <editor-fold defaultstate="collapsed" desc="getters and setters methods. Click on the + sign on the left to edit the code.">
     public Boolean isAdministrative() {
         return administrative;
@@ -148,6 +156,14 @@ public class AttributeMetadata implements Serializable {
         this.visible = visible;
     }
 
+    public Boolean isMandatory() {
+        return mandatory;
+    }
+
+    public void setMandatory(Boolean mandatory) {
+        this.mandatory = mandatory;
+    }
+
     public Boolean isUnique() {
         return unique;
     }
@@ -188,13 +204,13 @@ public class AttributeMetadata implements Serializable {
         this.locked = locked;
     }
 
-    public int getMapping() {
-        return mapping;
-    }
-
-    public void setMapping(int mapping) {
-        this.mapping = mapping;
-    }
+//    public int getMapping() {
+//        return mapping;
+//    }
+//
+//    public void setMapping(int mapping) {
+//        this.mapping = mapping;
+//    }
     // </editor-fold>
     
     @Override
@@ -225,5 +241,17 @@ public class AttributeMetadata implements Serializable {
         return type.equals("String") || type.equals("Integer") || type.equals("Float") 
                 || type.equals("Long") || type.equals("Boolean") || type.equals("Date")
                 || type.equals("Timestamp");
+    }
+    
+    public static List<AttributeInfo> toAttributeInfo(List<AttributeMetadata> toBeWrapped){
+        if (toBeWrapped == null)
+            return null;
+        
+        List<AttributeInfo> res = new ArrayList<>();
+        
+        for (AttributeMetadata toBeWrapped1 : toBeWrapped) 
+            res.add(new AttributeInfo(toBeWrapped1.getName(), toBeWrapped1.getDisplayName(), toBeWrapped1.getType(), toBeWrapped1.isAdministrative(), toBeWrapped1.isVisible(), toBeWrapped1.isUnique(), toBeWrapped1.isMandatory(), toBeWrapped1.getDescription()));
+        
+        return res;
     }
 }

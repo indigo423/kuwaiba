@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package com.neotropic.kuwaiba.modules.reporting;
 
 /**
  * All report types must inherit from this abstract class. It describes the general behavior of a report. 
- * @author duckman
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public abstract class InventoryReport {
     /**

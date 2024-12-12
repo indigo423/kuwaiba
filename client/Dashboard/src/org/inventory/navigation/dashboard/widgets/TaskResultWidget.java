@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,12 +90,6 @@ public class TaskResultWidget extends AbstractWidget {
         
         JScrollPane pnlScrollMain = new JScrollPane();
         
-        //Apparently, you can't use the same instance for different orientations
-        pnlScrollMain.getHorizontalScrollBar().setUI(DashboardWidgetUtilities.createSimpleScrollBarUI(
-                DashboardWidgetUtilities.DARK_GREEN, DashboardWidgetUtilities.LIGHT_GREEN, DashboardWidgetUtilities.GREEN));
-        pnlScrollMain.getVerticalScrollBar().setUI(DashboardWidgetUtilities.createSimpleScrollBarUI(
-                DashboardWidgetUtilities.DARK_GREEN, DashboardWidgetUtilities.LIGHT_GREEN, DashboardWidgetUtilities.GREEN));
-        
         add(pnlScrollMain);
                 
         JPanel pnlInner = new JPanel(new GridBagLayout());
@@ -108,7 +102,7 @@ public class TaskResultWidget extends AbstractWidget {
         //The horizontal fill is a general setting
         layoutConstraints.fill = GridBagConstraints.HORIZONTAL;
               
-        //Lets configure how the title will be placed
+        //Let's configure how the title will be placed
         layoutConstraints.gridx = 0;
         layoutConstraints.gridy = 0;
 

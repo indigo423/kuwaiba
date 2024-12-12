@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ public interface Constants {
     /**
      * Server version
      */
-    public static final String SERVER_VERSION = "1.1.1";
+    public static final String SERVER_VERSION = "1.5";
     /**
      * Max icon size in bytes
      */

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
@@ -236,7 +236,7 @@ public class Utils {
      * @param format format to be read
      * @return The byte array
      */
-    public static byte[] getByteArrayFromFile(File f) throws IOException{
+    public static byte[] getByteArrayFromFile(File f) throws IOException {
         InputStream is = new FileInputStream(f);
         long length = f.length();
         byte[] bytes;
@@ -286,27 +286,6 @@ public class Utils {
     }
 
     /**
-     * This method receives two conjuncts and extract the elements that are not common among them
-     * @param groupA
-     * @param groupB
-     * @return An array of two positions with the remaining elements in the set A and the second with the B's elements
-     */
-    public static Collection[] inverseIntersection(Collection groupA, Collection groupB){
-        for (Object elementA : groupA){
-            for (Object elementB : groupB){
-                if (elementA.equals(elementB)){
-                    List<Object> myGroupA = new ArrayList<>(groupA);
-                    List<Object> myGroupB = new ArrayList<>(groupB);
-                    myGroupA.remove(elementA);
-                    myGroupB.remove(elementB);
-                    return inverseIntersection(myGroupA, myGroupB);
-                }
-            }
-        }
-        return new Collection[]{groupA,groupB};
-    }
-
-    /**
      * Returns string based on a given color. For now is pretty simple making a plain comparison
      * it could be extended by guessing the name base on the RGB value
      * @param value The color to be evaluated
@@ -334,27 +313,6 @@ public class Utils {
                                         if (value.equals(Color.yellow))
                                             return "Yellow";
         return "Other";
-    }
-    
-    /**
-     * Returns the color that should be used to render a connection
-     * @param connectionClass The class of the connection 
-     * @return The corresponding color
-     */
-    public static Color getConnectionColor(String connectionClass){
-        if (connectionClass.equals(Constants.CLASS_ELECTRICALLINK))
-            return Color.ORANGE;
-        if (connectionClass.equals(Constants.CLASS_OPTICALLINK))
-            return Color.GREEN;
-        if (connectionClass.equals(Constants.CLASS_WIRELESSLINK))
-            return Color.MAGENTA;
-        if (connectionClass.equals(Constants.CLASS_POWERLINK))
-            return Color.YELLOW;
-        if (connectionClass.equals(Constants.CLASS_WIRECONTAINER))
-            return Color.RED;
-        if (connectionClass.equals(Constants.CLASS_WIRELESSCONTAINER))
-            return Color.BLUE;
-        return Color.BLACK;
     }
     
     /**
@@ -394,5 +352,27 @@ public class Utils {
         }
         
         throw new IllegalArgumentException(String.format("List type %s with id %s could not be found", listTypeClass, listTypeItemId));
+    }
+
+    /**
+     * Outputs as a string a list of inventory objects (usually a list of parents in the containment hierarchy)
+     * @param objectList The list of objects
+     * @param startFromTheLast The output string should start from the first or the last object?
+     * @param howManyToShow How many elements should be displayed? used -1 to show all
+     * @return A string with the names of the objects concatenated with a "/" as separator
+     */
+    public static String formatObjectList(List<LocalObjectLight> objectList, boolean startFromTheLast, int howManyToShow) {
+        if (startFromTheLast)
+            Collections.reverse(objectList);
+        
+        String outputString = "";
+        int i;
+        
+        for (i = 0;  i <  ((howManyToShow == -1 || howManyToShow >= objectList.size()) ? objectList.size() - 1 : howManyToShow - 1); i++) 
+            outputString += objectList.get(i) + " / ";
+        
+        
+        outputString += objectList.get(i);
+        return outputString;
     }
 }

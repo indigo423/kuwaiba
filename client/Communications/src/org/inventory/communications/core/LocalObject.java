@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,10 +15,14 @@
  */
 package org.inventory.communications.core;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
+import org.inventory.communications.wsclient.RemoteObject;
+import org.inventory.communications.wsclient.StringArray;
 
 /**
  * Represents the whole information related to an object. Instances if this class
@@ -99,5 +103,14 @@ public class LocalObject extends LocalObjectLight {
     @Override
     public String getName() {
         return (String)getAttribute(Constants.PROPERTY_NAME);
+    }
+    
+    public static LocalObject toLocalObject(RemoteObject remoteObject) {
+        LocalClassMetadata lcmd = CommunicationsStub.getInstance().getMetaForClass(remoteObject.getClassName(), false);
+            List<List<String>> values = new ArrayList<>();
+            for (StringArray value : remoteObject.getValues())
+                values.add(value.getItem());
+        return new LocalObject(remoteObject.getClassName(), remoteObject.getOid(), 
+                remoteObject.getAttributes(), values, lcmd);
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.util.Constants;
-import org.inventory.navigation.applicationnodes.objectnodes.properties.DatePickerPropertyEditorSupport;
+import org.inventory.navigation.navigationtree.nodes.properties.DatePickerPropertyEditorSupport;
 import org.openide.nodes.PropertySupport;
 
 /**

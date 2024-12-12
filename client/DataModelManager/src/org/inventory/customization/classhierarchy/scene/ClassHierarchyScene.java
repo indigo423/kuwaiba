@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.visual.actions.providers.CustomSelectProvider;
 import org.inventory.core.visual.scene.AbstractScene;
 import org.inventory.core.visual.scene.SelectableVMDNodeWidget;
-import org.inventory.customization.classhierarchy.actions.ClassHierarchyActions;
+import org.inventory.customization.classhierarchy.nodes.ClassMetadataNode;
+import org.inventory.customization.classhierarchy.scene.menus.ClassMetadataWidgetMenu;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.action.WidgetAction;
@@ -36,8 +37,6 @@ import org.netbeans.api.visual.graph.layout.GraphLayoutSupport;
 import org.netbeans.api.visual.layout.LayoutFactory;
 import org.netbeans.api.visual.layout.SceneLayout;
 import org.netbeans.api.visual.router.RouterFactory;
-import org.netbeans.api.visual.vmd.VMDColorScheme;
-import org.netbeans.api.visual.vmd.VMDFactory;
 import org.netbeans.api.visual.vmd.VMDNodeWidget;
 import org.netbeans.api.visual.vmd.VMDPinWidget;
 import org.netbeans.api.visual.widget.ConnectionWidget;
@@ -49,21 +48,14 @@ import org.netbeans.api.visual.widget.Widget;
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
 public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, String> {
+    public static final String COMMAND_EXPAND = "expandClassHierarchy";
     private SceneLayout sceneLayout;
-    private WidgetAction selectAction;
-    
-    private ClassHierarchyActions actions;
-    
-    public ClassHierarchyScene(LocalClassMetadata root) {
-        this(VMDFactory.getOriginalScheme(), root);
-    }
-    
-    private ClassHierarchyScene(VMDColorScheme scheme, LocalClassMetadata root) {
+    private final WidgetAction selectAction;
+        
+    public ClassHierarchyScene() {
         nodeLayer = new LayerWidget(this);
         edgeLayer = new LayerWidget(this);
-        
-        actions = new ClassHierarchyActions(this);
-        
+                
         addChild(nodeLayer);
         addChild(edgeLayer);
         
@@ -72,45 +64,17 @@ public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, Strin
         getActions().addAction(ActionFactory.createZoomAction());
         getActions().addAction(ActionFactory.createPanAction());
     }
-    
-    public void setSceneLayout(LocalClassMetadata root) {
-        int originX = 50; ///TODO: to improve the value of orginX
-        GraphLayout<LocalClassMetadata, String> layout = GraphLayoutFactory.createTreeGraphLayout(originX, 50, 100, 50, true, true);
-        GraphLayoutSupport.setTreeGraphLayoutRootNode(layout, root);
-        sceneLayout = LayoutFactory.createSceneGraphLayout(this, layout);
-    }
-    
-    public void addRootNodeClass(LocalClassMetadata root) {
-        VMDNodeWidget nodeWidget = (VMDNodeWidget) addNode(root);
-        nodeWidget.collapseWidget();
         
-        VMDPinWidget pinWidget = new VMDPinWidget(this);
-        nodeWidget.attachPinWidget(pinWidget);
-        
-        int length = root.getAttributeNames().length;
-        for (int i = 0; i < length; i += 1) {
-            String attributeName = root.getAttributeNames()[i];
-            String attributeType = root.getAttributeTypes()[i];
-            
-            String attributePin = String.format("%s [%s]", attributeName, attributeType);
-            
-            pinWidget.setPinName(attributePin);
-        }        
-        validate();
-        sceneLayout.invokeLayout();
-        repaint();
-    }
-    
     public void createSubHierarchyRecursively(LocalClassMetadata rootClass, List<LocalClassMetadata> subclasses, boolean recursive) {
         for (LocalClassMetadata subclass : subclasses) {
             if (findWidget(subclass) == null) {
                 VMDNodeWidget nodeWidget = (SelectableVMDNodeWidget) addNode(subclass);
                 nodeWidget.collapseWidget();
                 
-                int length = subclass.getAttributeNames().length;
+                int length = subclass.getAttributesNames().length;
                 for (int i = 0; i < length; i += 1) {
-                    String attributeName = subclass.getAttributeNames()[i];
-                    String attributeType = subclass.getAttributeTypes()[i];
+                    String attributeName = subclass.getAttributesNames()[i];
+                    String attributeType = subclass.getAttributesTypes()[i];
                     
                     String attributePin = String.format("%s [%s]", attributeName, attributeType);
                     
@@ -128,7 +92,7 @@ public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, Strin
                 setEdgeTarget(edge, subclass);
             }
             if (recursive)
-                fireChangeEvent(new ActionEvent(subclass, AbstractScene.SCENE_CHANGE, "expandClassHierarchy"));
+                fireChangeEvent(new ActionEvent(subclass, AbstractScene.SCENE_CHANGE, ClassHierarchyScene.COMMAND_EXPAND));
         }
     }
     
@@ -163,12 +127,12 @@ public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, Strin
 
     @Override
     protected Widget attachNodeWidget(LocalClassMetadata node) {
-        VMDNodeWidget nodeWidget = new SelectableVMDNodeWidget(this, node);
+        VMDNodeWidget nodeWidget = new SelectableVMDNodeWidget(this, new ClassMetadataNode(node));
         
         nodeWidget.setNodeName(node.isAbstract() ?  node.getClassName() + " [Abstract]" : node.getClassName());
         nodeWidget.getActions().addAction(selectAction);
         nodeWidget.getActions().addAction(ActionFactory.createMoveAction());
-        nodeWidget.getActions().addAction(ActionFactory.createPopupMenuAction(actions.createMenuForNode()));
+        nodeWidget.getActions().addAction(ActionFactory.createPopupMenuAction(ClassMetadataWidgetMenu.getInstance()));
         nodeLayer.addChild(nodeWidget);
         
         return nodeWidget;
@@ -194,8 +158,6 @@ public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, Strin
         ConnectionWidget connectionWidget = (ConnectionWidget) findWidget(edge);
         Widget sourceWidget = findWidget(sourceNode);
         connectionWidget.setSourceAnchor(sourceWidget != null ? AnchorFactory.createDirectionalAnchor(sourceWidget, AnchorFactory.DirectionalAnchorKind.VERTICAL) : null);
-        
-
     }
 
     @Override
@@ -207,6 +169,35 @@ public class ClassHierarchyScene extends AbstractScene<LocalClassMetadata, Strin
         
     public void reorganizeNodes() {
         sceneLayout.invokeLayoutImmediately();
+        repaint();
+    }
+    
+    @Override
+    public void render(LocalClassMetadata root) {
+        // Fix Scene Layout
+        int originX = 150; ///TODO: to improve the value of orginX
+        int originY = 50; ///TODO: to improve the value of orginX
+        GraphLayout<LocalClassMetadata, String> layout = GraphLayoutFactory.createTreeGraphLayout(originX, originY, 100, 50, true, true);
+        GraphLayoutSupport.setTreeGraphLayoutRootNode(layout, root);
+        sceneLayout = LayoutFactory.createSceneGraphLayout(this, layout);
+        // Adding Root Node Class       
+        VMDNodeWidget nodeWidget = (VMDNodeWidget) addNode(root);
+        nodeWidget.collapseWidget();
+        
+        VMDPinWidget pinWidget = new VMDPinWidget(this);
+        nodeWidget.attachPinWidget(pinWidget);
+        
+        int length = root.getAttributesNames().length;
+        for (int i = 0; i < length; i += 1) {
+            String attributeName = root.getAttributesNames()[i];
+            String attributeType = root.getAttributesTypes()[i];
+            
+            String attributePin = String.format("%s [%s]", attributeName, attributeType);
+            
+            pinWidget.setPinName(attributePin);
+        }        
+        validate();
+        sceneLayout.invokeLayout();
         repaint();
     }
 }

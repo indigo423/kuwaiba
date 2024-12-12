@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 
 package org.kuwaiba.apis.persistence.exceptions;
 
-import java.util.ResourceBundle;
-
 /**
  * Thrown when a certain property is not known or currently supported
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class UnsupportedPropertyException extends InventoryException{
 
-    public UnsupportedPropertyException(String propertyName) {
-        super(ResourceBundle.getBundle("org/kuwaiba/internationalization/Bundle").
-                getString("LBL_UNSUPPORTEDPROPERTY") + propertyName);
+    public UnsupportedPropertyException(String propertyName, String className) {
+        super(String.format("Unsupported property %s in %s", propertyName, className));
     }
 
+    public UnsupportedPropertyException(String propertyName) {
+        super(String.format("Usupported property %s", propertyName));
+    }
 }

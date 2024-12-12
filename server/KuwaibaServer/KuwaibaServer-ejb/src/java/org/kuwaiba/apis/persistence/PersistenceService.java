@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.kuwaiba.apis.persistence;
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
 import com.neotropic.kuwaiba.modules.ipam.IPAMModule;
 import com.neotropic.kuwaiba.modules.mpls.MPLSModule;
+import com.neotropic.kuwaiba.modules.projects.ProjectsModule;
 import com.neotropic.kuwaiba.modules.sdh.SDHModule;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Calendar;
@@ -81,7 +82,7 @@ public class PersistenceService {
             applicationConfiguration.put("backgroundsPath", configuration.getProperty("backgroundsPath"));
             applicationConfiguration.put("corporateLogo", configuration.getProperty("corporateLogo"));
             aem.setConfiguration(applicationConfiguration);
-            mem = plf.createMetadataEntityManager(connectionManager, aem);
+            mem = plf.createMetadataEntityManager(connectionManager);
             bem = plf.createBusinessEntityManager(connectionManager, aem, mem);
             dataModelLoader = new DataModelLoader(connectionManager, mem);
             //dataIntegrityService = new DataIntegrityService(connectionManager);
@@ -91,6 +92,7 @@ public class PersistenceService {
             aem.registerCommercialModule(new IPAMModule());
             aem.registerCommercialModule(new SDHModule());
             aem.registerCommercialModule(new MPLSModule());
+            aem.registerCommercialModule(new ProjectsModule());
             
             for (GenericCommercialModule aModule : aem.getCommercialModules()) {
                 System.out.println(String.format("[KUWAIBA]   [%s]  %s %s by %s", Calendar.getInstance().getTime(), aModule.getName(), aModule.getVersion(), aModule.getVendor()));

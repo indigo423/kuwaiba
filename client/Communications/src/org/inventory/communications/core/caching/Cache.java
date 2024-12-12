@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.communications.core.LocalClassMetadataLight;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.core.LocalReportLight;
 import org.inventory.communications.core.LocalUserGroupObject;
@@ -36,8 +37,10 @@ public class Cache{
     private HashMap<String,LocalClassMetadata> metadataIndex; //Cache for metadata (the complete metadata information)
     private HashMap<String,LocalClassMetadataLight> lightMetadataIndex; //Cache for lightmetadata (usually for administrative purposes)
     private HashMap<String,List<LocalClassMetadataLight>> possibleChildrenIndex; //Cache for possible children
+    private HashMap<String, List<LocalClassMetadataLight>> possibleSpecialChildrenIndex; //Cache for possible special children
     private HashMap<String,List<LocalObjectListItem>> listIndex; //Cache for list-type attributes
     private HashMap<String, List<LocalReportLight>> reportIndex; //Cache for class reports
+    private HashMap<String, List<LocalObjectLight>> templateIndex; //Cache for templates
     
     private Long rootClassId = null;
     /**
@@ -53,8 +56,10 @@ public class Cache{
         this.metadataIndex = new HashMap<>();
         this.lightMetadataIndex = new HashMap<>();
         this.possibleChildrenIndex = new HashMap<>();
+        this.possibleSpecialChildrenIndex = new HashMap<>();
         this.listIndex = new HashMap<>();
         this.reportIndex = new HashMap<>();
+        this.templateIndex = new HashMap<>();
     }
 
     /**
@@ -94,12 +99,22 @@ public class Cache{
     }
 
     public LocalClassMetadataLight[] getLightMetadataIndex() {
-        return metadataIndex.values().toArray(new LocalClassMetadataLight[0]);
+        return lightMetadataIndex.values().toArray(new LocalClassMetadataLight[0]);
     }
-
+    
+    public LocalClassMetadataLight getLightMetaForClass(String className) {
+        if (className == null)
+            return null;
+        return lightMetadataIndex.get(className);
+    }
+    
     public void addLightMeta(LocalClassMetadataLight[] all){
         for (LocalClassMetadataLight lcml : all)
             this.lightMetadataIndex.put(lcml.getClassName(), lcml);
+    }
+    
+    public void removeLightMeta(String className) {
+        lightMetadataIndex.remove(className);
     }
 
     public void addPossibleChildrenCached(String className, List<LocalClassMetadataLight> children){
@@ -121,9 +136,48 @@ public class Cache{
             return null;
         return possibleChildrenIndex.get(className);
     }
-
+        
     public HashMap<String, List<LocalClassMetadataLight>> getAllPossibleChildren() {
         return possibleChildrenIndex;
+    }
+    
+    public void addPossibleSpecialChildrenCached(String className, List<LocalClassMetadataLight> specialChildren) {
+        List<LocalClassMetadataLight> toBeAdded = new ArrayList<>();
+        for (LocalClassMetadataLight lcml : specialChildren) {
+            LocalClassMetadataLight myLocal = lightMetadataIndex.get(lcml.getClassName());
+            if (myLocal == null) {
+                lightMetadataIndex.put(lcml.getClassName(), lcml);
+                toBeAdded.add(lcml);
+            } else
+                toBeAdded.add(myLocal); //We reuse the instance in the light metadata index
+        }
+        possibleSpecialChildrenIndex.put(className, toBeAdded);
+    }
+    
+    public List<LocalClassMetadataLight> getPossibleSpecialChildrenCached(String className) {
+        if (className == null)
+            return null;
+        return possibleSpecialChildrenIndex.get(className);
+    }
+    
+    public HashMap<String, List<LocalClassMetadataLight>> getAllPossibleSpecialChildren() {
+        return possibleSpecialChildrenIndex;
+    }
+    
+    public List<LocalObjectLight> getTemplatesForClass(String className) {
+        return templateIndex.get(className);
+    }
+    
+    public void addTemplateForClass(String className, List<LocalObjectLight> templates) {
+        templateIndex.put(className, templates);
+    }
+    
+    public void removeTemplateForClass(String className) {
+        templateIndex.remove(className);
+    }
+    
+    public void resetTemplateCache() {
+        templateIndex.clear();
     }
 
     public List<LocalObjectListItem> getListCached(String className){
@@ -144,7 +198,7 @@ public class Cache{
         reportIndex.put(className, reports);
     }
 
-    public HashMap<String, List<LocalObjectListItem>> getAllList() {
+    public HashMap<String, List<LocalObjectListItem>> getAllListTypes() {
         return listIndex;
     }
     
@@ -171,7 +225,7 @@ public class Cache{
     /**
      * Resets de cached list types
      */
-    public void resetLists() {
+    public void resetListTypeCache() {
         listIndex.clear();
     }
 
@@ -181,33 +235,42 @@ public class Cache{
     public void resetPossibleChildrenCached() {
         possibleChildrenIndex.clear();
     }
+    
+    /**
+     * Resets the cached possible children
+     */
+    public void resetPossibleSpecialChildrenCached() {
+        possibleSpecialChildrenIndex.clear();
+    }
 
     /**
      * Resets the cached light class metadata
      */
-    public void resetLightMetadataIndex() {
+    public void resetLightMetadataCache() {
         lightMetadataIndex.clear();
     }
 
     /**
      * Resets the cached class metadata
      */
-    public void resetMetadataIndex(){
+    public void resetMetadataCache(){
         metadataIndex.clear();
     }
     
     /**
      * Resets cached class reports
      */
-    public void resetReportIndex(){
+    public void resetReportCache(){
         reportIndex.clear();
     }
     
     public void resetAll(){
         listIndex.clear();
         possibleChildrenIndex.clear();
+        possibleSpecialChildrenIndex.clear();
         metadataIndex.clear();
         lightMetadataIndex.clear();
         reportIndex.clear();
+        templateIndex.clear();
     }
 }

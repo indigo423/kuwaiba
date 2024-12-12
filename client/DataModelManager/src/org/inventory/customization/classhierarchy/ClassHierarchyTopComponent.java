@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import javax.swing.AbstractAction;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -47,6 +46,8 @@ import org.inventory.core.visual.export.filters.ImageFilter;
 import org.inventory.core.visual.export.filters.SceneExportFilter;
 import org.inventory.core.visual.scene.AbstractScene;
 import org.inventory.customization.classhierarchy.scene.ClassHierarchyScene;
+import org.inventory.customization.classhierarchy.scene.actions.HideSubclassAction;
+import org.inventory.customization.classhierarchy.scene.actions.ShowSubclassAction;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.netbeans.api.visual.widget.Widget;
 import org.openide.*;
@@ -54,7 +55,7 @@ import org.openide.explorer.ExplorerManager;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 /**
- * Top component which displays Class Hierarchy View.
+ * Top component to display the Class Hierarchy in a scene.
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
 @ConvertAsProperties(
@@ -67,16 +68,7 @@ import org.openide.util.NbBundle.Messages;
         persistenceType = TopComponent.PERSISTENCE_NEVER
 )
 @TopComponent.Registration(mode = "editor", openAtStartup = false)
-//@ActionID(category= "Tools", id = "org.inventory.customization.classhierarchy.ClassHierarchyTopComponent")
-//@ActionReference(path = "Menu/Tools/Administrative/Class Management" /*, position = 333 */)
-//@ActionReferences(value = {@ActionReference(path = "Menu/Tools/Administrative/Class Management") , 
-//    @ActionReference(path = "Toolbars/Tools")})
-@TopComponent.OpenActionRegistration(
-        displayName = "#CTL_ClassHierarchyAction",
-        preferredID = "ClassHierarchyTopComponent"
-)
 @Messages({
-    "CTL_ClassHierarchyAction=Class Hierarchy View",
     "CTL_ClassHierarchyTopComponent=Class Hierarchy View",
     "HINT_ClassHierarchyTopComponent=Update Class Hierarchy View"
 })
@@ -95,10 +87,10 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
     
     private void initComponentsCustom() {
         em = new ExplorerManager();
-        service = new ClassHierarchyService();
-        scene = new ClassHierarchyScene(service.getRootClass());
-        service.setScene(scene);
-                        
+        
+        scene = new ClassHierarchyScene();
+        service = new ClassHierarchyService(scene);
+                                
         associateLookup(scene.getLookup());
         pnlMainScrollPane.setViewportView(scene.createView());
         add(scene.createSatelliteView(), BorderLayout.SOUTH);
@@ -119,6 +111,7 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
         btnOrganize = new javax.swing.JButton();
         btnExportAsImage = new javax.swing.JButton();
         btnExportAsXML = new javax.swing.JButton();
+        btnRefresh = new javax.swing.JButton();
         layeredPaneLbl = new javax.swing.JLayeredPane();
         lblLocate = new javax.swing.JLabel();
         layeredPaneCmb = new javax.swing.JLayeredPane();
@@ -128,7 +121,6 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
         setLayout(new java.awt.BorderLayout());
 
         toolMain.setRollover(true);
-        toolMain.setAlignmentY(0.5F);
         toolMain.setMaximumSize(new java.awt.Dimension(392, 38));
         toolMain.setMinimumSize(new java.awt.Dimension(392, 38));
         toolMain.setPreferredSize(new java.awt.Dimension(326, 33));
@@ -151,7 +143,7 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
         toolMain.add(btnExpand);
         btnExpand.getAccessibleContext().setAccessibleName(org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnExpand.AccessibleContext.accessibleName")); // NOI18N
 
-        btnCollapse.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/customization/classhierarchy/res/collase.png"))); // NOI18N
+        btnCollapse.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/customization/classhierarchy/res/collapse.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnCollapse, org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnCollapse.text_1")); // NOI18N
         btnCollapse.setToolTipText(org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnCollapse.toolTipText")); // NOI18N
         btnCollapse.setActionCommand(org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnCollapse.actionCommand")); // NOI18N
@@ -236,6 +228,23 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
         });
         toolMain.add(btnExportAsXML);
 
+        btnRefresh.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/customization/classhierarchy/res/refresh.png"))); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(btnRefresh, org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnRefresh.text")); // NOI18N
+        btnRefresh.setToolTipText(org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnRefresh.toolTipText")); // NOI18N
+        btnRefresh.setActionCommand(org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.btnRefresh.actionCommand")); // NOI18N
+        btnRefresh.setFocusable(false);
+        btnRefresh.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        btnRefresh.setMaximumSize(new java.awt.Dimension(34, 34));
+        btnRefresh.setMinimumSize(new java.awt.Dimension(34, 34));
+        btnRefresh.setPreferredSize(new java.awt.Dimension(34, 34));
+        btnRefresh.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        btnRefresh.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnRefreshActionPerformed(evt);
+            }
+        });
+        toolMain.add(btnRefresh);
+
         layeredPaneLbl.setLayout(new java.awt.BorderLayout());
 
         org.openide.awt.Mnemonics.setLocalizedText(lblLocate, org.openide.util.NbBundle.getMessage(ClassHierarchyTopComponent.class, "ClassHierarchyTopComponent.lblLocate.text")); // NOI18N
@@ -265,7 +274,8 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
     }//GEN-LAST:event_btnOrganizeActionPerformed
 
     private void btnExportAsImageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportAsImageActionPerformed
-        ExportScenePanel exportPanel = new ExportScenePanel(new SceneExportFilter[]{ImageFilter.getInstance()}, scene);
+        ExportScenePanel exportPanel = new ExportScenePanel(new SceneExportFilter[]{ ImageFilter.getInstance() }, 
+                scene, "class_hierarchy");
         DialogDescriptor dd = new DialogDescriptor(exportPanel, "Export options", true, exportPanel);
         DialogDisplayer.getDefault().createDialog(dd).setVisible(true);
     }//GEN-LAST:event_btnExportAsImageActionPerformed
@@ -333,12 +343,17 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
         service.showAllAttributes();
     }//GEN-LAST:event_btnShowAttributesActionPerformed
 
+    private void btnRefreshActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRefreshActionPerformed
+        refresh();        
+    }//GEN-LAST:event_btnRefreshActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnCollapse;
     private javax.swing.JButton btnExpand;
     private javax.swing.JButton btnExportAsImage;
     private javax.swing.JButton btnExportAsXML;
     private javax.swing.JButton btnOrganize;
+    private javax.swing.JButton btnRefresh;
     private javax.swing.JButton btnShowAttributes;
     private javax.swing.JComboBox cmbClassList;
     private javax.swing.JLayeredPane layeredPaneCmb;
@@ -349,9 +364,7 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {
-        scene.setSceneLayout(service.getRootClass());
-        service.addRootClass();
-        
+        scene.render(service.getRootClass());
         scene.addChangeListener(this);
         
         cmbClassList.addActionListener(this);               
@@ -360,6 +373,8 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
     
     @Override
     public void componentClosed() {
+        cmbClassList.removeActionListener(this);
+        cmbClassList.removeAllItems();
         scene.removeAllListeners();
         scene.clear();
     }
@@ -383,17 +398,17 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getActionCommand().equals("showSubclasses")) {
+        if (e.getActionCommand().equals(ShowSubclassAction.COMMAND)) {
             service.addSubclasses((LocalClassMetadata) e.getSource(), false);
             listOfClasses();
         }
         
-        if (e.getActionCommand().equals("hideSubclasses")) {
+        if (e.getActionCommand().equals(HideSubclassAction.COMMAND)) {
             service.removeSubclasses((LocalClassMetadata) e.getSource());
             listOfClasses();
         }
         
-        if (e.getActionCommand().equals("expandClassHierarchy")) {
+        if (e.getActionCommand().equals(ClassHierarchyScene.COMMAND_EXPAND)) {
             service.addSubclasses((LocalClassMetadata) e.getSource(), true);
             listOfClasses();
         }
@@ -404,6 +419,14 @@ public final class ClassHierarchyTopComponent extends TopComponent implements Ex
 
     @Override
     public void refresh() {
+        if (isOpened()) {
+            List<LocalClassMetadata> classes = new ArrayList();
+            for (int i = 0; i < cmbClassList.getItemCount(); i += 1)
+                classes.add((LocalClassMetadata) cmbClassList.getItemAt(i));
+
+            service.refreshScene(classes);
+            listOfClasses();
+        }
     }
     
     private void listOfClasses() {

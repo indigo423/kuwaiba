@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+/*
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ public class StartupBean {
             persistenceServiceProperties.setProperty("dbPath", (String)context.lookup("java:comp/env/dbPath")); //NOI18N
             persistenceServiceProperties.setProperty("backgroundsPath", (String)context.lookup("java:comp/env/backgroundsPath")); //NOI18N
             persistenceServiceProperties.setProperty("corporateLogo", (String)context.lookup("java:comp/env/corporateLogo")); //NOI18N
+            persistenceServiceProperties.setProperty("enforceBusinessRules", (String)context.lookup("java:comp/env/enforceBusinessRules")); //NOI18N
             persistenceService.setConfiguration(persistenceServiceProperties);
             persistenceService.start();
         }catch (IllegalStateException ise) {

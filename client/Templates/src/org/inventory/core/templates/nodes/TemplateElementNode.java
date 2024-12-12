@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.templates.nodes.actions.TemplateActionsFactory;
 import org.inventory.core.templates.nodes.properties.ListTypeProperty;
 import org.inventory.core.templates.nodes.properties.PrimitiveTypeProperty;
-import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
+import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.openide.actions.CopyAction;
 import org.openide.actions.PasteAction;
 import org.openide.nodes.AbstractNode;
@@ -47,6 +47,7 @@ import org.openide.nodes.Node;
 import org.openide.nodes.NodeTransfer;
 import org.openide.nodes.PropertySupport;
 import org.openide.nodes.Sheet;
+import org.openide.util.Utilities;
 import org.openide.util.WeakListeners;
 import org.openide.util.datatransfer.ExTransferable;
 import org.openide.util.datatransfer.PasteType;
@@ -58,10 +59,12 @@ import org.openide.util.lookup.Lookups;
  */
 public class TemplateElementNode extends AbstractNode implements PropertyChangeListener {
 
-    private static Image defaultIcon = Utils.createRectangleIcon(Utils.DEFAULT_ICON_COLOR, 
+    private static final Image defaultIcon = Utils.createRectangleIcon(Utils.DEFAULT_ICON_COLOR, 
             Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT);
     
-    private CommunicationsStub com = CommunicationsStub.getInstance();
+    protected Image icon = defaultIcon;
+    
+    private final CommunicationsStub com = CommunicationsStub.getInstance();
     
     public TemplateElementNode(LocalObjectLight object) {
         super(new TemplateElementChildren(), Lookups.singleton(object));
@@ -71,6 +74,8 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
     @Override
     public Action[] getActions(boolean context) {
         return new Action[] {TemplateActionsFactory.getCreateTemplateElementAction(), 
+                             TemplateActionsFactory.getCreateTemplateElementSpecialAction(),
+                             null, 
                              TemplateActionsFactory.getDeleteTemplateElementAction(),
                              null,
                              CopyAction.get(CopyAction.class),
@@ -79,12 +84,12 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
     
     @Override
     public Image getOpenedIcon(int type) {
-        return defaultIcon;
+        return icon;
     }
 
     @Override
     public Image getIcon(int type) {
-        return defaultIcon;
+        return icon;
     }
 
     @Override
@@ -126,8 +131,8 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
                                 break;
                             default:
                                 NotificationUtil.getInstance().showSimplePopup("Information", NotificationUtil.WARNING_MESSAGE, "Unique and binary attributes are ignored to avoid redundancies");
-                        } //Do note that binary
-                        if (property != null)
+                        } 
+                        if (property != null) //Should not happen
                             generalSet.put(property);
                     }
                 }
@@ -159,6 +164,11 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
 
         if (getSheet() != null)
             setSheet(createSheet());
+    }
+    
+    @Override
+    public String getName() {
+        return getLookup().lookup(LocalObjectLight.class).getName();
     }
     
     @Override
@@ -205,6 +215,7 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
             return null;
         
         final LocalObjectLight incomingObject = dropNode.getLookup().lookup(LocalObjectLight.class);
+        final TemplateElementNode incomingNode = (TemplateElementNode) dropNode;
         
         //Ignore those noisy attempts to move it to itself
         if (incomingObject.equals(currentObject))
@@ -213,39 +224,78 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
         return new PasteType() {
             @Override
             public Transferable paste() throws IOException {
-                boolean canMove = false;
                 try {
+                    Object currentNode = Utilities.actionsGlobalContext().lookup(TemplateElementNode.class);
+                                        
+                    if (currentNode == null)
+                        currentNode = Utilities.actionsGlobalContext().lookup(TemplateSpecialElementNode.class);
                     
-                    //Check if the current object can contain the drop node
-                    List<LocalClassMetadataLight> possibleChildren = CommunicationsStub.getInstance().getPossibleChildren(currentObject.getClassName(), false);
-                    
-                    for (LocalClassMetadataLight lcml : possibleChildren) {
-                        if (lcml.getClassName().equals(incomingObject.getClassName())) {
-                            canMove = true;
-                            break;
+                    if (incomingNode instanceof TemplateSpecialElementNode) {
+                        boolean canMoveSpecialElement = false;
+                        //Check if the current object can contain the drop node
+                        List<LocalClassMetadataLight> possibleSpecialChildren = CommunicationsStub.getInstance().getPossibleSpecialChildren(currentObject.getClassName(), false);
+
+                        for (LocalClassMetadataLight lcml : possibleSpecialChildren) {
+                            if (lcml.getClassName().equals(incomingObject.getClassName())) {
+                                canMoveSpecialElement = true;
+                                break;
+                            }
                         }
-                    }
                     
-                    if (canMove) {
-                        List<String> classNames = new ArrayList<>();
-                        List<Long> ids = new ArrayList<>();
-                        
-                        classNames.add(incomingObject.getClassName());
-                        ids.add(incomingObject.getOid());
-                        
-                        List<LocalObjectLight> copiedNodes = CommunicationsStub.getInstance().
-                                copyTemplateElements(classNames, ids, currentObject.getClassName(), currentObject.getOid());
-                        
-                        if (copiedNodes != null) {
-                            if (getChildren() instanceof AbstractChildren)
-                                ((AbstractChildren)getChildren()).addNotify();
+                        if (canMoveSpecialElement) {
+                            List<String> classNames = new ArrayList<>();
+                            List<Long> ids = new ArrayList<>();
+
+                            classNames.add(incomingObject.getClassName());
+                            ids.add(incomingObject.getOid());
+
+                            List<LocalObjectLight> copiedNodes = CommunicationsStub.getInstance().
+                                    copyTemplateSpecialElements(classNames, ids, currentObject.getClassName(), currentObject.getOid());
+
+                            if (copiedNodes != null) {
+                                if (getChildren() instanceof AbstractChildren)
+                                    ((AbstractChildren)getChildren()).addNotify();
+                            } else 
+                                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+
                         } else 
-                            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-                        
-                    } else 
-                        NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE,
-                                String.format(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_MOVEOPERATION_TEXT"), 
-                                        incomingObject.getClassName(), currentObject.getClassName()));
+                            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE,
+                                String.format("An special child instance of %s can't be moved into a %s %sinstance", 
+                                    incomingObject.getClassName(), currentObject.getClassName(), 
+                                    currentNode instanceof TemplateSpecialElementNode ? " special child " : ""));
+                    } else {
+                        boolean canMoveElement = false;
+                        //Check if the current object can contain the drop node
+                        List<LocalClassMetadataLight> possibleChildren = CommunicationsStub.getInstance().getPossibleChildren(currentObject.getClassName(), false);
+
+                        for (LocalClassMetadataLight lcml : possibleChildren) {
+                            if (lcml.getClassName().equals(incomingObject.getClassName())) {
+                                canMoveElement = true;
+                                break;
+                            }
+                        }
+                    
+                        if (canMoveElement) {
+                            List<String> classNames = new ArrayList<>();
+                            List<Long> ids = new ArrayList<>();
+
+                            classNames.add(incomingObject.getClassName());
+                            ids.add(incomingObject.getOid());
+
+                            List<LocalObjectLight> copiedNodes = CommunicationsStub.getInstance().
+                                    copyTemplateElements(classNames, ids, currentObject.getClassName(), currentObject.getOid());
+
+                            if (copiedNodes != null) {
+                                if (getChildren() instanceof AbstractChildren)
+                                    ((AbstractChildren)getChildren()).addNotify();
+                            } else 
+                                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+
+                        } else 
+                            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE,
+                                    String.format("An instance of %s can't be moved into a %s %sinstance",incomingObject.getClassName(), currentObject.getClassName(), 
+                                        currentNode instanceof TemplateSpecialElementNode ? " special child " : ""));
+                    }
                 } catch (Exception ex) {
                     NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
                 }
@@ -268,17 +318,27 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
     }
     
     public static class TemplateElementChildren extends AbstractChildren {
+        private List<LocalObjectLight> templateElementSpecialChildren;
+        
         @Override
         public void addNotify() {
             LocalObjectLight templateElement = getNode().getLookup().lookup(LocalObjectLight.class);
             List<LocalObjectLight> templateElementChildren = CommunicationsStub.getInstance().
                     getTemplateElementChildren(templateElement.getClassName(), templateElement.getOid());
             
-            if (templateElementChildren == null) {
+            templateElementSpecialChildren = CommunicationsStub.getInstance().
+                    getTemplateSpecialElementChildren(templateElement.getClassName(), templateElement.getOid());
+            
+            if (templateElementChildren == null && templateElementSpecialChildren == null) {
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                 setKeys(Collections.EMPTY_SET);
-            } else
-                setKeys(templateElementChildren);
+            } else {                
+                List<LocalObjectLight> children = new ArrayList();
+                children.addAll(templateElementChildren);
+                children.addAll(templateElementSpecialChildren);
+                Collections.sort(children);
+                setKeys(children);
+            }
         }
         
         @Override
@@ -288,7 +348,13 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
         
         @Override
         protected Node[] createNodes(LocalObjectLight t) {
-            return new Node[] {new TemplateElementNode(t)};
+            if (templateElementSpecialChildren == null)
+                return new Node[0];
+            
+            if (templateElementSpecialChildren.contains(t))
+                return new Node[] {new TemplateSpecialElementNode(t)};
+            else
+                return new Node[] {new TemplateElementNode(t)};
         }
     }
 }

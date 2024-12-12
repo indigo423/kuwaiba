@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,11 @@ public class HTMLRow extends HTMLComponent {
     private HTMLColumn[] columns;
 
     public HTMLRow(HTMLColumn[] columns) {
+        this.columns = columns;
+    }
+    
+    public HTMLRow(String cssClass, HTMLColumn[] columns) {
+        setCssClass(cssClass);
         this.columns = columns;
     }
 

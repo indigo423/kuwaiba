@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 
 package org.kuwaiba.services.persistence.cache;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import org.kuwaiba.apis.persistence.application.GroupProfile;
 import org.kuwaiba.apis.persistence.application.UserProfile;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
+import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
 import org.kuwaiba.services.persistence.util.Constants;
 
@@ -47,6 +49,18 @@ public class CacheManager {
      */
     private HashMap<String, List<String>> possibleChildrenIndex;
     /**
+     * Possible special children index. The key is the class, the value its possible special children. Note that a blank key ("") represents the navigation tree root. The only difference with the possibleChildrenIndex, is that the relationship used to link the parent object with its children is CHILD_OF_SPECIAL
+     */
+    private HashMap<String, List<String>> possibleSpecialChildrenIndex;
+    /**
+     * List of subclasses of a class, the key is the name of the class, the value is the subclasses
+     */
+    private HashMap<String, List<ClassMetadataLight>> subClassesIndex;
+    /**
+     * List of subclasses of a class, the key is the name of the class, the value is the subclasses
+     */
+    private HashMap<String, List<ClassMetadataLight>> subClassesNoRecursiveIndex;
+    /**
      * Users index. It is used to ease the username uniqueness validation
      */
     private HashMap<String, UserProfile> userIndex;
@@ -54,6 +68,10 @@ public class CacheManager {
      * Groups index. It is used to ease the username uniqueness validation
      */
     private HashMap<String, GroupProfile> groupIndex;
+    /**
+     * List of the classes with unique attributes and its values index
+     */
+    private HashMap<String, HashMap<String, List<String>>> uniqueClassAttributesIndex;
 
 
     private CacheManager(){
@@ -61,6 +79,10 @@ public class CacheManager {
         userIndex = new HashMap<>();
         groupIndex = new HashMap<>();
         possibleChildrenIndex = new HashMap<>();
+        possibleSpecialChildrenIndex = new HashMap<>();
+        subClassesIndex =  new HashMap<>();
+        subClassesNoRecursiveIndex = new HashMap<>();
+        uniqueClassAttributesIndex = new HashMap<>();
         listTypeIndex = new HashMap<>();
     }
 
@@ -103,7 +125,83 @@ public class CacheManager {
     public void putPossibleChildren(String parent, List<String>children){
         possibleChildrenIndex.put(parent, children);
     }
+    
+    /**
+     * Adds an entry to the possible special children index
+     * @param parent The parent class
+     * @param children the list of possible special children classes
+     */
+    public void putPossibleSpecialChildren(String parent, List<String>children){
+        possibleSpecialChildrenIndex.put(parent, children);
+    }
 
+    public void putSubClassNoRecursive(String parent, ClassMetadataLight newSubClass){
+        List<ClassMetadataLight> children = subClassesNoRecursiveIndex.get(parent);
+        children.add(newSubClass);
+        subClassesNoRecursiveIndex.put(parent, children);
+    }
+    /**
+     * Adds an entry to the subclasses index
+     * @param className the given class
+     * @param subClasses  the subclasses of the given class
+     */
+    public void putSubclasses(String className, List<ClassMetadataLight> subClasses){
+        subClassesIndex.put(className, subClasses);
+    }
+    
+    /**
+     * Adds an entry to the subclasses index
+     * @param className the given class
+     * @param subClasses  the subclasses of the given class
+     */
+    public void putSubclassesNorecursive(String className, List<ClassMetadataLight> subClasses){
+        subClassesNoRecursiveIndex.put(className, subClasses);
+    }
+    
+    /**
+     * adds an entry for every unique attribute value of every class that has unique attributes
+     * @param className class name
+     * @param attributeName attribute name 
+     * @param value new value of an unique attribute
+     */
+    public void putUniqueAttributeValueIndex(String className, String attributeName, String value){
+        HashMap<String, List<String>> uniqueClassAttributes = uniqueClassAttributesIndex.get(className);
+        if(uniqueClassAttributes == null){
+            uniqueClassAttributes = new HashMap<>();
+            List<String> values = new ArrayList<>();
+            values.add(value);
+            uniqueClassAttributes.put(attributeName, values);
+            uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+        }
+        else{
+            List<String> values = uniqueClassAttributes.get(attributeName);
+            if(values == null){
+                values = new ArrayList<>();
+                values.add(value);
+                uniqueClassAttributes.put(attributeName, values);
+                uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+            }
+            else{
+                values.add(value);
+                uniqueClassAttributes.put(attributeName, values);
+                uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+            }
+        }
+    }
+    
+    public void putUniqueAttributeValuesIndex(String className, String attributeName, List<String> values){
+        HashMap<String, List<String>> uniqueClassAttributes = uniqueClassAttributesIndex.get(className);
+        if(uniqueClassAttributes == null){
+            uniqueClassAttributes = new HashMap<>();
+            uniqueClassAttributes.put(attributeName, values);
+            uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+        }
+        else{
+            uniqueClassAttributes.put(attributeName, values);
+            uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+        }
+    }
+    
     /**
      * Adds an entry to the possible children index
      * @param parent
@@ -114,22 +212,67 @@ public class CacheManager {
         if (myList != null)
             myList.add(child);
     }
+    
+    /**
+     * Adds a single entry to the possible special children index
+     * @param parent
+     * @param child
+     */
+    public void putPossibleSpecialChild(String parent, String child){
+        List<String> myList = possibleSpecialChildrenIndex.get(parent);
+        if (myList != null)
+            myList.add(child);
+    }
 
     public void removePossibleChild(String parent, String child){
         List<String> myList = possibleChildrenIndex.get(parent);
         if (myList != null)
             myList.remove(child);
     }
-
+            
+    public void removePossibleSpecialChild(String parent, String child){
+        List<String> myList = possibleSpecialChildrenIndex.get(parent);
+        if (myList != null)
+            myList.remove(child);
+    }
+    
     public List<String> getPossibleChildren(String parent){
         if (parent == null)
             return possibleChildrenIndex.get(Constants.NODE_DUMMYROOT);
         return possibleChildrenIndex.get(parent);
     }
     
+    public List<String> getPossibleSpecialChildren(String parent){
+        if (parent == null) //Should not happen
+            return possibleSpecialChildrenIndex.get(Constants.NODE_DUMMYROOT);
+        return possibleSpecialChildrenIndex.get(parent);
+    }
+    
+    public List<ClassMetadataLight> getSubclasses(String className){
+        return subClassesIndex.get(className);
+    }
+    
+    public List<ClassMetadataLight> getSubclassesNorecursive(String className){
+        return subClassesNoRecursiveIndex.get(className);
+    }
+    
+    public HashMap<String, List<String>> getUniqueClassAttributes(String className){
+        return uniqueClassAttributesIndex.get(className);
+    }
+    
+    public List<String> getUniqueAttributeValues(String className, String attributeName){
+        if (uniqueClassAttributesIndex.get(className) != null)
+            return uniqueClassAttributesIndex.get(className).get(attributeName);
+        else
+            return null;
+    }
+    
     public void clearClassCache(){
         classIndex.clear();
         possibleChildrenIndex.clear();
+        possibleSpecialChildrenIndex.clear();
+        subClassesIndex.clear();
+        subClassesNoRecursiveIndex.clear();
     }
 
     /**
@@ -182,6 +325,19 @@ public class CacheManager {
         userIndex.remove(groupName);
     }
     
+    public void removeUniqueAtribute(String className, String attributeName){
+        HashMap<String, List<String>> uniqueClassAttributes = uniqueClassAttributesIndex.get(className);
+        uniqueClassAttributes.remove(attributeName);
+    }    
+    
+    public void removeUniqueAttributeValue(String className, String attributeName, String attributeValue){
+        HashMap<String, List<String>> uniqueClassAttributes = uniqueClassAttributesIndex.get(className);
+        List<String> uniqueValues = uniqueClassAttributes.get(attributeName);
+        if(uniqueValues != null)
+            uniqueValues.remove(attributeValue);
+        uniqueClassAttributes.put(attributeName, uniqueValues);
+        uniqueClassAttributesIndex.put(className, uniqueClassAttributes);
+    }
     /**
      * Tries to retrieve a cached list type
      * @param listTypeName the list type to be retrieved from the cache
@@ -209,12 +365,15 @@ public class CacheManager {
     /**
      * Clear the cache
      */
-    public void clear() {
+    public void clearAll() {
         classIndex.clear();
         userIndex.clear();
         groupIndex.clear();
         possibleChildrenIndex.clear();
+        possibleSpecialChildrenIndex.clear();
         listTypeIndex.clear();
+        subClassesIndex.clear();
+        uniqueClassAttributesIndex.clear();
     }
 
      /**
@@ -269,4 +428,20 @@ public class CacheManager {
         return false;
     }
     
+    public boolean canBeSpecialChild(String allegedParent, String childToBeEvaluated) throws MetadataObjectNotFoundException{
+        List<String> possibleSpecialChildren;
+        if (allegedParent == null) //The navigation tree root
+            possibleSpecialChildren = possibleSpecialChildrenIndex.get("");
+        else
+            possibleSpecialChildren = possibleSpecialChildrenIndex.get(allegedParent);
+
+        if (possibleSpecialChildren == null)
+           throw new MetadataObjectNotFoundException(allegedParent);
+
+        for (String possibleSpecialChild : possibleSpecialChildren){
+            if (possibleSpecialChild.equals(childToBeEvaluated))
+                return true;
+        }
+        return false;
+    }
 }
