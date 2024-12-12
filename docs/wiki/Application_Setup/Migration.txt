@@ -1,0 +1,8 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2019-02-13T23:17:05-05:00
+
+====== Migration ======
+^{Created Wednesday 13 February 2019 @author Adrian Martinez}
+This section describes the procedures and requirements to move from one version to the next.
+

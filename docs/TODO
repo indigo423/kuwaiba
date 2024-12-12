@@ -1,0 +1,18 @@
+Client
+--------
+* Support for new views (rack view, GIS view, etc)
+* Java Help integration
+* Remove hard-coded strings
+* Fix shortcuts
+* Support for dates in searches and editors
+* Rewrite the ObjectView module
+* Reorganize menus
+* Limit the number of children shown under a given node
+* Constraints for certain fields according to business rules
+* Extend the privileges subsystem
+* Provide an API to integrate custom actions
+
+Server
+-------
+* Support for probes, parsers, etc
+* Enhance the logging mechanisms

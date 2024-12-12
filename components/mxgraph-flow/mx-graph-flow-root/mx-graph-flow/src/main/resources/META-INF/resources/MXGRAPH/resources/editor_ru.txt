@@ -1,0 +1,5 @@
+askZoom=Введите увеличение (%)
+properties=Свойства
+outline=Наружу
+tasks=Задачи
+help=Помощь

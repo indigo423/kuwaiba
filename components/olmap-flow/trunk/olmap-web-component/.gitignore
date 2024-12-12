@@ -1,0 +1,9 @@
+/node_modules/
+/lib/
+/test/
+
+# top level source
+ol-map.js
+ol-map.js.map
+ol-map.d.ts
+ol-map.d.ts.map

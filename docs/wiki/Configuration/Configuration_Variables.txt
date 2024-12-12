@@ -1,0 +1,30 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+Creation-Date: 2019-02-13T23:17:36-05:00
+
+====== Configuration Variables ======
+^{Created Wednesday 13 February 2019 @author Charles Bedon}
+
+//Tools → Configuration → Configuration Variables//
+
+The configuration variables are used to provide customized parameters to dashboard widgets, reports, sync providers and many other module components. The configuration variables are organized in pools, but the only relevant thing is their name, not where the are located, that's why it must be unique. As a naming convention, a variable name has at least three sections separated by dots(.). The first one is the general category (general, widgets, sync, etc), the second is an identifier of the component that uses it (for example a dashboard widget called //SImpleMapDashboardWidget//). The last one is the actual name of the variable. This naming policy is not enforced, but it is highly recommended. Use a consistent format across variables to avoid confusion.
+
+===== List of Default Configuration Variables =====
+* **general.misc.serverName:** //String//. The default name/IP address the server is running on. If not defined, the value is //127.0.0.1//.
+* **general.misc.serverPort:** //Integer//. The default port the server is listening to. If not defined, the value is //8181//.
+* **general.maps.provider:** //String//. Specifies the name of the map provider class. Currentky, the possible values are //org.kuwaiba.web.modules.osp.google.GoogleMapsMapProvider, ...//
+* **general.maps.apiKey:** //String//. The API key requested by commercial map providers used in Kuwaiba in the OSP module or the SImpleMapDashboardWidget.  Not all map providers need a key. There is no default value for this variable.
+* **general.maps.language:** //String//. The language to be used in maps. If not defined, the default value is //english//.
+* **widgets.simplemap.centerLatitude:** //Float//. The default center latitude used in the SImpleMapDashboardWidget. If not defined, the value will be //11.8399727//.
+* **widgets.simplemap.centerLongitude:** //Float//. The default center longitude used in the SImpleMapDashboardWidget. If not defined, the value will be //12.8260721//.
+* **widgets.simplemap.zoom:** //Integer//. The default map zoom used in the SImpleMapDashboardWidget. If not defined, the value is //3//.
+* **sync.provider.bgp.localAsn:** //Integer//. The ASN (Autonomous System Number) that identifies the network of the organization. It's used by the BGP sync provider. There is no default value for this variable.
+* **com.neotropic.kuwaiba.sync.provider**
+	* **sync.providers.enabled.provider1: **//String.// This variable defines the path to the Hardware/ interfaces synchronization provider in kuwaiba. The default value for these variable is: //com.neotropic.kuwaiba.sync.connectors.snmp.reference.ReferenceSnmpSyncProvider//
+	* **sync.providers.enabled.provider2: **//String. //This variable defines the path to the MPLS synchronization provider in kuwaiba. The default value for these variable will be//: com.neotropic.kuwaiba.sync.connectors.ssh.mpls.MplsSyncProvider//
+	* **sync.providers.enabled.provider3: **//String.// This variable defines the path to the IP addresses synchronization provider in kuwaiba. The default value for these variable will be: //com.neotropic.kuwaiba.sync.connectors.snmp.ip.IPAddressesSyncProvider//
+	* **sync.providers.enabled.provider4: **//String. T//his variable defines the path to the VLANs synchronization provider in kuwaiba. The default value for these variable will be: //com.neotropic.kuwaiba.sync.connectors.snmp.vlan.SnmpCiscoVlansSyncProvider//
+	* **sync.providers.enabled.provider5:** //String. //This variable defines the path to the Bridge Domains Interfaces synchronization provider in kuwaiba. The default value for these variable will be: //com.neotropic.kuwaiba.sync.connectors.ssh.bdi.BridgeDomainSyncProvider//
+	* **sync.providers.enabled.provider6:** //String. //This variable defines the path to the Border Getway Protocol synchronization provider in kuwaiba, the value will be: //com.neotropic.kuwaiba.sync.connectors.snmp.bgp.BgpSyncProvider//
+
+

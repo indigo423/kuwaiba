@@ -1,0 +1,90 @@
+Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.6
+Creation-Date: 2022-08-12T12:37:52-05:00
+
+====== Neo4j Migrate sequential ======
+^{Created Fryday 12 August 2022 @author Juan Sebastian Betancourt}
+[[https://neo4j.com/docs/upgrade-migration-guide/current/understanding-upgrades-migration/|Neo4j migration]] is the process of migrating an existing single or clustered deployment to a newer MAJOR version. Such migrations require a review of the Neo4j configurations. 
+
+There are two ways to do the migrations:
+
+* **Direct migration (Neo4j Enterprise Edition)**
+* **Sequential migration (Neo4j Community Edition)**
+
+===== Sequential migration =====
+Following the sequential patch migrate Neo4j deployment from 3.5.lastest to 4.0.lastest then sequentially upgrade it to 4.1.lastest, 4.2.lastest, 4.3.lastest and 4.4.lastest
+
+==== Prepare for the migration ====
+
+//**__Note:__ **// Before you start preparing for migration , it is very important verify that you have installed Java 11 because under Neo4j 3.5.X Java 8 is used, when you upgrade to 4.0.X it has a hard requirement on Java 11.
+
+**$Neo4j_HOME: **Neo4j current version directory. (3.5.5).
+**$New_Neo4j_HOME: **Neo4j new version directory. (3.5.12).
+
+We start the migration from neo4j-community-3.5.5 to 3.5.12, this due to compatibility issues from version 3.3.5 to 4.0.0.
+
+1. Backup your current database files** ($Neo4j_HOME/data).**
+2. Install** [[https://neo4j.com/download-thanks/?edition=community&release=3.5.12&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j community 3.5.12.]] **
+3. Take the enire contents of **data folder** ( databases and dbms) from** $Neo4j_HOME/data **and copy and put it over into the** $New_Neo4j_HOME/data **folder** replaces all its contents.**
+4. Rename your database folder to **graph.db** (**$New_Neo4j_HOME/data/databases/**).
+
+							 {{../img/databases.png?width=350}}
+
+5. Prepare the neo4j.conf file into the (**$New_Neo4j_HOME/conf) **uncomment the next lines
+	* Set dbms.allow_upgrate=true
+	* Set dbms.default_database=__graph.db__ 
+6. Start the migration by running the following command **$New_Neo4j_HOME/bin/neo4j console.**
+{{../img/upgrade_database.png?width=480}}{{../img/finish_upgrade.png?width=550}} 
+
+7. The preparation it is complete and the server run at **http://localhost:7474.**
+8. Stop the server to continue the migration (Ctrl + C ).
+
+==== Steps to migrate ====
+
+Now we migrate our database to Neo4j 3.5.12 to Neo4j 4.0.0.
+
+**$Neo4j_HOME: **Neo4j current version directory. (3.5.12).
+**$New_Neo4j_HOME: **Neo4j new version directory. (4.0.0).
+
+
+1. Backup your current database files** ($Neo4j_HOME/data).**
+2. Install** [[https://neo4j.com/download-thanks/?edition=community&release=4.0.0&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j community 4.0.0.]] **
+3. Take the enire contents of **data folder** ( databases and dbms) from** $Neo4j_HOME/data **and copy and put it over into the** $New_Neo4j_HOME/data **folder,** replaces all its contents.**
+4. Rename your database folder to **neo4j** (**$New_Neo4j_HOME/data/databases/**) From this new version onwards we have the concept of multi databases and graph.db i**s not a valid name**, the databases have to follow a naming convention and can not contain special characters including dots.
+
+						   {{../img/database_4.0.png?width=400}}
+
+5. Prepare the neo4j.conf file into the (**$New_Neo4j_HOME/conf) **uncomment the next lines
+* Set dbms.allow_upgrate=true
+* Set dbms.default_database=__neo4j__
+6. Start the migration by running the following command **$New_Neo4j_HOME/bin/neo4j console**
+7. The migration it is complete. 
+8. Stop the server to continue the migration (Ctrl + C ).
+
+Below to migrate from version 4.0.0 to 4.4.10 repeat steps 1 to 8, remember that from version 4.0.0 the name of the database must be **neo4j**
+
+The recommended sequential migration patch to avoid migration issues is as follows:
+
+Neo4j 4.0.0 ---> [[https://neo4j.com/download-thanks/?edition=community&release=4.1.12&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j 4.1.12]] ---> repeat staeps 1 to 8  ---->  Neo4j 4.1.12 ---> [[https://neo4j.com/download-thanks/?edition=community&release=4.2.19&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j 4.2.19]] ---> repeat staeps 1 to 8
+
+Neo4j 4.2.19 ---> [[https://neo4j.com/download-thanks/?edition=community&release=4.3.12&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j 4.3.12]] ---> repeat staeps 1 to 8 ----> Neo4j 4.3.12 ---> [[https://neo4j.com/download-thanks/?edition=community&release=4.4.10&flavour=unix&_gl=1*1d1w708*_ga*NzMzOTU0MDMwLjE2MzE3MTkwODQ.*_ga_DL38Q8KGQC*MTY2MDE2MTI3MS4yNi4xLjE2NjAxNjE2MDEuMA..&_ga=2.67751121.1383424675.1660148212-733954030.1631719084|Neo4j 4.4.10]] ---> repeat staeps 1 to 8 
+
+__Note:__ Edit the neo4j.conf file into the** ($New_Neo4j_HOME/conf)**, when the migration is complete, comment the line** dbms.allow_upgrate=true**
+
+Finally we will have migrated from Neo4j 3.5.5 to 4.4.10, to run the server use** $New_Neo4j_HOME/bin/neo4j start.**
+
+{{../img/neo4j_server_4.4.10.png?width=700}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
