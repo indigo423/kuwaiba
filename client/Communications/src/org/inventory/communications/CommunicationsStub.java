@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Random;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;
+import javax.xml.ws.BindingProvider;
+import javax.xml.ws.handler.MessageContext;
 import javax.xml.ws.soap.SOAPFaultException;
 import org.inventory.communications.core.LocalApplicationLogEntry;
 import org.inventory.communications.core.LocalClassMetadata;
@@ -54,39 +56,39 @@ import org.inventory.communications.core.queries.LocalResultRecord;
 import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.communications.core.views.LocalObjectView;
 import org.inventory.communications.core.views.LocalObjectViewLight;
-import org.kuwaiba.wsclient.ApplicationLogEntry;
-import org.kuwaiba.wsclient.ClassInfo;
-import org.kuwaiba.wsclient.ClassInfoLight;
-import org.kuwaiba.wsclient.GroupInfo;
-import org.kuwaiba.wsclient.KuwaibaService;
-import org.kuwaiba.wsclient.KuwaibaService_Service;
-import org.kuwaiba.wsclient.RemoteBusinessObjectLight;
-import org.kuwaiba.wsclient.RemoteBusinessObjectLightList;
-import org.kuwaiba.wsclient.RemoteObject;
-import org.kuwaiba.wsclient.RemoteObjectLight;
-import org.kuwaiba.wsclient.RemoteObjectLightArray;
-import org.kuwaiba.wsclient.RemoteObjectSpecialRelationships;
-import org.kuwaiba.wsclient.RemotePool;
-import org.kuwaiba.wsclient.RemoteQueryLight;
-import org.kuwaiba.wsclient.RemoteReport;
-import org.kuwaiba.wsclient.RemoteReportLight;
-import org.kuwaiba.wsclient.RemoteResultMessage;
-import org.kuwaiba.wsclient.RemoteTask;
-import org.kuwaiba.wsclient.RemoteTaskResult;
-import org.kuwaiba.wsclient.ResultRecord;
-import org.kuwaiba.wsclient.SdhContainerLinkDefinition;
-import org.kuwaiba.wsclient.SdhPosition;
-import org.kuwaiba.wsclient.ServerSideException_Exception;
-import org.kuwaiba.wsclient.StringArray;
-import org.kuwaiba.wsclient.StringPair;
-import org.kuwaiba.wsclient.TaskNotificationDescriptor;
-import org.kuwaiba.wsclient.TaskScheduleDescriptor;
-import org.kuwaiba.wsclient.TransientQuery;
-import org.kuwaiba.wsclient.UserInfo;
-import org.kuwaiba.wsclient.UserInfoLight;
-import org.kuwaiba.wsclient.Validator;
-import org.kuwaiba.wsclient.ViewInfo;
-import org.kuwaiba.wsclient.ViewInfoLight;
+import org.inventory.communications.wsclient.ApplicationLogEntry;
+import org.inventory.communications.wsclient.ClassInfo;
+import org.inventory.communications.wsclient.ClassInfoLight;
+import org.inventory.communications.wsclient.GroupInfo;
+import org.inventory.communications.wsclient.KuwaibaService;
+import org.inventory.communications.wsclient.KuwaibaService_Service;
+import org.inventory.communications.wsclient.RemoteBusinessObjectLight;
+import org.inventory.communications.wsclient.RemoteBusinessObjectLightList;
+import org.inventory.communications.wsclient.RemoteObject;
+import org.inventory.communications.wsclient.RemoteObjectLight;
+import org.inventory.communications.wsclient.RemoteObjectLightArray;
+import org.inventory.communications.wsclient.RemoteObjectSpecialRelationships;
+import org.inventory.communications.wsclient.RemotePool;
+import org.inventory.communications.wsclient.RemoteQueryLight;
+import org.inventory.communications.wsclient.RemoteReport;
+import org.inventory.communications.wsclient.RemoteReportLight;
+import org.inventory.communications.wsclient.RemoteResultMessage;
+import org.inventory.communications.wsclient.RemoteTask;
+import org.inventory.communications.wsclient.RemoteTaskResult;
+import org.inventory.communications.wsclient.ResultRecord;
+import org.inventory.communications.wsclient.SdhContainerLinkDefinition;
+import org.inventory.communications.wsclient.SdhPosition;
+import org.inventory.communications.wsclient.ServerSideException_Exception;
+import org.inventory.communications.wsclient.StringArray;
+import org.inventory.communications.wsclient.StringPair;
+import org.inventory.communications.wsclient.TaskNotificationDescriptor;
+import org.inventory.communications.wsclient.TaskScheduleDescriptor;
+import org.inventory.communications.wsclient.TransientQuery;
+import org.inventory.communications.wsclient.UserInfo;
+import org.inventory.communications.wsclient.UserInfoLight;
+import org.inventory.communications.wsclient.Validator;
+import org.inventory.communications.wsclient.ViewInfo;
+import org.inventory.communications.wsclient.ViewInfoLight;
 
 /**
  * Singleton class that provides communication and caching services to the rest of the modules
@@ -180,6 +182,10 @@ public class CommunicationsStub {
                 serverURL = new URL("http", "localhost", 8080,"/kuwaiba/KuwaibaService?wsdl"); //NOI18n
 
             this.service = new KuwaibaService_Service(serverURL).getKuwaibaServicePort();
+            
+            //Adds support for HTTP compression (if available). Don't forget to activate compression at server side.
+            ((BindingProvider)service).getRequestContext().put(MessageContext.HTTP_REQUEST_HEADERS,
+                Collections.singletonMap("Accept-Encoding",Collections.singletonList("gzip"))); //NOI18N
             
             this.session = new LocalSession(this.service.createSession(user, password));
             return true;
@@ -1222,6 +1228,7 @@ public class CommunicationsStub {
         }
     }
     //</editor-fold>
+    
     // <editor-fold defaultstate="collapsed" desc="Object methods. Click on the + sign on the left to edit the code.">
     /**
      * 
@@ -1325,8 +1332,25 @@ public class CommunicationsStub {
         }
     }
 
-    public boolean moveObjects(String targetClass, long targetOid, LocalObjectLight[] objects) {
+    public boolean moveObjectsToPool(String targetClass, long targetOid, LocalObjectLight[] objects) {
 
+        try{
+            List<Long> objectOids = new ArrayList<>();
+            List<String> objectClasses = new ArrayList<>();
+
+            for (LocalObjectLight lol : objects){
+                objectOids.add(lol.getOid());
+                objectClasses.add(lol.getClassName());
+            }
+            service.moveObjectsToPool(targetClass, targetOid, objectClasses, objectOids, this.session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean moveObjects(String targetClass, long targetOid, LocalObjectLight[] objects) {
         try{
             List<Long> objectOids = new ArrayList<>();
             List<String> objectClasses = new ArrayList<>();
@@ -1381,7 +1405,7 @@ public class CommunicationsStub {
     }
     
     public boolean releaseMirrorPort (String objectClass, long objectId) {
-        try{
+        try {
             service.releaseMirrorPort (objectClass, objectId, session.getSessionId());
             return true;
         }catch(Exception ex){
@@ -1398,6 +1422,7 @@ public class CommunicationsStub {
      * @param endpointBId target object oid
      * @param parentClass connection's parent class
      * @param parentId connection's parent id
+     * @param name Initial connection name
      * @param type This can be either the type name or its id
      * @param connectionClass Class for the corresponding connection to be created
      * @return A local object light representing the new connection
@@ -1417,8 +1442,8 @@ public class CommunicationsStub {
             values.add(valueType);
 
             long myObjectId = service.createPhysicalConnection(endpointAClass, endpointAId,
-                    endpointBClass, endpointBId, parentClass, parentId, Arrays.asList(new String[]{"name","type"}), values, connectionClass, this.session.getSessionId());
-            return new LocalObjectLight(myObjectId, "", connectionClass);
+                    endpointBClass, endpointBId, parentClass, parentId, Arrays.asList(new String[]{ "name", "type" }), values, connectionClass, this.session.getSessionId());
+            return new LocalObjectLight(myObjectId, name, connectionClass);
         }catch(Exception ex){
             this.error =  ex.getMessage();
             return null;
@@ -2248,8 +2273,9 @@ public class CommunicationsStub {
     }
     
     /**
-     * Creates a pool that will have as parent an inventory object. This special containment structure can be used to 
-     * provide support for new models
+     * Creates a pool that will have as parent an inventory object.
+     * This special containment structure can be used to provide 
+     * support for new models.
      * @param parentClassname Class name of the parent object
      * @param parentId Id of the parent object
      * @param name Pool name
@@ -3203,6 +3229,18 @@ public class CommunicationsStub {
         return null;
     }
     
+    public List<LocalObjectLight> getSubnetsInSubent(long id, String className){
+        try {
+            List<LocalObjectLight> res = new ArrayList<>();
+            for (RemoteObjectLight anIp : service.getSubnetsInSubent(id, 0, className, this.session.getSessionId())) 
+                res.add(new LocalObjectLight(anIp.getOid(), anIp.getName(), anIp.getClassName()));
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+        }
+        return null;
+    }
+
     public boolean relateToVLAN(long subnetId, String className, long vlanId){
         try{
             service.relateToVlan(subnetId, className, vlanId, this.session.getSessionId());

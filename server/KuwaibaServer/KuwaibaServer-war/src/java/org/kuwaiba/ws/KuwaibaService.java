@@ -1971,6 +1971,33 @@ public class KuwaibaService {
             }
         }
     }
+    
+     /**
+     * Moves objects from their current parent to a pool target object.
+     * @param  targetClass New parent object id
+     * @param targetOid The new parent's oid
+     * @param objectClasses Class names of the objects to be moved
+     * @param objectOids Oids of the objects to be moved
+     * @param sessionId Session token
+     * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime
+     */
+    @WebMethod(operationName = "moveObjectsToPool")
+    public void moveObjectsToPool(@WebParam(name = "targetClass")String targetClass,
+            @WebParam(name = "targetOid")long targetOid,
+            @WebParam(name = "objectsClasses")String[] objectClasses,
+            @WebParam(name = "objectsOids")long[] objectOids,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            wsBean.moveObjectsToPool(targetClass,targetOid, objectClasses, objectOids, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in moveObjectsToPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
 
     /**
      * Moves objects from their current parent to a target object.
@@ -4399,7 +4426,7 @@ public class KuwaibaService {
      * @param limit limit of returned subnets
      * @param className the class name
      * @param sessionId the session id
-     * @return a set of subnets
+     * @return a set of IPs
      * @throws ServerSideException 
      */
     @WebMethod(operationName = "getSubnetUsedIps")
@@ -4414,6 +4441,32 @@ public class KuwaibaService {
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in getSubnetUsedIps: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Retrieves the subnets of a subnet
+     * @param id subnet id
+     * @param limit limit of returned subnets
+     * @param className the class name
+     * @param sessionId the session id
+     * @return a set of subnets
+     * @throws ServerSideException 
+     */
+    @WebMethod(operationName = "getSubnetsInSubent")
+    public RemoteObjectLight[] getSubnetsInSubent(@WebParam(name = "id")long id,
+            @WebParam(name = "limit")int limit,
+            @WebParam(name = "className")String className,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            return wsBean.getSubnetsInSubent(id, className, limit, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getSubnetsInSubent: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
