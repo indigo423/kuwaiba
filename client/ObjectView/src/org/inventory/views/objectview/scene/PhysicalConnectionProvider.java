@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.inventory.communications.SharedInformation;
 import org.inventory.connections.physicalconnections.wizards.ConnectionWizard;
 import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.utils.Constants;
 import org.inventory.views.objectview.ObjectViewTopComponent;
 import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.action.ConnectorState;
@@ -35,7 +36,7 @@ import org.openide.util.Lookup;
 
 /**
  * This class controls the physical connections behavior
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class PhysicalConnectionProvider implements ConnectProvider{
 
@@ -85,7 +86,7 @@ public class PhysicalConnectionProvider implements ConnectProvider{
         switch (currentConnectionSelection){
             case ObjectViewTopComponent.CONNECTION_WIRECONTAINER:
             case ObjectViewTopComponent.CONNECTION_WIRELESSCONTAINER:
-                if (com.getMetaForClass(myObject.getClassName(), false).isPhysicalNode())
+                if (com.getMetaForClass(myObject.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1)
                     return true;
                 break;
             case ObjectViewTopComponent.CONNECTION_ELECTRICALLINK:
@@ -147,7 +148,7 @@ public class PhysicalConnectionProvider implements ConnectProvider{
 
         ConnectionWizard myWizard =new ConnectionWizard(wizardType,((ObjectNodeWidget)sourceWidget).getObject(),
                 ((ObjectNodeWidget)targetWidget).getObject(), connectionClass,
-                ((ViewScene)sourceWidget.getScene()).getCurrentObject().getOid());
+                ((ViewScene)sourceWidget.getScene()).getCurrentObject());
         
         myWizard.show();
         if (myWizard.getNewConnection() != null){

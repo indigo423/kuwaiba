@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *   Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@ package org.inventory.core.usermanager.nodes.properties;
 
 import java.beans.PropertyEditorSupport;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.session.LocalUserGroupObjectLight;
 import org.inventory.core.services.api.session.LocalUserObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.Utils;
@@ -51,12 +54,13 @@ public class UserProperty extends ReadWrite{
      */
     private PasswordEditorSupport pes = null;
 
-    public UserProperty(String _name,String _displayName,String _toolTextTip,Object _value, LocalUserObject _user){
-        super(_name,_value.getClass(),_displayName,_toolTextTip);
-        this.object = _user;
-        this.value = _value;
+    public UserProperty(String name,String displayName,String toolTextTip,
+            Object value, LocalUserObject user){
+        super(name, value.getClass(),displayName, toolTextTip);
+        this.object = user;
+        this.value = value;
         this.com = CommunicationsStub.getInstance();
-        if (_name.equals(UserNode.PROP_PASSWORD) || _name.equals(UserNode.PROP_GROUPS))
+        if (name.equals(UserNode.PROP_PASSWORD) || name.equals(UserNode.PROP_GROUPS))
             this.setValue("canEditAsText", Boolean.FALSE);
     }
 
@@ -68,13 +72,23 @@ public class UserProperty extends ReadWrite{
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
-        LocalObject update = Lookup.getDefault().lookup(LocalObject.class);
+        LocalUserGroupObjectLight[] groups = object.getGroups();
+        List<Long> oids = new ArrayList<Long>();
+        for (LocalUserGroupObjectLight group : groups) {
+            oids.add(group.getOid());
+        }
 
-        update.setLocalObject("User", //NOI18N
-                new String[]{this.getName()}, new Object[]{t});
-        update.setOid(this.object.getOid());
+        boolean success = false;
+        if (this.getName().equals(UserNode.PROP_USERNAME))
+            success = com.setUserProperties(object.getOid(), (String)t, null, null, null, oids);
+        else if(this.getName().equals(UserNode.PROP_PASSWORD))
+            success = com.setUserProperties(object.getOid(), null, (String)t, null, null, oids);
+        else if(this.getName().equals(UserNode.PROP_FIRSTNAME))
+            success = com.setUserProperties(object.getOid(), null, null, (String)t, null, oids);
+        else if(this.getName().equals(UserNode.PROP_LASTNAME))
+            success = com.setUserProperties(object.getOid(), null, null, null, (String)t, oids);
         
-        if(!com.setUserProperties(update)){
+        if(!success){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("User Update", NotificationUtil.ERROR, com.getError());
         }else
@@ -113,7 +127,7 @@ public class UserProperty extends ReadWrite{
         update.setLocalObject("User", //NOI18N
                 new String[]{UserNode.PROP_PASSWORD}, new Object[]{Utils.getMD5Hash(passwd)}); //NOI18N
         update.setOid(this.object.getOid());
-        if(com.saveObject(update) == null){
+        if(!com.saveObject(update)){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("User Update", NotificationUtil.ERROR, com.getError());
         }

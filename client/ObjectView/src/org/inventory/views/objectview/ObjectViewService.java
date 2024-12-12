@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import org.openide.util.Utilities;
 
 /**
  * Contains the business logic for the associated TopComponent
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ObjectViewService implements LookupListener{
     
@@ -99,7 +99,7 @@ public class ObjectViewService implements LookupListener{
            vrtc.getScene().getInteractionLayer().removeChildren();
            vrtc.getScene().getLabelsLayer().removeChildren();
 
-           if (myObject != null){ //Other nodes than the root one
+           if (myObject.getOid() != null){ //Other nodes than the root one
                if(!com.getLightMetaForClass(myObject.getClassName(), false).isViewable()){
                    vrtc.getNotifier().showStatusMessage("This object doesn't have any view", false);
                    disableView();
@@ -129,7 +129,7 @@ public class ObjectViewService implements LookupListener{
        LocalObjectView defaultView = com.getObjectDefaultView(myObject.getOid(),myObject.getClassName());
        if(defaultView == null){
            List<LocalObjectLight> myChildren = com.getObjectChildren(myObject.getOid(), com.getMetaForClass(myObject.getClassName(),false).getOid());
-           List<LocalObject> myConnections = com.getChildrenOfClass(myObject.getOid(), SharedInformation.CLASS_GENERICCONNECTION);
+           List<LocalObject> myConnections = com.getChildrenOfClass(myObject.getOid(),myObject.getClassName(), SharedInformation.CLASS_GENERICCONNECTION);
            //TODO: Change for a ViewFactory
            viewBuilder = new ViewBuilder(null, vrtc.getScene());
            viewBuilder.buildDefaultView(myChildren, myConnections);
@@ -137,10 +137,10 @@ public class ObjectViewService implements LookupListener{
        else{
            viewBuilder = new ViewBuilder(defaultView, vrtc.getScene());
            viewBuilder.buildView();
-           if (viewBuilder.getMyView().getIsDirty()){
+           if (defaultView.isDirty()){
                vrtc.getNotifier().showSimplePopup("View changes", NotificationUtil.WARNING, "Some elements in the view has been deleted since the last time it was opened. They were removed");
                vrtc.getScene().fireChangeEvent(new ActionEvent(this, ViewScene.SCENE_CHANGETOSAVE, "Removing old objects"));
-               viewBuilder.getMyView().setIsDirty(false);
+               defaultView.setDirty(false);
            }
        }
        for (Widget node : vrtc.getScene().getNodesLayer().getChildren()){
@@ -149,7 +149,7 @@ public class ObjectViewService implements LookupListener{
        }
        vrtc.getScene().validate();
        vrtc.getScene().repaint();
-       vrtc.setDisplayName(myObject.getDisplayname() + " ["+myObject.getClassName()+"]");
+       vrtc.setDisplayName(myObject.getName() + " ["+myObject.getClassName()+"]");
     }
 
     private void disableView(){
@@ -205,10 +205,10 @@ public class ObjectViewService implements LookupListener{
         List<LocalObjectLight> childrenNodes = com.getObjectChildren(vrtc.getScene().getCurrentObject().getOid(),
                 com.getMetaForClass(vrtc.getScene().getCurrentObject().getClassName(), false).getOid());
         List<LocalObject> childrenEdges = com.getChildrenOfClass(vrtc.getScene().getCurrentObject().getOid(),
-                SharedInformation.CLASS_GENERICCONNECTION);
+                vrtc.getScene().getCurrentObject().getClassName(),SharedInformation.CLASS_GENERICCONNECTION);
         
         List<LocalObjectLight> currentNodes = new ArrayList<LocalObjectLight>();
-        List<LocalObject> currentEdges = new ArrayList<LocalObject>();
+        List<LocalObjectLight> currentEdges = new ArrayList<LocalObjectLight>();
 
         for (Widget widget : vrtc.getScene().getNodesLayer().getChildren())
             currentNodes.add(((ObjectNodeWidget)widget).getObject());
@@ -219,8 +219,8 @@ public class ObjectViewService implements LookupListener{
         Object[] nodesIntersection = Utils.inverseIntersection(childrenNodes, currentNodes);
         Object[] edgesIntersection = Utils.inverseIntersection(childrenEdges, currentEdges);
         
-        viewBuilder.refreshView((List<LocalObjectLight>)nodesIntersection[0], (List<LocalObject>)edgesIntersection[0],
-                (List<LocalObjectLight>)nodesIntersection[1], (List<LocalObject>)edgesIntersection[1]);
+        viewBuilder.refreshView((List<LocalObjectLight>)nodesIntersection[0], (List<LocalObjectLight>)edgesIntersection[0],
+                (List<LocalObjectLight>)nodesIntersection[1], (List<LocalObjectLight>)edgesIntersection[1]);
         vrtc.getScene().validate();
         vrtc.getScene().repaint();
         if (!((List)nodesIntersection[0]).isEmpty() || !((List)nodesIntersection[1]).isEmpty()

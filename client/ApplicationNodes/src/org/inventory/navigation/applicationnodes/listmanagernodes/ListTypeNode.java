@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package org.inventory.navigation.applicationnodes.listmanagernodes;
 
 import javax.swing.Action;
 import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
-import org.inventory.navigation.applicationnodes.listmanagernodes.actions.Create;
+import org.inventory.navigation.applicationnodes.listmanagernodes.actions.CreateListTypeAction;
 import org.openide.nodes.AbstractNode;
 
 /**
  * Node representing a list type class
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ListTypeNode extends AbstractNode{
     private LocalClassMetadataLight object;
@@ -31,7 +31,7 @@ public class ListTypeNode extends AbstractNode{
     public static final String ICON_PATH="org/inventory/navigation/applicationnodes/res/list-type.png";
 
     public ListTypeNode(LocalClassMetadataLight lcm) {
-        super(new ListElementChildren());
+        super(new ListTypeItemChildren());
         this.object = lcm;
         setIconBaseWithExtension(ICON_PATH);
     }
@@ -47,6 +47,6 @@ public class ListTypeNode extends AbstractNode{
 
     @Override
     public Action[] getActions(boolean context){
-        return new Action[]{new Create(this)};
+        return new Action[]{new CreateListTypeAction(this)};
     }
 }

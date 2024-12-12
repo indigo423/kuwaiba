@@ -17,6 +17,7 @@
 package org.inventory.communications.core.queries;
 
 import org.inventory.core.services.api.queries.LocalQuery;
+//import org.kuwaiba.wsclient.RemoteQuery;
 import org.kuwaiba.wsclient.RemoteQuery;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -39,7 +40,7 @@ public class LocalQueryImpl extends LocalQueryLightImpl implements LocalQuery{
     }
     public LocalQueryImpl(RemoteQuery remoteQuery) {
         super(remoteQuery);
-        this.structure = remoteQuery.getContent();     
+        this.structure = remoteQuery.getContent();
     }
 
     public byte[] getStructure() {

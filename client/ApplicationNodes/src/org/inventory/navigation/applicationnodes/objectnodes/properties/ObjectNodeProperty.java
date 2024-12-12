@@ -20,12 +20,13 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Date;
+import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.factories.ObjectFactory;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementNode;
+import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
 import org.openide.util.Lookup;
@@ -37,7 +38,7 @@ import org.openide.util.Lookup;
  */
 public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListener{
     private Object value;
-    private LocalObjectListItem[] list;
+    private List<LocalObjectListItem> list;
     private ObjectNode node;
 
 
@@ -58,7 +59,7 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
      * @param _name
      */
     public ObjectNodeProperty(String _name, Class _valueType, Object _value,
-            String _displayName,String _toolTextTip, LocalObjectListItem[] _list, ObjectNode _node) {
+            String _displayName,String _toolTextTip, List<LocalObjectListItem> _list, ObjectNode _node) {
         super(_name,_valueType,_displayName,_toolTextTip);
         if (_value != null)
             this.value = _value;
@@ -87,13 +88,13 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
                 update.setLocalObject(node.getObject().getClassName(),
                     new String[]{this.getName()}, new Object[]{t});
             update.setOid(node.getObject().getOid());
-            if(CommunicationsStub.getInstance().saveObject(update) == null)
+            if(!CommunicationsStub.getInstance().saveObject(update))
                 throw new Exception("[saveObject]: Error "+ CommunicationsStub.getInstance().getError());
             else
                 value = t;
             
-            if (node instanceof ListElementNode)
-                CommunicationsStub.getInstance().getList(node.getObject().getClassName(), true);
+            if (node instanceof ListTypeItemNode)
+                CommunicationsStub.getInstance().getList(node.getObject().getClassName(), true, true);
             
         }catch(Exception e){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
@@ -118,7 +119,7 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
                 return;
 
             if (this.getName().equals("name")){
-                node.getObject().setDisplayName((String)getPropertyEditor().getValue());
+                node.getObject().setName((String)getPropertyEditor().getValue());
                 node.setDisplayName((String)getPropertyEditor().getValue());
             }
             

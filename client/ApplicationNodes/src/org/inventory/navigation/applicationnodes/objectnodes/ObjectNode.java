@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,9 +34,10 @@ import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.core.services.api.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementNode;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateObjectAction;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteObjectAction;
+import org.inventory.core.services.utils.Constants;
+import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateBusinessObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteBusinessObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.EditObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.RefreshObjectAction;
 import org.inventory.navigation.applicationnodes.objectnodes.actions.RelateToServiceAction;
@@ -60,7 +61,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents a node within the navigation tree
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
@@ -71,8 +72,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
     protected CommunicationsStub com;
 
-    protected CreateObjectAction createAction;
-    protected DeleteObjectAction deleteAction;
+    protected CreateBusinessObjectAction createAction;
+    protected DeleteBusinessObjectAction deleteAction;
     protected RefreshObjectAction refreshAction;
     protected EditObjectAction editAction;
     private RelateToServiceAction relateToServiceAction;
@@ -80,6 +81,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
     protected Sheet sheet;
     protected Image icon;
+    private Image defaultIcon = ImageUtilities.loadImage(GENERIC_ICON_PATH);;
     private NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
 
     public ObjectNode(LocalObjectLight _lol, boolean isLeaf){
@@ -93,7 +95,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
         explorerAction.putValue(OpenLocalExplorerAction.NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EXPLORE"));
         editAction = new EditObjectAction(this);
-        deleteAction = new DeleteObjectAction(this);
+        deleteAction = new DeleteBusinessObjectAction(this);
         refreshAction = new RefreshObjectAction(this);
     }
     
@@ -107,11 +109,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         icon = (com.getMetaForClass(_lol.getClassName(),false)).getSmallIcon();
         explorerAction.putValue(OpenLocalExplorerAction.NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EXPLORE"));
 
-        createAction = new CreateObjectAction(this);
-        deleteAction = new DeleteObjectAction(this);
+        createAction = new CreateBusinessObjectAction(this);
+        deleteAction = new DeleteBusinessObjectAction(this);
         editAction = new EditObjectAction(this);
         refreshAction = new RefreshObjectAction(this);
-        if (object.getValidator("isRelatableToService")){
+        if (object.getValidator("isRelatableToService") == 1){
             relateToServiceAction = new RelateToServiceAction(object);
             showRelatedServicesAction = new ShowRelatedServicesAction(object);
         }
@@ -159,36 +161,51 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
             if(lam.isVisible()){
 
                 ObjectNodeProperty property = null;
-
-                if (lam.isMultiple()){
-                    //If so, this can be a reference to an object list item or a 1:1 to any other RootObject subclass
-                    LocalObjectListItem[] list = com.getList(lam.getListAttributeClassName(),false);
-                    LocalObjectListItem val = null;
-
-                    for (LocalObjectListItem loli : list)
-                        if(loli.getOid().equals(lo.getAttribute(lam.getName()))){
-                            val = loli;
-                            break;
+                int mapping = lam.getMapping();
+                switch (mapping){
+                    case Constants.MAPPING_DATE:
+                    case Constants.MAPPING_TIMESTAMP:
+                    case Constants.MAPPING_PRIMITIVE:
+                        //Those attributes that are not multiple, but reference another object
+                        //like nodeA or endpointB in physicalConnections should be ignored, at least by now
+                        if (!lam.getType().equals(LocalObjectLight.class))
+                            property = new ObjectNodeProperty(
+                                                                lam.getName(),
+                                                                lam.getType(),
+                                                                lo.getAttribute(lam.getName()),
+                                                                lam.getDisplayName().equals("")?lam.getName():lam.getDisplayName(),
+                                                                lam.getDescription(),this);
+                    break;
+                    case Constants.MAPPING_MANYTOONE:
+                        //If so, this can be a reference to an object list item or a 1:1 to any other RootObject subclass
+                        List<LocalObjectListItem> list = com.getList(lam.getListAttributeClassName(), true, false);
+                        if (list == null){
+                            nu.showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+                            return sheet;
                         }
-                    property = new ObjectNodeProperty(
-                                           lam.getName(),
-                                           LocalObjectListItem.class,
-                                           val,
-                                           lam.getDisplayName().equals("")?lam.getName():lam.getDisplayName(),
-                                           lam.getDescription(),
-                                           list,
-                                           this);
-                }
-                else{
-                    //Those attributes that are not multiple, but reference another object
-                    //like nodeA or endpointB in physicalConnections should be ignored, at least by now
-                    if (!lam.getType().equals(LocalObjectLight.class))
+                        LocalObjectListItem val = null;
+
+                        for (LocalObjectListItem loli : list)
+                            if(loli.getOid().equals(lo.getAttribute(lam.getName()))){
+                                val = loli;
+                                break;
+                            }
                         property = new ObjectNodeProperty(
-                                                            lam.getName(),
-                                                            lam.getType(),
-                                                            lo.getAttribute(lam.getName()),
-                                                            lam.getDisplayName().equals("")?lam.getName():lam.getDisplayName(),
-                                                            lam.getDescription(),this);
+                                               lam.getName(),
+                                               LocalObjectListItem.class,
+                                               val,
+                                               lam.getDisplayName().equals("")?lam.getName():lam.getDisplayName(),
+                                               lam.getDescription(),
+                                               list,
+                                               this);
+                    break;
+                    case Constants.MAPPING_MANYTOMANY:
+                        property = new ObjectNodeProperty(lam.getName(), String.class, "",
+                                    lam.getDisplayName(),  "", this);
+                    break;
+                    default:
+                        nu.showSimplePopup("Error", NotificationUtil.ERROR, "Mapping not supported");
+                        return sheet;
                 }
                 generalPropertySet.put(property);
             }         
@@ -224,8 +241,10 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         if (this.sheet != null)
             setSheet(createSheet());
 
-        icon = (com.getMetaForClass(object.getClassName(),false)).getSmallIcon();
-        fireIconChange();
+        if (!(this instanceof ListTypeItemNode)){
+            icon = (com.getMetaForClass(object.getClassName(),false)).getSmallIcon();
+            fireIconChange();
+        }
 
         //Don't try to refresh the anything if the node is a leaf (used only in views)
         if (!(getChildren() instanceof ObjectChildren))
@@ -327,7 +346,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                     }
                     if (canMove){
                           if (action == DnDConstants.ACTION_COPY){
-                              LocalObjectLight[] copiedNodes = com.copyObjects(getObject().getOid(),
+                              LocalObjectLight[] copiedNodes = com.copyObjects(getObject().getClassName(),getObject().getOid(),
                                                                 new LocalObjectLight[] {obj});
                                 if (copiedNodes!= null){
                                     for (LocalObjectLight lol : copiedNodes)
@@ -340,7 +359,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                           }
                           else{
                               if (action == DnDConstants.ACTION_MOVE){
-                                    if (com.moveObjects(getObject().getOid(),new LocalObjectLight[] {obj})){
+                                    if (com.moveObjects(getObject().getClassName(),getObject().getOid(),new LocalObjectLight[] {obj})){
                                         dropNode.getParentNode().getChildren().remove(new Node[]{dropNode});
                                         getChildren().add(new Node[]{new ObjectNode(obj)});
                                     }
@@ -387,8 +406,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
     @Override
     public Image getIcon(int i){
         if (icon==null)
-            //TODO: Inefficient, create only one instance to save memory
-            return ImageUtilities.loadImage(GENERIC_ICON_PATH);
+            return defaultIcon;
         return icon;
     }
 
@@ -404,12 +422,12 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
             update.setLocalObject(object.getClassName(),
                     new String[]{"name"}, new Object[]{newName}); //NOI18N
             update.setOid(object.getOid());
-            if (com.saveObject(update) != null){
-                object.setDisplayName(newName);
-                fireDisplayNameChange(object.getDisplayname(), newName);
+            if (com.saveObject(update)){
+                object.setName(newName);
+                setDisplayName(getDisplayName());
                 
-                if (this instanceof ListElementNode)
-                    CommunicationsStub.getInstance().getList(object.getClassName(), true);
+                if (this instanceof ListTypeItemNode)
+                    CommunicationsStub.getInstance().getList(object.getClassName(), true, true);
             }
 
             //So the PropertySheet reflects the changes too
@@ -425,14 +443,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
     }
 
     public String getEditableText(){
-        String displayName;
-        if (object instanceof LocalObject)
-            displayName = (((LocalObject)object).getAttribute("name").equals("")) ?
-                java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NONAME"):((LocalObject)object).getAttribute("name").toString();
-        else
-            displayName= (object.getDisplayname().equals(""))?
-                java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NONAME"):object.getDisplayname();
-        return displayName;
+        if (object.getName() == null)
+            return java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NONAME");
+        if (object.getName().equals(""))
+            return java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NONAME");
+        return object.getName();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,36 +37,30 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
     private String [] attributeTypes;
     private String [] attributeDisplayNames;
     private Boolean [] attributesIsVisible;
-    private Boolean [] attributesIsMultiple;
+    private Integer [] attributeMappings;
     private String [] attributesDescription;
 
     public LocalClassMetadataImpl() {    }
 
     public LocalClassMetadataImpl(ClassInfo cm){
-        super(cm.getId(),cm.getClassName(),cm.getDisplayName(),cm.getSmallIcon(),
-                cm.isPhysicalNode(),cm.isPhysicalEndpoint(), cm.isAbstractClass(), cm.isViewable());
-        this.isAbstract = cm.isAbstractClass();
-        this.icon = cm.getIcon()==null?null:Utils.getImageFromByteArray(cm.getIcon());
+        super(cm);
+        this.icon = (cm.getIcon()==null) ? null : Utils.getImageFromByteArray(cm.getIcon());
         this.description = cm.getDescription();
         this.attributeIds = cm.getAttributeIds().toArray(new Long[0]);
         this.attributeNames = cm.getAttributeNames().toArray(new String[0]);
         this.attributeTypes = cm.getAttributeTypes().toArray(new String[0]);
         this.attributeDisplayNames = cm.getAttributeDisplayNames().toArray(new String[0]);
         this.attributesIsVisible = cm.getAttributesIsVisible().toArray(new Boolean[0]);
-        this.attributesIsMultiple = cm.getAttributesIsMultiple().toArray(new Boolean[0]);
+        this.attributeMappings = cm.getAttributesMapping().toArray(new Integer[0]);
         this.attributesDescription = cm.getAttributesDescription().toArray(new String[0]);
     }
 
-    public LocalClassMetadataImpl(String className, Long oid){
-        super (className,oid);
+    public Integer[] getAttributeMappings() {
+        return attributeMappings;
     }
 
-    public Boolean[] getAttributesIsMultiple() {
-        return attributesIsMultiple;
-    }
-
-    public void setAttributesIsMultiple(Boolean[] attributesIsMultiple) {
-        this.attributesIsMultiple = attributesIsMultiple;
+    public void setAttributeMappings(Integer[] attributeMappings) {
+        this.attributeMappings = attributeMappings;
     }
 
     public String[] getAttributeDisplayNames() {
@@ -116,11 +110,11 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         return att;
     }
 
-    public Boolean isMultiple(String att){
+    public Integer getMappingForAttribute(String att){
         for (int i=0; i< this.attributeNames.length;i++)
             if(this.attributeNames[i].equals(att))
-                return this.attributesIsMultiple[i];
-        return false;
+                return this.attributeMappings[i];
+        return 0;
     }
     
     public Boolean isVisible(String att){
@@ -154,7 +148,7 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
                                     attributeTypes[i],
                                     attributeDisplayNames[i],
                                     attributesIsVisible[i],
-                                    attributesIsMultiple[i],
+                                    attributeMappings[i],
                                     attributesDescription[i]);
         return res;
     }
@@ -175,10 +169,7 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         return this.description;
     }
 
-    public LocalClassMetadataLight getLightMetadata() {
-        LocalClassMetadataLightImpl lightClass = new LocalClassMetadataLightImpl(id, className, displayName, null, isPhysicalNode,
-                isPhysicalEndpoint, isAbstract, isViewable);
-        lightClass.setSmallIcon(icon);
-        return lightClass;
+    public LocalClassMetadataLight asLocalClassMetadataLight(){
+        return new LocalClassMetadataLightImpl(id, className, displayName, smallIcon, abstractClass, viewable, listType, validators);
     }
 }

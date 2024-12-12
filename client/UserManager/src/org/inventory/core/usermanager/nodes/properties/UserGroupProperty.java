@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *   Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.inventory.communications.LocalStuffFactory;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.session.LocalUserGroupObject;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.usermanager.nodes.GroupNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
 import org.openide.util.Lookup;
 
@@ -56,12 +57,14 @@ public class UserGroupProperty extends ReadWrite{
 
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        LocalObject update = LocalStuffFactory.createLocalObject();
-
-        update.setLocalObject("UserGroup",
-                new String[]{this.getName()}, new Object[]{t});
-        update.setOid(this.object.getOid());
-        if(com.setGroupProperties(update))
+        
+        Boolean success = false;
+        if(this.getName().equals(GroupNode.PROP_NAME))
+            success = com.setGroupProperties(object.getOid(), (String)t, null);
+        else if(this.getName().equals(GroupNode.PROP_DESCRIPTION))
+            success = com.setGroupProperties(object.getOid(), null,(String)t);
+        
+        if(success)
             this.value = t;
         else{
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);

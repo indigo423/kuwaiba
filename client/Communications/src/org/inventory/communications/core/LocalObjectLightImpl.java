@@ -22,8 +22,8 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
                                                                //LocalObjectLight interface extends from it
 
     protected Long oid;
+    protected String name;
     protected String className;
-    protected String displayName;
     /**
      * The list of property change listeners
      */
@@ -31,29 +31,29 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
     /**
      * Collection of flags
      */
-    protected HashMap validators;
-    /**
-     * Properties
-     */
-    public static String PROP_DISPLAYNAME="displayname";
+    protected HashMap<String, Integer> validators;
 
     public LocalObjectLightImpl(){
     }
 
-    public LocalObjectLightImpl(RemoteObjectLight rol){
-        this.className = rol.getClassName();
-        this.oid = rol.getOid();
-        this.displayName = rol.getDisplayName();
-        this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
-        if (rol.getValidators() != null){
-            validators = new HashMap();
-            for (Validator validator : rol.getValidators())
-                validators.put(validator.getLabel(), validator.isValue());
-        }
+    public LocalObjectLightImpl(Long oid, String name, String className) {
+        this.oid = oid;
+        this.name = name;
+        this.className = className;
+        this.validators = new HashMap<String, Integer>();
     }
 
-    public String getDisplayname(){
-        return this.displayName;
+    public LocalObjectLightImpl(RemoteObjectLight rol){
+        this.className = rol.getClassName();
+        this.name = rol.getName();
+        this.oid = rol.getOid();
+        this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
+
+        if (rol.getValidators() != null){
+            this.validators = new HashMap<String, Integer>();
+            for (Validator validator : rol.getValidators())
+                validators.put(validator.getLabel(), validator.getValue());
+        }
     }
 
     public String getClassName() {
@@ -64,18 +64,24 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
         return oid;
     }
 
-    public void setDisplayName(String text){
-        this.displayName = text;
-        
-    }
-
-    public Boolean getValidator(String label){
-        Boolean res = (Boolean)this.validators.get(label);
+    public int getValidator(String label){
+        if (this.validators == null)
+            return 0;
+        Integer res = this.validators.get(label);
         if(res == null)
-            return false;
+            return 0;
         else
             return res;
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
 
     public void addPropertyChangeListener(PropertyChangeListener newListener){
         if (propertyChangeListeners == null)
@@ -139,6 +145,6 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
 
     @Override
     public String toString(){
-        return getDisplayname() +" ["+getClassName()+"]"; //NOI18N
+        return getName() +" ["+getClassName()+"]"; //NOI18N
     }
 }

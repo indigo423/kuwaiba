@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.inventory.views.objectview.scene;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.LocalStuffFactory;
 import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.api.LocalObjectLight;
@@ -31,7 +32,7 @@ import org.netbeans.api.visual.widget.Widget;
 
 /**
  * This class builds every view so it can be rendered by the scene
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ViewBuilder {
 
@@ -43,6 +44,10 @@ public class ViewBuilder {
      * Reference to the scene
      */
     private ViewScene scene;
+    /**
+     * Reference to the singleton of CommunicationStub
+     */
+    private CommunicationsStub com = CommunicationsStub.getInstance();
 
     /**
      * This constructor should be used if there's already a view
@@ -93,7 +98,7 @@ public class ViewBuilder {
             if (widget.getSourceAnchor() == null || widget.getTargetAnchor() == null)
                 scene.getNotifier().showSimplePopup("View Generation",
                         NotificationUtil.WARNING, "The connection "+
-                        edge.getObject().getAttribute("name")+" ["+edge.getObject().getClassName()+"], id="+edge.getObject().getOid()+" has a side missing, please check if it was moved and refresh the view"); //NOI18N
+                        edge.getObject().getName()+" ["+edge.getObject().getClassName()+"], id="+edge.getObject().getOid()+" has a side missing, please check if it was moved and refresh the view"); //NOI18N
             else{
                 widget.setControlPoints(edge.getControlPoints(), true);
                 scene.getEdgesLayer().addChild(widget);
@@ -124,14 +129,23 @@ public class ViewBuilder {
 
         //TODO: This algorithm to find the endpoints for a connection could be improved in many ways
         for (LocalObject container : myPhysicalConnections){
+            String aSideString, bSideString;
+            //Hardcoded for now
+            if (container.getClassName().equals("WireContainer") || container.getClassName().equals("WirelessContainer")){ //NOI18N
+                aSideString = "nodeA";
+                bSideString = "nodeB";
+            }else{
+                aSideString = "endpointA";
+                bSideString = "endpointB";
+            }
             LocalEdge le = LocalStuffFactory.createLocalEdge(container,null);
 
             for (LocalNode myNode : myLocalNodes){
                 
-                if (((Long)container.getAttribute("nodeA")).equals(myNode.getObject().getOid())) //NOI18N
+                if (Long.valueOf(com.getSpecialAttribute(container.getClassName(), container.getOid(),aSideString).get(0)).equals(myNode.getObject().getOid())) //NOI18N
                     le.setaSide(myNode);
                 else{
-                    if (((Long)container.getAttribute("nodeB")).equals(myNode.getObject().getOid())) //NOI18N
+                    if (Long.valueOf(com.getSpecialAttribute(container.getClassName(), container.getOid(),bSideString).get(0)).equals(myNode.getObject().getOid())) //NOI18N
                        le.setbSide(myNode);
                 }
                 if (le.getaSide() != null && le.getbSide() != null)
@@ -149,8 +163,8 @@ public class ViewBuilder {
      * @param myNodes
      * @param myPhysicalConnections
      */
-    public void refreshView(List<LocalObjectLight> newNodes, List<LocalObject> newPhysicalConnections,
-            List<LocalObjectLight> nodesToDelete, List<LocalObject> physicalConnectionsToDelete){
+    public void refreshView(List<LocalObjectLight> newNodes, List<LocalObjectLight> newPhysicalConnections,
+            List<LocalObjectLight> nodesToDelete, List<LocalObjectLight> physicalConnectionsToDelete){
 
         scene.getNodesLayer().removeChildren();
         scene.getEdgesLayer().removeChildren();
@@ -163,7 +177,7 @@ public class ViewBuilder {
         }
 
         if (physicalConnectionsToDelete != null){
-            for (LocalObject toDelete : physicalConnectionsToDelete)
+            for (LocalObjectLight toDelete : physicalConnectionsToDelete)
                 myView.getEdges().remove(LocalStuffFactory.createLocalEdge(toDelete));
         }
 
@@ -176,11 +190,20 @@ public class ViewBuilder {
         }
 
         if (newPhysicalConnections != null)
-            for (LocalObject toAdd : newPhysicalConnections){
-                LocalNode nodeA = getNodeMatching(myView.getNodes(), (Long)toAdd.getAttribute("nodeA"));
+            for (LocalObjectLight toAdd : newPhysicalConnections){
+                String aSideString, bSideString;
+                //Hardcoded for now
+                if (toAdd.getClassName().equals("WireContainer") || toAdd.getClassName().equals("WirelessContainer")){ //NOI18N
+                    aSideString = "nodeA";
+                    bSideString = "nodeB";
+                }else{
+                    aSideString = "endpointA";
+                    bSideString = "endpointB";
+                }
+                LocalNode nodeA = getNodeMatching(myView.getNodes(), Long.valueOf(com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(),aSideString).get(0)));
                 if (nodeA == null)
                     continue;
-                LocalNode nodeB = getNodeMatching(myView.getNodes(), (Long)toAdd.getAttribute("nodeB"));
+                LocalNode nodeB = getNodeMatching(myView.getNodes(), Long.valueOf(com.getSpecialAttribute(toAdd.getClassName(), toAdd.getOid(),bSideString).get(0)));
                 if (nodeB == null)
                     continue;
                 myView.getEdges().add(LocalStuffFactory.createLocalEdge(toAdd, nodeA, nodeB, null));

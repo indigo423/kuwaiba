@@ -96,9 +96,10 @@ public class Cache{
     public LocalClassMetadataLight getLightMetaForClass(String className) {
         if (className == null)
             return null;
+        //If the entry is already in the LocalClassMetadata cache, use it
         LocalClassMetadata possibleMetadata = metadataIndex.get(className);
         if (possibleMetadata != null)
-            return possibleMetadata.getLightMetadata();
+            return possibleMetadata.asLocalClassMetadataLight();
         return this.lightMetadataIndex.get(className);
     }
 
@@ -140,13 +141,10 @@ public class Cache{
         return possibleChildrenIndex;
     }
 
-    public LocalObjectListItem[] getListCached(String className){
+    public List<LocalObjectListItem> getListCached(String className){
         if (className == null)
             return null;
-        List<LocalObjectListItem> existingItems = listIndex.get(className);
-        if (existingItems == null) //The list is not cached
-            return null;
-        return existingItems.toArray(new LocalObjectListItem[0]);
+        return listIndex.get(className);
     }
 
     public void addListCached(String className, List<LocalObjectListItem> items){

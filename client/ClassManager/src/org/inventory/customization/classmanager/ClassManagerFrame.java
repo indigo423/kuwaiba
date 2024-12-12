@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.util.Lookup;
 
 /**
  * Displays the form to customize a class' properties
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class ClassManagerFrame extends javax.swing.JFrame {
     private JFileChooser fChooser;
@@ -251,7 +251,7 @@ public class ClassManagerFrame extends javax.swing.JFrame {
                         getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The width of the image exceeds 16 pixels");
                     else{
                         try {
-                            smallIcon = Utils.getByteArrayFromImageFile(fChooser.getSelectedFile(), cms.getExtension(fChooser.getSelectedFile()));
+                            smallIcon = Utils.getByteArrayFromFile(fChooser.getSelectedFile());
                             txtSmallIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
                         } catch (IOException ex) {
                             smallIcon = null;
@@ -277,7 +277,7 @@ public class ClassManagerFrame extends javax.swing.JFrame {
                         getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The widtth of the image exceeds 32 pixels");
                     else{
                         try {
-                            icon = Utils.getByteArrayFromImageFile(fChooser.getSelectedFile(), cms.getExtension(fChooser.getSelectedFile()));
+                            icon = Utils.getByteArrayFromFile(fChooser.getSelectedFile());
                             txtIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
                         } catch (IOException ex) {
                             icon = null;

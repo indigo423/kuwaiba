@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package org.inventory.communications.core.views;
 import java.awt.Image;
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
-/*import java.io.FileOutputStream;*/
+//import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,7 +41,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This class represents the elements inside a view as recorded in the database
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@@kuwaiba.org>
  */
 @ServiceProvider(service=LocalObjectView.class)
 public class LocalObjectViewImpl  implements LocalObjectView {
@@ -63,31 +63,34 @@ public class LocalObjectViewImpl  implements LocalObjectView {
      */
     private Image background;
     /**
-     * Type of view (DefaultView, RackView, etc)
+     * Type of view 
      */
-    private String viewClass;
+    private int viewType;
     /**
      * Mark the current view as outdated
      */
-    private boolean isDirty = false;
+    private boolean dirty = false;
 
-    public LocalObjectViewImpl() {    }
-
-
-    public LocalObjectViewImpl(byte[] viewStructure, byte[] _background, String viewClass) {
-        this.background = Utils.getImageFromByteArray(_background);
-        this.viewClass = viewClass;
+    public LocalObjectViewImpl() {    
         nodes = new ArrayList<LocalNode>();
         edges = new ArrayList<LocalEdge>();
         labels = new ArrayList<LocalLabel>();
+    }
+
+
+    public LocalObjectViewImpl(byte[] viewStructure, byte[] _background, int viewType) {
+        this();
+        this.background = Utils.getImageFromByteArray(_background);
+        this.viewType = viewType;
+        
         if (viewStructure != null){
             /* Comment this out for debugging purposes
             try{
                 FileOutputStream fos = new FileOutputStream("/home/zim/out.xml");
                 fos.write(viewStructure);
                 fos.close();
-            }catch(Exception e){}
-             */
+            }catch(Exception e){}*/
+             
             try {
                 parseXML(viewStructure);
             } catch (XMLStreamException ex) {
@@ -118,9 +121,10 @@ public class LocalObjectViewImpl  implements LocalObjectView {
         return background;
     }
 
-    public String getViewClass() {
-        return this.viewClass;
+    public int getViewType() {
+        return viewType;
     }
+
     /**
      * Parse the XML document using StAX. Thanks to <a href="http://www.ibm.com/developerworks/java/library/os-ag-renegade15/index.html">Michael Galpin</a>
      * for his ideas on this
@@ -139,9 +143,9 @@ public class LocalObjectViewImpl  implements LocalObjectView {
         ByteArrayInputStream bais = new ByteArrayInputStream(structure);
         XMLStreamReader reader = inputFactory.createXMLStreamReader(bais);
 
-        nodes.removeAll(nodes);
-        edges.removeAll(edges);
-        labels.removeAll(labels);
+        nodes.clear();
+        edges.clear();
+        labels.clear();
 
         while (reader.hasNext()){
             int event = reader.next();
@@ -158,7 +162,7 @@ public class LocalObjectViewImpl  implements LocalObjectView {
                     if (lol != null)
                         nodes.add(new LocalNodeImpl(lol, xCoordinate, yCoordinate));
                     else
-                        isDirty = true;
+                        dirty = true;
                 }else{
                     if (reader.getName().equals(qEdge)){
                         Long objectId = Long.valueOf(reader.getAttributeValue(null,"id"));
@@ -167,35 +171,43 @@ public class LocalObjectViewImpl  implements LocalObjectView {
 
                         String className = reader.getAttributeValue(null,"class");
                         LocalObject container = CommunicationsStub.getInstance().getObjectInfo(className, objectId);
-                        LocalEdgeImpl myLocalEdge = new LocalEdgeImpl(container,null);
+                        if (container != null){
+                            LocalEdgeImpl myLocalEdge = new LocalEdgeImpl(container,null);
 
-                        for (LocalNode myNode : nodes){
+                            for (LocalNode myNode : nodes){
 
-                            if (aSide.equals(myNode.getObject().getOid())) //NOI18N
-                                myLocalEdge.setaSide(myNode);
-                            else{
-                                if (bSide.equals(myNode.getObject().getOid())) //NOI18N
-                                   myLocalEdge.setbSide(myNode);
+                                if (aSide.equals(myNode.getObject().getOid())) //NOI18N
+                                    myLocalEdge.setaSide(myNode);
+                                else{
+                                    if (bSide.equals(myNode.getObject().getOid())) //NOI18N
+                                       myLocalEdge.setbSide(myNode);
+                                }
+
+                                if (myLocalEdge.getaSide() != null && myLocalEdge.getbSide() != null)
+                                    break;
                             }
-
-                            if (myLocalEdge.getaSide() != null && myLocalEdge.getbSide() != null)
-                                break;
-                        }
-                        if (myLocalEdge.getaSide() == null || myLocalEdge.getbSide() == null)
-                            isDirty = true;
-                        else{
-                            edges.add(myLocalEdge);
-                        }
+                            if (myLocalEdge.getaSide() == null || myLocalEdge.getbSide() == null)
+                                dirty = true;
+                            else{
+                                edges.add(myLocalEdge);
+                                while(true){
+                                    reader.nextTag();
+                                    if (reader.getName().equals(qControlPoint)){
+                                        if (reader.getEventType() == XMLStreamConstants.START_ELEMENT)
+                                            edges.get(edges.size() -1).getControlPoints().
+                                                    add(new Point(Double.valueOf(reader.getAttributeValue(null,"x")).intValue(), //NOI18N
+                                                    Double.valueOf(reader.getAttributeValue(null,"y")).intValue()));             //NOI18N
+                                    }else break;
+                                }
+                            }
+                        }else
+                            dirty = true;
                     }else{
                         if (reader.getName().equals(qLabel)){
-                            //Unavailable by now
+                            //Unavailable for now
                         }
                         else{
-                            if (reader.getName().equals(qControlPoint)){
-                                edges.get(edges.size() -1).getControlPoints().
-                                        add(new Point(Double.valueOf(reader.getAttributeValue(null,"x")).intValue(), //NOI18N
-                                        Double.valueOf(reader.getAttributeValue(null,"y")).intValue()));             //NOI18N
-                            }
+                            //An unknown discardable tag
                         }
                     }
                 }
@@ -204,11 +216,11 @@ public class LocalObjectViewImpl  implements LocalObjectView {
         reader.close();
     }
 
-    public boolean getIsDirty(){
-        return this.isDirty;
+    public boolean isDirty(){
+        return this.dirty;
     }
 
-    public void setIsDirty(boolean value) {
-        this.isDirty = value;
+    public void setDirty(boolean value) {
+        this.dirty = value;
     }
 }

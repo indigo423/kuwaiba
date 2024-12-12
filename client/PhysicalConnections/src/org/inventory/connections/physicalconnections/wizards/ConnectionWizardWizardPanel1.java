@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 Charles Edward Bedon Cortazar <charles.bedon@zoho.com>.
+ *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.utils.Constants;
 import org.openide.WizardDescriptor;
 import org.openide.WizardValidationException;
 import org.openide.util.HelpCtx;
@@ -31,6 +32,10 @@ import org.openide.util.Lookup.Result;
 import org.openide.util.LookupEvent;
 import org.openide.util.LookupListener;
 
+/**
+ * Connection wizard panel 1
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ */
 public class ConnectionWizardWizardPanel1 implements WizardDescriptor.ValidatingPanel{
 
     /**
@@ -61,19 +66,19 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                     isValid = false;
                                 }
                                 else{
-                                    if (aSelection.getValidator("isConnected")){ //NOI18n
+                                    if (aSelection.getValidator("isConnected") == 1){ //NOI18n
                                         errorStr = "The port A is already connected";
                                         isValid = false;
                                     }
                                     else{
-                                        if (bSelection.getValidator("isConnected")){ //NOI18n
+                                        if (bSelection.getValidator("isConnected") == 1){ //NOI18n
                                            errorStr = "The port B is already connected";
                                             isValid = false;
                                         }else{
                                             switch(wizardType){
                                                 case ConnectionWizard.WIZARDTYPE_CONTAINERS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).isPhysicalNode()){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).isPhysicalNode())
+                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1){
+                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a container";
@@ -86,8 +91,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                                     }
                                                     break;
                                                 case ConnectionWizard.WIZARDTYPE_CONNECTIONS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).isPhysicalEndpoint()){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).isPhysicalEndpoint())
+                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1){
+                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a link";
@@ -122,19 +127,19 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                     isValid = false;
                                 }
                                 else{
-                                    if (bSelection.getValidator("isConnected")){ //NOI18n
+                                    if (bSelection.getValidator("isConnected") == 1){ //NOI18n
                                         errorStr = "The port B is already connected";
                                         isValid = false;
                                     }
                                     else{
-                                        if (aSelection.getValidator("isConnected")){ //NOI18n
+                                        if (aSelection.getValidator("isConnected") == 1){ //NOI18n
                                             errorStr = "The port A is already connected";
                                             isValid = false;
                                         }else{
                                             switch(wizardType){
                                                 case ConnectionWizard.WIZARDTYPE_CONTAINERS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).isPhysicalNode()){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).isPhysicalNode())
+                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1){
+                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_NODE_VALIDATOR) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a container";
@@ -147,8 +152,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
                                                     }
                                                     break;
                                                 case ConnectionWizard.WIZARDTYPE_CONNECTIONS:
-                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).isPhysicalEndpoint()){
-                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).isPhysicalEndpoint())
+                                                    if (com.getLightMetaForClass(aSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1){
+                                                        if(com.getLightMetaForClass(bSelection.getClassName(), false).getValidator(Constants.IS_PHYSICAL_ENDPOINT_VALIDATOR) == 1)
                                                             isValid = true;
                                                         else{
                                                             errorStr = "The object selected in the right tree cannot be connected using a link";
@@ -235,6 +240,8 @@ public class ConnectionWizardWizardPanel1 implements WizardDescriptor.Validating
         if(isValid){
             ((WizardDescriptor)settings).putProperty("aSide", aSelection.getOid());//NOI18N
             ((WizardDescriptor)settings).putProperty("bSide", bSelection.getOid());//NOI18N
+            ((WizardDescriptor)settings).putProperty("aSideClass", aSelection.getClassName());//NOI18N
+            ((WizardDescriptor)settings).putProperty("bSideClass", bSelection.getClassName());//NOI18N
         }
     }
 
