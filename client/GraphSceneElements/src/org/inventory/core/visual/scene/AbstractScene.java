@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -195,20 +195,26 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
      */
     public void setSceneFont (Font newFont) {
         setFont(newFont == null ? defaultFont : newFont);
-        for (Widget aLabel : labelsLayer.getChildren())
-            aLabel.setFont(getFont());
+        if (labelsLayer != null) { //Not all views will have a layer to place labels
+            for (Widget aLabel : labelsLayer.getChildren())
+                aLabel.setFont(getFont());
+        }
     }
     
     public void setSceneForegroundColor (Color foregroundColor) {
         setForeground(foregroundColor == null ? defaultForegroundColor : foregroundColor);
-        for (Widget aLabel : labelsLayer.getChildren())
-            aLabel.setForeground(getForeground());
+        if (labelsLayer != null) { //Not all views will have a layer to place labels
+            for (Widget aLabel : labelsLayer.getChildren())
+                aLabel.setForeground(getForeground());
+        }
     }
 
     public void setSceneBackgroundColor (Color backgroundColor) {
         setForeground(backgroundColor == null ? defaultForegroundColor : backgroundColor);
-        for (Widget aLabel : labelsLayer.getChildren())
-            aLabel.setBackground(getBackground());
+        if (labelsLayer != null) { //Not all views will have a layer to place labels
+            for (Widget aLabel : labelsLayer.getChildren())
+                aLabel.setBackground(getBackground());
+        }
     }
     
     public void clear(){

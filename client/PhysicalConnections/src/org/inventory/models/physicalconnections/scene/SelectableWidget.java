@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import java.awt.Color;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 
 /**
- * Repeated. Show be merged with the one from ObjectView
+ * Repeated. Should be merged with the one from ObjectView
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public interface SelectableWidget {

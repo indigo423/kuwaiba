@@ -1,5 +1,5 @@
 /**
- * Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  * 
 * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -408,7 +408,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
             object = (LocalObjectLight) evt.getSource();
             if (evt.getPropertyName().equals(Constants.PROPERTY_NAME)) {
                 setDisplayName(getDisplayName());
-                fireDisplayNameChange((String)evt.getOldValue(), (String)evt.getNewValue());
+                //fireDisplayNameChange((String)evt.getOldValue(), (String)evt.getNewValue());
+                fireNameChange(null, object.getName());
                 //firePropertyChange(Constants.PROPERTY_NAME, null, object.getName());
             }
         }

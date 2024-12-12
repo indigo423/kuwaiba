@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,19 +18,11 @@ package org.kuwaiba.sync;
 
 import java.io.File;
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
-import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
-import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
-import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
-import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
-import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
-import org.kuwaiba.apis.persistence.exceptions.WrongMappingException;
 
 /**
- * Syncronnization manager 
+ * Synchronization manager 
  * @author adrian martinez molina <adrian.martinez@kuwaiba.org>
  */
 public class SyncManager{

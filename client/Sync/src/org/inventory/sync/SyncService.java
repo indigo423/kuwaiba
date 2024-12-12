@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 - 2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
  * 
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Calendar;
 import org.inventory.communications.CommunicationsStub;
 import org.openide.windows.IOProvider;
 import org.openide.windows.InputOutput;
@@ -53,24 +54,30 @@ public class SyncService implements Runnable {
 
     @Override
     public void run() {
-        InputOutput io = IOProvider.getDefault().getIO ("Bulk upload results", true);
+        InputOutput io = IOProvider.getDefault().getIO ("Bulk import results " + Calendar.getInstance().getTime(), true);
         CommunicationsStub com = CommunicationsStub.getInstance();
+        io.getOut().println(String.format("[%s] Starting importing process... ", Calendar.getInstance().getTime()));
+        io.getOut().println(String.format("[%s] Uploading file...", Calendar.getInstance().getTime()));
         fileName =  com.loadDataFromFile(file, commitSize, fileType);
-        logResults = com.downloadLog(fileName);
-        if (logResults != null) {
-            BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(logResults)));
-            try {
-                String line;
-                while ((line = br.readLine()) != null)
-                    io.getOut().println (line);
-                
-                br.close();
-            }catch (IOException ex){
-                io.getOut().println ("Error reading log file");
-            }
-        }else
-            io.getOut().println (com.getError());
         
+        if (fileName != null) {
+            logResults = com.downloadLog(fileName);
+            if (logResults != null) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(logResults)));
+                try {
+                    String line;
+                    while ((line = br.readLine()) != null)
+                        io.getOut().println (line);
+
+                    br.close();
+                }catch (IOException ex){
+                    io.getOut().println (String.format("[%s] Error reading log file: %s", Calendar.getInstance().getTime(), ex.getMessage()));
+                }
+            }else
+                io.getOut().println (String.format("[%s] Retrieving log file failed: %s", Calendar.getInstance().getTime(), com.getError()));
+        } else
+            io.getOut().println(String.format("[%s] Upload failed: %s", Calendar.getInstance().getTime(), com.getError()));
+        io.getOut().println(String.format("[%s] Importing process finished", Calendar.getInstance().getTime()));
         io.getOut().close();
     } 
 }

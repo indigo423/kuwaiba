@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ public class Util {
      * @param propertyName Relationship's property to be used as filter
      * @param propertyValue Relationship's property value to be used as filter
      */
-    public static void releaseRelationshipss(Node instance, RelTypes relationshipType,
+    public static void releaseRelationships(Node instance, RelTypes relationshipType,
             Direction relationshipDirection, String propertyName, String propertyValue) {
         Iterable<Relationship> relatedItems = instance.getRelationships(relationshipType, relationshipDirection);
         for (Relationship relatedItemRelationship : relatedItems){
@@ -198,7 +198,7 @@ public class Util {
 
             // Ensure all the bytes have been read in
             if (offset < bytes.length) {
-                throw new IOException("Could not completely read file "+f.getName());
+                throw new IOException("Could not completely read file " + f.getName());
             }
         }
         is.close();

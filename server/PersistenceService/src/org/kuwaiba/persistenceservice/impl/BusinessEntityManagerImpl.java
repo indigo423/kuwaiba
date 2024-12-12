@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010 - 2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -133,14 +134,15 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
             throw new OperationNotPermittedException("Create Object", "Can not create non-inventory objects");
 
         //The object should be created under an instance other than the dummy root
-        if (parentClassName != null){
+        if (parentClassName != null) {
             ClassMetadata myParentObjectClass= cm.getClass(parentClassName);
             if (myParentObjectClass == null)
                 throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", className));
-
-            if (!cm.getPossibleChildren(parentClassName).contains(className))
-                throw new OperationNotPermittedException("Create Object", String.format("An instance of class %s can't be created as child of class %s", className, myParentObjectClass.getName()));
         }
+        
+        if (!cm.getPossibleChildren(parentClassName).contains(className))
+            throw new OperationNotPermittedException("Create Object", 
+                    String.format("An instance of class %s can't be created as child of %s", className, parentClassName == null ? Constants.NODE_DUMMYROOT : parentClassName));
 
         Node parentNode;
         if (parentOid != -1){
@@ -174,41 +176,83 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
         }
     }
     
+    //TODO: This method could be optimized, since it forces to search for the parent object twice
     @Override
     public long createObject(String className, String parentClassName, String criteria, HashMap<String,List<String>> attributes, long template, String ipAddress, String sessionId)
             throws ObjectNotFoundException, OperationNotPermittedException, MetadataObjectNotFoundException, InvalidArgumentException, DatabaseException, ApplicationObjectNotFoundException, NotAuthorizedException {
         try {
                 aem.validateCall("createObject", ipAddress, sessionId);
                 String[] splitCriteria = criteria.split(":");
-                if (splitCriteria.length < 2)
-                    throw new InvalidArgumentException("The criteria is not valid. It has to have at least two components", Level.INFO);
+                if (splitCriteria.length != 2)
+                    throw new InvalidArgumentException("The criteria is not valid, two components expected (attributeName:attributeValue)", Level.INFO);
                 
-                if (splitCriteria[0].equals("oid"))
+                if (splitCriteria[0].equals(Constants.PROPERTY_OID))
                     return createObject(className, parentClassName, Long.parseLong(splitCriteria[1]), attributes, template, ipAddress, sessionId);
                 
-                if (splitCriteria[0].equals("name")) {
-                    Node classNode = classIndex.get(Constants.PROPERTY_NAME, parentClassName).getSingle();
-                    if (classNode == null)
-                        throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", parentClassName));
-                    long parentOid = -1;
-                    Iterator<Relationship> children = classNode.getRelationships(RelTypes.INSTANCE_OF).iterator();
-                    while (children.hasNext()){
-                        Node possibleParentNode = children.next().getStartNode();
-                        if (splitCriteria[1].equals(possibleParentNode.getProperty(Constants.PROPERTY_NAME))) {
-                            parentOid = possibleParentNode.getId();
-                            break;
-                        }
-                    }
-                    if (parentOid != -1)
-                        return createObject(className, parentClassName, parentOid, attributes, template, ipAddress, sessionId);
-                    
-                    throw new InvalidArgumentException(String.format("A parent with name %s of class %s could not be found", 
-                            splitCriteria[1], parentClassName), Level.INFO);
-                }
+                ClassMetadata parentClass = cm.getClass(parentClassName);
+                if (parentClass == null)
+                    throw new MetadataObjectNotFoundException(String.format("Class %s could not be found", parentClassName));
                 
-                throw new InvalidArgumentException("Wrong criteria identifier: " + splitCriteria[1], Level.INFO);
+                AttributeMetadata filterAttribute = parentClass.getAttribute(splitCriteria[0]);
+                
+                if (filterAttribute == null)
+                    throw new MetadataObjectNotFoundException(String.format("Attribute %s could not be found", splitCriteria[1]));
+
+                if (!AttributeMetadata.isPrimitive(filterAttribute.getType()))
+                    throw new InvalidArgumentException(String.format(
+                            "The filter provided (%s) is not a primitive type. Non-primitive types are not supported as they typically don't uniquely identify an object", 
+                            splitCriteria[0]), Level.INFO);
+                
+                long parentOid = -1;
+                Node parentClassNode = classIndex.get(Constants.PROPERTY_NAME, parentClassName).getSingle();
+                Iterator<Relationship> instances = parentClassNode.getRelationships(RelTypes.INSTANCE_OF).iterator();
+                
+                while (instances.hasNext()){
+                    Node possibleParentNode = instances.next().getStartNode();                   
+                    if (possibleParentNode.getProperty(splitCriteria[0]).toString().equals(splitCriteria[1])) {
+                        parentOid = possibleParentNode.getId();
+                        break;
+                    }
+                }
+                if (parentOid != -1)
+                    return createObject(className, parentClassName, parentOid, attributes, template, ipAddress, sessionId);
+
+                throw new InvalidArgumentException(String.format("A parent with %s %s of class %s could not be found", 
+                        splitCriteria[0], splitCriteria[1], parentClassName), Level.INFO);
             }catch(Exception ex){
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, "createObject: {0}", ex.getMessage()); //NOI18N
+            throw new RuntimeException(ex.getMessage());
+        }
+    }
+    
+    //@Override
+    public long[] createObjects(List<String> classNamesString, List<String> parentClassNames, List<AttributeDefinitionSet> criteria, List<AttributeDefinitionSet> attributes, String ipAddress, String sessionId)
+            throws ObjectNotFoundException, OperationNotPermittedException, MetadataObjectNotFoundException, InvalidArgumentException, DatabaseException, ApplicationObjectNotFoundException, NotAuthorizedException {
+        aem.validateCall("createObjects", ipAddress, sessionId);
+        
+        Transaction tx = null;
+        try{
+            if (classNamesString.size() != parentClassNames.size() || parentClassNames.size() != criteria.size()
+                    || criteria.size() != attributes.size())
+                throw new InvalidArgumentException("The length of the parameters provided doesn't match", Level.INFO);
+
+            tx = graphDb.beginTx();
+            long[] newObjects = new long[classNamesString.size()];
+            
+            for (int i = 0; i < classNamesString.size(); i++){
+                //TODO
+            }
+            
+            tx.success();
+            tx.finish();
+            
+            return newObjects;
+        }catch(Exception ex){
+            Logger.getLogger(getClass().getName()).log(Level.INFO, "createSpecialObject: {0}", ex.getMessage()); //NOI18N
+            if (tx != null) {
+                tx.failure();
+                tx.finish();
+            }
             throw new RuntimeException(ex.getMessage());
         }
     }
@@ -1184,41 +1228,36 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
         Node newObject = graphDb.createNode();
         newObject.setProperty(Constants.PROPERTY_NAME, ""); //The default value is an empty string 
 
+        newObject.setProperty(Constants.PROPERTY_CREATION_DATE, Calendar.getInstance().getTimeInMillis()); //The default value is right now
+        
         if (attributes != null){
-            for (AttributeMetadata att : classToMap.getAttributes()){
-                if (att.getName().equals(Constants.PROPERTY_CREATION_DATE)){
-                    newObject.setProperty(att.getName(), Calendar.getInstance().getTimeInMillis());
-                    continue;
-                }
-
-                if (attributes.get(att.getName()) == null)
-                    continue;
-
+            for(String attributeName : attributes.keySet()) {
                 //If the array is empty, it means the attribute should be set to null, that is, ignore it
-                if (!attributes.get(att.getName()).isEmpty()){
-                    if (attributes.get(att.getName()).get(0) != null){
-                        if (AttributeMetadata.isPrimitive(classToMap.getType(att.getName())))
-                                newObject.setProperty(att.getName(), Util.getRealValue(attributes.get(att.getName()).get(0), classToMap.getType(att.getName())));
+                if (!attributes.get(attributeName).isEmpty()){
+                    if (attributes.get(attributeName).get(0) != null){
+                        String attributeType = classToMap.getType(attributeName);
+                        if (AttributeMetadata.isPrimitive(attributeType))
+                                newObject.setProperty(attributeName, Util.getRealValue(attributes.get(attributeName).get(0), classToMap.getType(attributeName)));
                         else{
                         //If it's not a primitive type, maybe it's a relationship
 
-                            if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, att.getType()))
-                                throw new InvalidArgumentException(String.format("Type %s is not a primitive nor a list type", att.getName()), Level.WARNING);
+                            if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, attributeType))
+                                throw new InvalidArgumentException(String.format("Type %s is not a primitive nor a list type", attributeName), Level.WARNING);
                                                            
-                            Node listTypeNode = classIndex.get(Constants.PROPERTY_NAME, att.getType()).getSingle();
+                            Node listTypeNode = classIndex.get(Constants.PROPERTY_NAME, attributeType).getSingle();
                             
                             if (listTypeNode == null)
-                                throw new InvalidArgumentException(String.format("Class %s could not be found as list type", att.getType()), Level.INFO);
+                                throw new InvalidArgumentException(String.format("Class %s could not be found as list type", attributeType), Level.INFO);
                             
-                            List<Node> listTypeNodes = Util.getRealValue(attributes.get(att.getName()), listTypeNode);
+                            List<Node> listTypeNodes = Util.getRealValue(attributes.get(attributeName), listTypeNode);
                             
-                            //if (listTypeNodes.isEmpty())
-                            //    throw new InvalidArgumentException(String.format("At least one of list type items could not be found. Check attribute definition for %s", att.getName()), Level.INFO);
+                            if (listTypeNodes.isEmpty())
+                                throw new InvalidArgumentException(String.format("At least one of the list type items could not be found. Check attribute definition for %s", attributeName), Level.INFO);
                       
                             //Create the new relationships
                             for (Node item : listTypeNodes){
                                 Relationship newRelationship = newObject.createRelationshipTo(item, RelTypes.RELATED_TO);
-                                newRelationship.setProperty(Constants.PROPERTY_NAME, att.getName());
+                                newRelationship.setProperty(Constants.PROPERTY_NAME, attributeName);
                             }
                         }
                     }
@@ -1297,5 +1336,23 @@ public class BusinessEntityManagerImpl implements BusinessEntityManager, Busines
             }
         }//end for
         return new int[]{executedFiles, totalPatchFiles};
+    }
+    
+    /**
+     * This class wraps a set of attribute definitions necessary to create objects with default values
+     */
+    public class AttributeDefinitionSet implements Serializable{
+        /**
+         * The key is the attribute name, the value, the attribute definition, typically one value, a string or a number
+         */
+        private HashMap<String, String[]> attributes;
+
+        public HashMap<String, String[]> getAttributes() {
+            return attributes;
+        }
+
+        public void setAttributes(HashMap<String, String[]> attributes) {
+            this.attributes = attributes;
+        }
     }
 }

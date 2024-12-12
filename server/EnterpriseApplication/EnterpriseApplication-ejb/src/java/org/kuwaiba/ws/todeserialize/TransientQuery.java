@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010, 2011, 2012 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import java.util.ArrayList;
  * Don't confuse with the representation of entitity.queries.Query (RemoteQuery). That one is used
  * to <b>store</b> the queries and eventually to send them to the client to be reconstructed, This
  * one is used only for query execution purposes
- * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
+ * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 
 public class TransientQuery implements Serializable {

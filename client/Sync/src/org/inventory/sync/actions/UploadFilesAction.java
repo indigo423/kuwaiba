@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2014 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,15 +32,12 @@ import org.openide.util.NbBundle;
 @ActionID(category = "Tools", id = "org.inventory.sync.actions.UploadFilesAction")
 @ActionRegistration(iconBase="org/inventory/sync/res/sync.png", displayName = "#CTL_Uploadfile")
 @ActionReference(path = "Menu/Tools")
-@NbBundle.Messages({"CTL_Uploadfile=Bulk upload"})
+@NbBundle.Messages({"CTL_Uploadfile=Bulk Import"})
 public class UploadFilesAction  extends AbstractAction{
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        //UploadFilesJFrame uf = new UploadFilesJFrame();
-        //JFrame uf  = new JFrame("Bulk Upload");
-        BulkUploadFrame uf = new BulkUploadFrame();
-        //uf.setSize(250, 350);
+        BulkUploadFrame uf = BulkUploadFrame.getInstance();
         uf.setLocationRelativeTo(null);
         uf.setVisible(true);
     }

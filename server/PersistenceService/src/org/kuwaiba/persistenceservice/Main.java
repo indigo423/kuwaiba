@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.kuwaiba.persistence.factory.PersistenceLayerFactory;
 import org.kuwaiba.persistenceservice.impl.ApplicationEntityManagerImpl;
 import org.kuwaiba.persistenceservice.impl.BusinessEntityManagerImpl;
 import org.kuwaiba.persistenceservice.impl.MetadataEntityManagerImpl;
+import org.kuwaiba.persistenceservice.util.Constants;
 import org.kuwaiba.psremoteinterfaces.ApplicationEntityManagerRemote;
 import org.kuwaiba.psremoteinterfaces.BusinessEntityManagerRemote;
 import org.kuwaiba.psremoteinterfaces.MetadataEntityManagerRemote;
@@ -42,7 +43,7 @@ public class Main {
         if (System.getSecurityManager() == null)
             System.setSecurityManager(new SecurityManager());
         try{
-
+            System.out.println(String.format("[%s] Starting Persistence Service version %s", Calendar.getInstance().getTime(), Constants.PERSISTENCE_SERVICE_VERSION));
             System.out.println(String.format("[%s] Current working directory: %s", Calendar.getInstance().getTime(), System.getProperty("user.dir")));
             PersistenceLayerFactory plf = new PersistenceLayerFactory();
             final ConnectionManager cm = plf.createConnectionManager();
@@ -51,7 +52,7 @@ public class Main {
             System.out.println(String.format("[%s] Connection established", Calendar.getInstance().getTime()));
             cm.printConnectionDetails();
             
-            MetadataEntityManagerImpl memi  =new MetadataEntityManagerImpl(cm);
+            MetadataEntityManagerImpl memi = new MetadataEntityManagerImpl(cm);
             ApplicationEntityManagerImpl aemi = new ApplicationEntityManagerImpl(cm);
             BusinessEntityManagerImpl bemi = new BusinessEntityManagerImpl(cm, aemi);
             
@@ -76,7 +77,7 @@ public class Main {
             System.out.println(String.format("[%s] Persistence Service is up and running", Calendar.getInstance().getTime()));
 
             Runtime.getRuntime().addShutdownHook(new Thread() {
-
+                
                     @Override
                     public void run() {
                        System.out.println(String.format("[%s] Closing connection...", Calendar.getInstance().getTime()));

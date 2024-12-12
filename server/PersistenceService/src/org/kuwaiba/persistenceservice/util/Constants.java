@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public class Constants {
     /**
      * Persistence Service version
      */
-    public static final String PERSISTENCE_SERVICE_VERSION = "0.5.1";
+    public static final String PERSISTENCE_SERVICE_VERSION = "0.7.1";
     /**
      * Class type for RootObject
      */
@@ -151,6 +151,7 @@ public class Constants {
     public static final String PROPERTY_DESCRIPTION = "description"; //NOI18N
     public static final String PROPERTY_READ_ONLY = "readOnly"; //NOI18N
     public static final String PROPERTY_ID = "id"; //NOI18N
+    public static final String PROPERTY_OID = "oid"; //NOI18N
     public static final String PROPERTY_ABSTRACT = "abstract"; //NOI18N
     public static final String PROPERTY_CUSTOM = "custom"; //NOI18N
     public static final String PROPERTY_COUNTABLE = "countable"; //NOI18N
