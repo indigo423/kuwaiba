@@ -41,3 +41,21 @@
 * New element icons
 * General code clean up
 * Several bugfixes
+
+0.3 Alpha (17012011)
+* Export views to PNG/JPG formats
+* Preliminary support for graphiical query design
+
+0.3. Beta (31012011)
+* Search results can be exported to CSV and XML formats
+* Searches can be saved and restored
+* Logging methods enhanced
+
+0.3 Beta2 (13032011)
+* Support for a new data model
+* Support for text formatting in views
+* Multiple bugfixes
+
+0.3 Stable (16052011)
+* New Menu scroller for the possible children menu
+* Multiple bugfixes (see tracker for details)

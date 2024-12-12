@@ -19,9 +19,9 @@ package org.inventory.core.usermanager.nodes.properties;
 import java.beans.PropertyEditorSupport;
 import java.lang.reflect.InvocationTargetException;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalObject;
-import org.inventory.core.services.interfaces.LocalUserObject;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.session.LocalUserObject;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.Utils;
 import org.inventory.core.usermanager.nodes.UserNode;
 import org.inventory.core.usermanager.nodes.customeditor.GroupsEditorSupport;
@@ -74,11 +74,11 @@ public class UserProperty extends ReadWrite{
                 new String[]{this.getName()}, new Object[]{t});
         update.setOid(this.object.getOid());
         
-        if(!com.saveObject(update)){
+        if(!com.setUserProperties(update)){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("User Update", NotificationUtil.ERROR, com.getError());
-        }
-        this.value = t;
+        }else
+            this.value = t;
     }
 
     /**
@@ -113,7 +113,7 @@ public class UserProperty extends ReadWrite{
         update.setLocalObject("User", //NOI18N
                 new String[]{UserNode.PROP_PASSWORD}, new Object[]{Utils.getMD5Hash(passwd)}); //NOI18N
         update.setOid(this.object.getOid());
-        if(!com.saveObject(update)){
+        if(com.saveObject(update) == null){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("User Update", NotificationUtil.ERROR, com.getError());
         }

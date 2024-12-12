@@ -17,7 +17,7 @@
 package org.inventory.core.usermanager.nodes;
 
 import javax.swing.Action;
-import org.inventory.core.services.interfaces.LocalUserObject;
+import org.inventory.core.services.api.session.LocalUserObject;
 import org.inventory.core.usermanager.UserManagerTopComponent;
 import org.inventory.core.usermanager.actions.Delete;
 import org.inventory.core.usermanager.nodes.properties.UserProperty;
@@ -35,7 +35,7 @@ public class UserNode extends AbstractNode{
     private LocalUserObject object;
     public static final String PROP_USERNAME="username";
     public static final String PROP_LASTNAME="lastName";
-    public static final String PROP_FIRSTNAME="firstName";
+    public static final String PROP_FIRSTNAME="name";
     public static final String PROP_GROUPS="groups";
     public static final String PROP_PASSWORD="password";
 

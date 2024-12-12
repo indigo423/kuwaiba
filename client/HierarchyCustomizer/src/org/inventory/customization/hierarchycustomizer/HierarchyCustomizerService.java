@@ -18,9 +18,9 @@ package org.inventory.customization.hierarchycustomizer;
 import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.customization.hierarchycustomizer.nodes.ClassMetadataChildren;
 import org.inventory.customization.hierarchycustomizer.nodes.ClassMetadataNode;
 import org.openide.util.Lookup;
@@ -45,7 +45,7 @@ public class HierarchyCustomizerService implements LookupListener{
     public HierarchyCustomizerService(HierarchyCustomizerTopComponent _hctc){
         notifier = Lookup.getDefault().lookup(NotificationUtil.class);
         LocalClassMetadataLight[] allMeta;
-        allMeta = com.getAllLightMeta();
+        allMeta = com.getAllLightMeta(false);
         this.hctc = _hctc;
 
         listModel = new ArrayList<LocalClassMetadataLight>();
@@ -56,7 +56,7 @@ public class HierarchyCustomizerService implements LookupListener{
         if (allMeta==null){
            notifier.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/customization/hierarchycustomizer/Bundle").getString("LBL_RETRIEVE_HIERARCHY_TEXT"),
                         notifier.ERROR, com.getError());
-           allMeta = new LocalClassMetadata[0];
+           allMeta = new LocalClassMetadata [0];
         }else{
 
             result = hctc.getLookup().lookupResult(ClassMetadataNode.class);
@@ -76,7 +76,7 @@ public class HierarchyCustomizerService implements LookupListener{
             for (LocalClassMetadataLight item : allMeta){
                 listModel.add(item);
 
-                if (!item.getIsAbstract())
+                if (!item.isAbstract())
                     treeModel.add(item);
             }
         }

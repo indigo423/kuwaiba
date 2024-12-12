@@ -17,8 +17,8 @@
 package org.inventory.navigation.applicationnodes.objectnodes;
 
 import javax.swing.Action;
-import org.inventory.communications.core.LocalObjectLightImpl;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.Create;
+import org.inventory.communications.LocalStuffFactory;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateObjectAction;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Children;
 import org.openide.util.lookup.Lookups;
@@ -32,14 +32,14 @@ public class RootObjectNode extends AbstractNode{
    static final String DEFAULT_ICON_PATH = "org/inventory/navigation/applicationnodes/res/root.png";
 
     public RootObjectNode(Children _children) {
-        super(_children,Lookups.singleton(new LocalObjectLightImpl())); //Dummy object
+        super(_children,Lookups.singleton(LocalStuffFactory.createLocalObjectLight())); //Dummy object
         setDisplayName(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_ROOT"));
         setIconBaseWithExtension(DEFAULT_ICON_PATH);
     }
 
     @Override
     public Action[] getActions(boolean context){
-        Create createAction = new Create(this);
+        CreateObjectAction createAction = new CreateObjectAction(this);
         return new Action[]{createAction};
     }
 

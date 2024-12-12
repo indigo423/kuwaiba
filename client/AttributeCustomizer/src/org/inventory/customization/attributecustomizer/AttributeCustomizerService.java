@@ -19,9 +19,9 @@ package org.inventory.customization.attributecustomizer;
 import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 
 /**
  * Implements the business logic for the associated component
@@ -36,7 +36,7 @@ public class AttributeCustomizerService {
     }
 
     public LocalClassMetadataLight[] getInstanceableMeta() {
-        LocalClassMetadataLight[] allMeta = com.getAllLightMeta();
+        LocalClassMetadataLight[] allMeta = com.getAllLightMeta(true);
         if (allMeta == null){
             actc.getNotifier().showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/customization/attributecustomizer/Bundle").getString("LBL_TITLE_CREATION"),
                     NotificationUtil.ERROR, com.getError());
@@ -44,7 +44,7 @@ public class AttributeCustomizerService {
         }
         List<LocalClassMetadataLight> res = new ArrayList<LocalClassMetadataLight>();
         for (LocalClassMetadataLight lcm : allMeta)
-            if(!(lcm.getIsAbstract() || lcm.getClassName().equals("DummyRoot")))
+            if(!(lcm.isAbstract() || lcm.getClassName().equals("DummyRoot")))
                 res.add(lcm);
         return res.toArray(new LocalClassMetadataLight[0]);
     }

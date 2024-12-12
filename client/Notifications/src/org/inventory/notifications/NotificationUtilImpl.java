@@ -1,13 +1,16 @@
 package org.inventory.notifications;
 
 import java.awt.event.ActionListener;
+import java.util.Timer;
+import java.util.TimerTask;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.awt.Notification;
 import org.openide.awt.NotificationDisplayer;
 import org.openide.awt.StatusDisplayer;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This class provides mechanisms to perform different notifications. By now this is
@@ -15,6 +18,7 @@ import org.openide.awt.StatusDisplayer;
  * adding connectors for remote notifications or integration with IM services, to name some
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=NotificationUtil.class)
 public class NotificationUtilImpl extends NotificationDisplayer
         implements NotificationUtil {
     static final String ERROR_ICON_PATH="/org/inventory/notifications/res/error.png";
@@ -23,7 +27,7 @@ public class NotificationUtilImpl extends NotificationDisplayer
     /**
      * Temporal workaround to clear the last notification from the tray
      */
-    private Notification lastNotification;
+    private Timer controller;
 
     @Override
     public Notification notify(String string, Icon icon, String string1, ActionListener al, Priority prt) {
@@ -49,9 +53,20 @@ public class NotificationUtilImpl extends NotificationDisplayer
                 popupIcon = new ImageIcon(getClass().getResource(INFO_ICON_PATH));
         }
         if (NotificationDisplayer.getDefault() != null){
-            if (lastNotification != null)
-                lastNotification.clear();
-            lastNotification = NotificationDisplayer.getDefault().notify(title,popupIcon, details, null);
+            final Notification lastNotification = NotificationDisplayer.getDefault().notify(title,popupIcon, details, null);
+
+            //Thanks to Luca Dazi for this suggestion
+            if (lastNotification != null){
+                if (null == controller)
+                    controller = new Timer();
+                TimerTask tt = new TimerTask() {
+                        @Override
+                        public void run() {
+                            lastNotification.clear();
+                        }
+                    };
+                controller.schedule(tt, 10000);
+            }
         }
     }
 

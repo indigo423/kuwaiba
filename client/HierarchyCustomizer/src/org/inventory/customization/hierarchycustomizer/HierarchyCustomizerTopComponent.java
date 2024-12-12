@@ -67,8 +67,6 @@ public final class HierarchyCustomizerTopComponent extends TopComponent
         bTreeView = new BeanTreeView();
         lstClasses = new JList();
 
-        em.setRootContext(new AbstractNode(new ClassMetadataChildren(hml.getTreeModel())));
-
         bTreeView.setRootVisible(false);
 
         pnlLeft.add(bTreeView,BorderLayout.CENTER);
@@ -85,7 +83,7 @@ public final class HierarchyCustomizerTopComponent extends TopComponent
         DragSource.getDefaultDragSource().addDragSourceListener(tm);
 
         pnlHierarchyManagerScrollMain.setViewportView(lstClasses);
-        pnlHierarchyManagerMain.setDividerLocation(200);
+        pnlHierarchyManagerMain.setDividerLocation(0.5);
 
     }
 
@@ -174,12 +172,12 @@ public final class HierarchyCustomizerTopComponent extends TopComponent
 
     @Override
     public void componentOpened() {
-        
+        em.setRootContext(new AbstractNode(new ClassMetadataChildren(hml.getTreeModel())));
     }
 
     @Override
     public void componentClosed() {
-
+        em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
     }
 
     void writeProperties(java.util.Properties p) {

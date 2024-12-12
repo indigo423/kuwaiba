@@ -21,21 +21,26 @@ import java.awt.dnd.DnDConstants;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalAttributeMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.LocalObject;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.LocalObjectListItem;
-import org.inventory.core.services.interfaces.NotificationUtil;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.Create;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.Delete;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.Edit;
-import org.inventory.navigation.applicationnodes.objectnodes.actions.Refresh;
+import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.LocalObjectListItem;
+import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementNode;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.CreateObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.EditObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.RefreshObjectAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.RelateToServiceAction;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.ShowRelatedServicesAction;
 import org.inventory.navigation.applicationnodes.objectnodes.properties.ObjectNodeProperty;
 import org.openide.actions.CopyAction;
 import org.openide.actions.CutAction;
@@ -66,13 +71,16 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
 
     protected CommunicationsStub com;
 
-    protected Create createAction;
-    protected Delete deleteAction;
-    protected Refresh refreshAction;
-    protected Edit editAction;
+    protected CreateObjectAction createAction;
+    protected DeleteObjectAction deleteAction;
+    protected RefreshObjectAction refreshAction;
+    protected EditObjectAction editAction;
+    private RelateToServiceAction relateToServiceAction;
+    private ShowRelatedServicesAction showRelatedServicesAction;
 
     protected Sheet sheet;
     protected Image icon;
+    private NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
 
     public ObjectNode(LocalObjectLight _lol, boolean isLeaf){
         super(Children.LEAF, Lookups.singleton(_lol));
@@ -84,9 +92,9 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         icon = (com.getMetaForClass(_lol.getClassName(),false)).getSmallIcon();
 
         explorerAction.putValue(OpenLocalExplorerAction.NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EXPLORE"));
-        editAction = new Edit(this);
-        deleteAction = new Delete(this);
-        refreshAction = new Refresh(this);
+        editAction = new EditObjectAction(this);
+        deleteAction = new DeleteObjectAction(this);
+        refreshAction = new RefreshObjectAction(this);
     }
     
     public ObjectNode(LocalObjectLight _lol){
@@ -99,10 +107,14 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         icon = (com.getMetaForClass(_lol.getClassName(),false)).getSmallIcon();
         explorerAction.putValue(OpenLocalExplorerAction.NAME, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_EXPLORE"));
 
-        createAction = new Create(this);
-        deleteAction = new Delete(this);
-        editAction = new Edit(this);
-        refreshAction = new Refresh(this);
+        createAction = new CreateObjectAction(this);
+        deleteAction = new DeleteObjectAction(this);
+        editAction = new EditObjectAction(this);
+        refreshAction = new RefreshObjectAction(this);
+        if (object.getValidator("isRelatableToService")){
+            relateToServiceAction = new RelateToServiceAction(object);
+            showRelatedServicesAction = new ShowRelatedServicesAction(object);
+        }
     }
 
     /*
@@ -127,28 +139,38 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         Set administrativePropertySet = Sheet.createPropertiesSet(); //Administrative attributes category
 
         LocalClassMetadata meta = com.getMetaForClass(object.getClassName(),false);
-        LocalObject lo;
+        if (meta == null){
+            nu.showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            return sheet;
+        }
+
+        LocalObject lo = null;
         if (object instanceof LocalObject)
             lo = (LocalObject)object;
         else
             lo = com.getObjectInfo(object.getClassName(), object.getOid());
 
+        if (lo == null){
+            nu.showSimplePopup("Error", NotificationUtil.ERROR, com.getError());
+            return sheet;
+        }
+
         for(LocalAttributeMetadata lam:meta.getAttributes()){
-            if(lam.getIsVisible()){
+            if(lam.isVisible()){
 
                 ObjectNodeProperty property = null;
 
-                if (lam.getIsMultiple()){
+                if (lam.isMultiple()){
                     //If so, this can be a reference to an object list item or a 1:1 to any other RootObject subclass
                     LocalObjectListItem[] list = com.getList(lam.getListAttributeClassName(),false);
                     LocalObjectListItem val = null;
 
                     for (LocalObjectListItem loli : list)
-                        if(loli.getId().equals(lo.getAttribute(lam.getName()))){
+                        if(loli.getOid().equals(lo.getAttribute(lam.getName()))){
                             val = loli;
                             break;
                         }
-                   property = new ObjectNodeProperty(
+                    property = new ObjectNodeProperty(
                                            lam.getName(),
                                            LocalObjectListItem.class,
                                            val,
@@ -158,7 +180,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                                            this);
                 }
                 else{
-                    //Those attributes that are not multiple, but references another object
+                    //Those attributes that are not multiple, but reference another object
                     //like nodeA or endpointB in physicalConnections should be ignored, at least by now
                     if (!lam.getType().equals(LocalObjectLight.class))
                         property = new ObjectNodeProperty(
@@ -168,12 +190,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                                                             lam.getDisplayName().equals("")?lam.getName():lam.getDisplayName(),
                                                             lam.getDescription(),this);
                 }
-                if (property != null){
-                    if(lam.getIsAdministrative())
-                        administrativePropertySet.put(property);
-                    else
-                        generalPropertySet.put(property);
-                }
+                generalPropertySet.put(property);
             }         
         }
 
@@ -190,13 +207,19 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         return sheet;
     }
 
-    public void refresh(){
-        
+    public boolean refresh(){
+        LocalObjectLight refreshedObject;
         //Force to retrieve the object info again
         if (object instanceof LocalObjectLight)
-            object = com.getObjectInfoLight(object.getClassName(), object.getOid());
+            refreshedObject = com.getObjectInfoLight(object.getClassName(), object.getOid());
         else
-            object = com.getObjectInfo(object.getClassName(), object.getOid());
+            refreshedObject = com.getObjectInfo(object.getClassName(), object.getOid());
+
+        if (refreshedObject == null) //The object has been deleted or couldn'be retrieved
+            return false;
+        else
+            object = refreshedObject;
+        
         //Force to get the attributes again, but only if there's a property sheet already asigned
         if (this.sheet != null)
             setSheet(createSheet());
@@ -204,13 +227,38 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
         icon = (com.getMetaForClass(object.getClassName(),false)).getSmallIcon();
         fireIconChange();
 
-        //Don't refresh anything if the node is a leaf (used only in views)
+        //Don't try to refresh the anything if the node is a leaf (used only in views)
         if (!(getChildren() instanceof ObjectChildren))
-            return;
+            return true;
 
-        if (!((ObjectChildren)getChildren()).getKeys().isEmpty())
-            for (Node child : getChildren().getNodes())
-                ((ObjectNode)child).refresh();
+        
+        if (((ObjectChildren)getChildren()).getKeys() != null){ //Expanded node
+            List<LocalObjectLight> children = com.getObjectChildren(object.getOid(), com.getMetaForClass(object.getClassName(), false).getOid());
+
+            
+            List<Node> toBeDeleted = new ArrayList<Node>(Arrays.asList(getChildren().getNodes()));
+            List<LocalObjectLight> toBeAdded = new ArrayList<LocalObjectLight>(children);
+
+            for (Node child : getChildren().getNodes()){
+                for (LocalObjectLight myChild : children){
+                    if (((ObjectNode)child).getObject().equals(myChild)){
+                        ((ObjectNode)child).refresh();
+                        toBeDeleted.remove(child);
+                        toBeAdded.remove(myChild);
+                    }
+                }
+            }
+            children = toBeAdded;
+
+            for (Node deadNode : toBeDeleted)
+                ((ObjectChildren)getChildren()).remove(new Node[]{deadNode});
+
+            for (LocalObjectLight newChild : toBeAdded)
+                ((ObjectChildren)getChildren()).add(new Node[]{new ObjectNode(newChild)});
+        }
+        
+
+        return true;
     }
 
     //This method is called for the very first time when the first context menu is created, and
@@ -225,6 +273,9 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
                             SystemAction.get(CopyAction.class),
                             SystemAction.get(CutAction.class),
                             SystemAction.get(PasteAction.class),
+                            null, //Separator
+                            relateToServiceAction,
+                            showRelatedServicesAction,
                             null, //Separator
                             explorerAction};
 
@@ -265,7 +316,6 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
             @Override
             public Transferable paste() throws IOException {
                 boolean canMove = false;
-                NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
                 try{
                     LocalObjectLight obj = dropNode.getObject();
 
@@ -354,15 +404,18 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener{
             update.setLocalObject(object.getClassName(),
                     new String[]{"name"}, new Object[]{newName}); //NOI18N
             update.setOid(object.getOid());
-            if (com.saveObject(update)){
+            if (com.saveObject(update) != null){
                 object.setDisplayName(newName);
                 fireDisplayNameChange(object.getDisplayname(), newName);
+                
+                if (this instanceof ListElementNode)
+                    CommunicationsStub.getInstance().getList(object.getClassName(), true);
             }
 
             //So the PropertySheet reflects the changes too
             refresh();
         }catch(Exception e){
-            e.printStackTrace();
+            nu.showSimplePopup("Error", NotificationUtil.ERROR, e.getMessage());
         }
     }
 

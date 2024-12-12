@@ -16,17 +16,18 @@
 package org.inventory.communications.core;
 
 import java.util.HashMap;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
-import org.inventory.core.services.interfaces.LocalObject;
-import org.inventory.core.services.interfaces.LocalObjectLight;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.LocalObject;
 import org.inventory.core.services.utils.Utils;
-import org.inventory.webservice.RemoteObject;
+import org.kuwaiba.wsclient.RemoteObject;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Represents the whole information related to an object. Instances if this class
  * are actually proxies representing a business object. They can be cities, buildings, port, etc
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalObject.class)
 public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject {
     private HashMap<String, Object> attributes;
     //Reference to the metadata associated to this object's class
@@ -53,7 +54,6 @@ public class LocalObjectImpl extends LocalObjectLightImpl implements LocalObject
     public LocalObjectImpl(RemoteObject ro, LocalClassMetadata lcmdt){
         this.className = ro.getClassName();
         this.myMetadata = lcmdt;
-        this.packageName = ro.getPackageName();
         this.oid = ro.getOid();
 
         attributes = new HashMap<String, Object>();

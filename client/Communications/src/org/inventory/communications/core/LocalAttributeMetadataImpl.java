@@ -15,14 +15,16 @@
  */
 package org.inventory.communications.core;
 
-import org.inventory.core.services.interfaces.LocalAttributeMetadata;
-import org.inventory.core.services.interfaces.LocalObjectLight;
+import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
+import org.inventory.core.services.api.LocalObjectLight;
 import org.inventory.core.services.utils.Utils;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Represents the metadata associated to a single attribute
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalAttributeMetadata.class)
 public class LocalAttributeMetadataImpl
         implements LocalAttributeMetadata{
     private String name;
@@ -30,20 +32,19 @@ public class LocalAttributeMetadataImpl
     private Class type;
     private String displayName;
     private Boolean isVisible;
-    private Boolean isAdministrative;
     private Boolean isMultiple;
     private String description;
 
     private String listAttributeClassName = null;
 
     public LocalAttributeMetadataImpl(){}
-    public LocalAttributeMetadataImpl(String _name, String _type, String _displayName,
-            Boolean _isVisible, Boolean _isAdministrative, Boolean _isMultiple, String _description){
+    public LocalAttributeMetadataImpl(Long oid, String _name, String _type, String _displayName,
+            Boolean _isVisible, Boolean _isMultiple, String _description){
+        this.id = oid;
         this.name = _name;
         this.type = Utils.getRealType(_type);
         this.displayName = _displayName;
         this.isVisible = _isVisible;
-        this.isAdministrative = _isAdministrative;
         this.isMultiple = _isMultiple;
         this.description = _description;
 
@@ -67,19 +68,11 @@ public class LocalAttributeMetadataImpl
         this.displayName = displayName;
     }
 
-    public Boolean getIsAdministrative() {
-        return isAdministrative;
-    }
-
-    public void setIsAdministrative(Boolean isAdministrative) {
-        this.isAdministrative = isAdministrative;
-    }
-
-    public Boolean getIsVisible() {
+    public Boolean isVisible() {
         return isVisible;
     }
 
-    public void setIsVisible(Boolean isVisible) {
+    public void setVisible(Boolean isVisible) {
         this.isVisible = isVisible;
     }
 
@@ -114,7 +107,23 @@ public class LocalAttributeMetadataImpl
         this.id =_id;
     }
 
-    public Boolean getIsMultiple() {
+    public Boolean isMultiple() {
         return this.isMultiple;
+    }
+
+    @Override
+    public boolean equals(Object obj){
+        if (obj == null)
+            return false;
+        if (!(obj instanceof LocalAttributeMetadata))
+            return false;
+        return this.getId().longValue() == ((LocalAttributeMetadata)obj).getId().longValue();
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 13 * hash + (this.id != null ? this.id.hashCode() : 0);
+        return hash;
     }
 }

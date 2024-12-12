@@ -16,38 +16,49 @@
 package org.inventory.communications.core;
 
 import java.awt.Image;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.utils.Utils;
-import org.inventory.webservice.ClassInfo;
+import org.kuwaiba.wsclient.ClassInfo;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * It's a proxy class, whose instances represent the metadata information associated to a class
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalClassMetadata.class)
 public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         implements LocalClassMetadata{
 
     private Image icon;
+    private String description;
+    private Long [] attributeIds;
     private String [] attributeNames; 
     private String [] attributeTypes;
     private String [] attributeDisplayNames;
     private Boolean [] attributesIsVisible;
-    private Boolean [] attributesIsAdministrative;
     private Boolean [] attributesIsMultiple;
     private String [] attributesDescription;
 
+    public LocalClassMetadataImpl() {    }
+
     public LocalClassMetadataImpl(ClassInfo cm){
-        super(cm.getId(),cm.getClassName(),cm.getPackage(),cm.getDisplayName(),
-                cm.getDescription(),cm.getSmallIcon(),cm.isIsPhysicalNode(),cm.isIsPhysicalEndpoint());
-        this.isAbstract = cm.isIsAbstract();
+        super(cm.getId(),cm.getClassName(),cm.getDisplayName(),cm.getSmallIcon(),
+                cm.isPhysicalNode(),cm.isPhysicalEndpoint(), cm.isAbstractClass(), cm.isViewable());
+        this.isAbstract = cm.isAbstractClass();
         this.icon = cm.getIcon()==null?null:Utils.getImageFromByteArray(cm.getIcon());
+        this.description = cm.getDescription();
+        this.attributeIds = cm.getAttributeIds().toArray(new Long[0]);
         this.attributeNames = cm.getAttributeNames().toArray(new String[0]);
         this.attributeTypes = cm.getAttributeTypes().toArray(new String[0]);
         this.attributeDisplayNames = cm.getAttributeDisplayNames().toArray(new String[0]);
         this.attributesIsVisible = cm.getAttributesIsVisible().toArray(new Boolean[0]);
-        this.attributesIsAdministrative = cm.getAttributesIsAdministrative().toArray(new Boolean[0]);
         this.attributesIsMultiple = cm.getAttributesIsMultiple().toArray(new Boolean[0]);
         this.attributesDescription = cm.getAttributesDescription().toArray(new String[0]);
+    }
+
+    public LocalClassMetadataImpl(String className, Long oid){
+        super (className,oid);
     }
 
     public Boolean[] getAttributesIsMultiple() {
@@ -90,14 +101,6 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         this.attributesDescription = attributesDescription;
     }
 
-    public Boolean[] getAttributesIsAdministrative() {
-        return attributesIsAdministrative;
-    }
-
-    public void setAttributesIsAdministrative(Boolean[] attributesIsAdministrative) {
-        this.attributesIsAdministrative = attributesIsAdministrative;
-    }
-
     public Boolean[] getAttributesIsVisible() {
         return attributesIsVisible;
     }
@@ -111,13 +114,6 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
             if(this.attributeNames[i].equals(att))
                 return this.attributeDisplayNames[i].equals("")?att:this.attributeDisplayNames[i];
         return att;
-    }
-
-    public Boolean isAdministrative(String att){
-        for (int i=0; i< this.attributeNames.length;i++)
-            if(this.attributeNames[i].equals(att))
-                return this.attributesIsAdministrative[i];
-        return false;
     }
 
     public Boolean isMultiple(String att){
@@ -152,11 +148,12 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         LocalAttributeMetadataImpl[] res =
                 new LocalAttributeMetadataImpl[attributeNames.length];
         for (int i = 0; i<res.length;i++)
-            res[i] = new LocalAttributeMetadataImpl(attributeNames[i],
+            res[i] = new LocalAttributeMetadataImpl(
+                                    attributeIds[i],
+                                    attributeNames[i],
                                     attributeTypes[i],
                                     attributeDisplayNames[i],
                                     attributesIsVisible[i],
-                                    attributesIsAdministrative[i],
                                     attributesIsMultiple[i],
                                     attributesDescription[i]);
         return res;
@@ -166,8 +163,22 @@ public class LocalClassMetadataImpl extends LocalClassMetadataLightImpl
         return icon;
     }
 
-    @Override
-    public String toString(){
-        return this.className;
+    public Long[] getAttributeIds() {
+        return attributeIds;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getDescription() {
+        return this.description;
+    }
+
+    public LocalClassMetadataLight getLightMetadata() {
+        LocalClassMetadataLightImpl lightClass = new LocalClassMetadataLightImpl(id, className, displayName, null, isPhysicalNode,
+                isPhysicalEndpoint, isAbstract, isViewable);
+        lightClass.setSmallIcon(icon);
+        return lightClass;
     }
 }

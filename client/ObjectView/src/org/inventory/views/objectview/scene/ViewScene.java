@@ -27,9 +27,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.inventory.core.services.interfaces.LocalObject;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.Utils;
 import org.inventory.views.objectview.scene.actions.CustomAddRemoveControlPointAction;
 import org.inventory.views.objectview.scene.actions.CustomMoveAction;
@@ -135,6 +135,10 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
      */
     public final static int SCENE_OBJECTSELECTED = 3;
     /**
+     * Version of the XML format used to store this view (see getAsXML method)
+     */
+    private final static String FORMAT_VERSION = "1.0";
+    /**
      * Default notifier
      */
     private NotificationUtil notifier;
@@ -156,36 +160,18 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         setActiveTool(ACTION_SELECT);
         addObjectSceneListener(new ObjectSceneListener() {
 
-            public void objectAdded(ObjectSceneEvent ose, Object o) {
-
-            }
-
-            public void objectRemoved(ObjectSceneEvent ose, Object o) {
-
-            }
-
-            public void objectStateChanged(ObjectSceneEvent ose, Object o, ObjectState os, ObjectState os1) {
-
-            }
-
+            public void objectAdded(ObjectSceneEvent ose, Object o) {}
+            public void objectRemoved(ObjectSceneEvent ose, Object o) {}
+            public void objectStateChanged(ObjectSceneEvent ose, Object o, ObjectState os, ObjectState os1) {}
             public void selectionChanged(ObjectSceneEvent ose, Set<Object> oldSelection, Set<Object> newSelection) {
                 if (newSelection.size() == 1){
                     fireChangeEvent(new ActionEvent(newSelection.iterator().next(),
                             SCENE_OBJECTSELECTED, "object-selected-operation"));
                 }
             }
-
-            public void highlightingChanged(ObjectSceneEvent ose, Set<Object> set, Set<Object> set1) {
-                System.out.println("");
-            }
-
-            public void hoverChanged(ObjectSceneEvent ose, Object o, Object o1) {
-                System.out.println("");
-            }
-
-            public void focusChanged(ObjectSceneEvent ose, Object o, Object o1) {
-
-            }
+            public void highlightingChanged(ObjectSceneEvent ose, Set<Object> set, Set<Object> set1) {}
+            public void hoverChanged(ObjectSceneEvent ose, Object o, Object o1) {}
+            public void focusChanged(ObjectSceneEvent ose, Object o, Object o1) {}
         }, ObjectSceneEventType.OBJECT_SELECTION_CHANGED);
         this.notifier = notifier;
     }
@@ -331,6 +317,9 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         moveAction.clearActionListeners();
         addRemoveControlPointAction.clearActionListeners();
         moveControlPointAction.clearActionListeners();
+        nodesLayer.removeChildren();
+        edgesLayer.removeChildren();
+        backgroundLayer.removeChildren();
     }
 
     public void fireChangeEvent(ActionEvent ev){
@@ -357,7 +346,8 @@ public final class ViewScene extends GraphScene<LocalObjectLight,LocalObject>{
         ByteArrayOutputStream bas = new ByteArrayOutputStream();
         WAX xmlWriter = new WAX(bas);
         StartTagWAX mainTag = xmlWriter.start("view");
-        //TODO: Send this to a config file
+        mainTag.attr("version", FORMAT_VERSION); //NOI18N
+        //TODO: Get the class name from some else
         mainTag.start("class").text("DefaultView").end();
         StartTagWAX nodesTag = mainTag.start("nodes");
         for (Widget nodeWidget : nodesLayer.getChildren())

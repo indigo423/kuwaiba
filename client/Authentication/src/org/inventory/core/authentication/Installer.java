@@ -21,7 +21,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.net.MalformedURLException;
 import java.net.URL;
-import javax.swing.JDialog;
 import org.inventory.communications.CommunicationsStub;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
@@ -45,8 +44,17 @@ public class Installer extends ModuleInstall {
             public void actionPerformed(ActionEvent e) {
                 //Surprisingly, pressing the "OK" button doesn't fire a property change, but
                 //only an action event
-                if (e.getSource() == DialogDescriptor.OK_OPTION)
-                        connect();
+                if (e.getSource() == DialogDescriptor.OK_OPTION){
+                    //This is done instead of the older approach to prompt for the user credentials
+                    //again in case of error (versions 0.3 beta and earlier). With the past approach, a new
+                    //Dialog was created every time, creating a new window over the past ones
+                    //With this approach, errors are painted in the same dialog, but we have to tell the
+                    //descriptor to not close if something went wrong
+                        if (connect())
+                            dd.setClosingOptions(new Object[]{DialogDescriptor.OK_OPTION, DialogDescriptor.CANCEL_OPTION, DialogDescriptor.CLOSED_OPTION});
+                        else
+                            dd.setClosingOptions(new Object[]{DialogDescriptor.CANCEL_OPTION, DialogDescriptor.CLOSED_OPTION});
+                }
             }
         });
       dd.addPropertyChangeListener(new PropertyChangeListener() {
@@ -57,40 +65,33 @@ public class Installer extends ModuleInstall {
                     LifecycleManager.getDefault().exit();
             }
         });
+        dd.setClosingOptions(new Object[]{DialogDescriptor.CANCEL_OPTION});
         DialogDisplayer.getDefault().notifyLater(dd);
     }
 
-    public void connect(){
+    public boolean connect(){
         ConnectionSettingsPanel containedPanel = pnlAuthentication.getContainedPanel();
         try {
             CommunicationsStub.setServerURL(
                     new URL("http", containedPanel.getServerAddress() , containedPanel.getServerPort(),
                     containedPanel.getWSDLPath()));
+
         } catch (MalformedURLException ex) {
             showExceptions("Malformed URL: "+ex.getMessage());
+            return false;
         }
         try{
-            if (!CommunicationsStub.getInstance().createSession(pnlAuthentication.getTxtUser().getText(), new String(pnlAuthentication.getTxtPassword().getPassword())))
-               showMeAgain(CommunicationsStub.getInstance().getError(),
-                       pnlAuthentication.getTxtUser().getText(),
-                       containedPanel.getTxtServerAddress().getText(),
-                       containedPanel.getTxtServerPort().getText(),
-                       containedPanel.getTxtWSDLPath().getText());
+            if (!CommunicationsStub.getInstance().createSession(pnlAuthentication.getTxtUser().getText(), new String(pnlAuthentication.getTxtPassword().getPassword()))){
+               showExceptions(CommunicationsStub.getInstance().getError());
+               return false;
+            }
+
         }catch(Exception exp){
             CommunicationsStub.resetInstance();
-            showMeAgain(exp.getMessage(),
-                       pnlAuthentication.getTxtUser().getText(),
-                       containedPanel.getTxtServerAddress().getText(),
-                       containedPanel.getTxtServerPort().getText(),
-                       containedPanel.getTxtWSDLPath().getText());
+            showExceptions(exp.getMessage());
+            return false;
         }
-    }
-    public void showMeAgain(String errorText, String user, String serverAddress, String serverPort, String WSDLPath){
-        showExceptions(errorText);
-
-        JDialog dialog = (JDialog)DialogDisplayer.getDefault().createDialog(dd);
-        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        dialog.setVisible(true);
+        return true;
     }
 
     private void showExceptions(String errorText){

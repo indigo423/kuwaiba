@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.openide.nodes.Node;
 import org.openide.util.Lookup;
@@ -33,10 +33,15 @@ import org.openide.util.Lookup;
  */
 public class ListElementChildren extends ObjectChildren{
 
+    public ListElementChildren() {
+        keys = new ArrayList<LocalObjectLight>();
+    }
+
     //This is basically the same code as in ObjectChildren but changes ObjectNodes for ListElementNodes
     @Override
     protected Collection<Node> initCollection(){
         List<Node> myNodes = new ArrayList<Node>();
+
         for (LocalObjectLight lol : keys)
             myNodes.add(new ListElementNode(lol));
         return myNodes;
@@ -45,7 +50,6 @@ public class ListElementChildren extends ObjectChildren{
     @Override
     public void addNotify(){
         if (this.getNode() instanceof ListTypeNode){
-            CommunicationsStub com = CommunicationsStub.getInstance();
             LocalClassMetadataLight lcml = ((ListTypeNode)this.getNode()).getObject();
             LocalObjectLight[] myObjects = CommunicationsStub.getInstance().searchForObjects(lcml.getClassName(),
                 new ArrayList<String>(), new ArrayList<String>(), new ArrayList<String>());

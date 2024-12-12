@@ -20,10 +20,11 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 import org.inventory.core.services.utils.Utils;
-import org.inventory.webservice.ClassInfo;
-import org.inventory.webservice.ClassInfoLight;
+import org.kuwaiba.wsclient.ClassInfo;
+import org.kuwaiba.wsclient.ClassInfoLight;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Implementation of the common interface to represent the classmetadata in a simple
@@ -31,6 +32,7 @@ import org.inventory.webservice.ClassInfoLight;
  * metadata is not necessary (ie. Container Hierarchy Manager)
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalClassMetadataLight.class)
 public class LocalClassMetadataLightImpl
         implements LocalClassMetadataLight,Transferable{
 
@@ -38,48 +40,48 @@ public class LocalClassMetadataLightImpl
     protected Boolean isAbstract;
     protected Boolean isPhysicalNode;
     protected Boolean isPhysicalEndpoint;
+    protected Boolean isViewable;
     protected String className;
     protected String displayName;
-    protected String description;
-    protected String packageName;
     protected Image smallIcon;
 
+    public LocalClassMetadataLightImpl() {    }
+
     public LocalClassMetadataLightImpl(ClassInfo ci){
-        this (ci.getId(),ci.getClassName(),ci.getPackage(),ci.getDisplayName(),
-                ci.getDescription(),ci.getSmallIcon(), ci.isIsPhysicalNode(),ci.isIsPhysicalEndpoint());
+        this (ci.getId(),ci.getClassName(),ci.getDisplayName(),ci.getSmallIcon(),
+                ci.isPhysicalNode(),ci.isPhysicalEndpoint(), ci.isAbstractClass(), ci.isViewable());
+    }
+
+    public LocalClassMetadataLightImpl(String className, Long oid){
+        this.id = oid;
+        this.className = className;
     }
 
     public LocalClassMetadataLightImpl(ClassInfoLight cil){
         this.id = cil.getId();
-        this.isPhysicalNode = cil.isIsPhysicalNode();
-        this.isPhysicalEndpoint = cil.isIsPhysicalEndpoint();
-        this.isAbstract = cil.isIsAbstract();
+        this.isPhysicalNode = cil.isPhysicalNode();
+        this.isPhysicalEndpoint = cil.isPhysicalEndpoint();
+        this.isAbstract = cil.isAbstractClass();
+        this.isViewable = cil.isViewable();
         this.className = cil.getClassName();
-        this.packageName = cil.getPackage();
         this.displayName = cil.getDisplayName();
-        this.description = cil.getDescription();
-        this.smallIcon = cil.getSmallIcon()==null?null:Utils.getImageFromByteArray(cil.getSmallIcon());
+        this.smallIcon = cil.getSmallIcon()==null ? null : Utils.getImageFromByteArray(cil.getSmallIcon());
     }
 
-    public LocalClassMetadataLightImpl(Long _id, String _className, String _packageName,
-            String _displayName, String _description, byte[] _smallIcon,
-            Boolean _isPhysicalNode, Boolean _isPhysicalEndpoint){
-        this.id=_id;
+    public LocalClassMetadataLightImpl(Long _id, String _className, String _displayName,
+            byte[] _smallIcon,Boolean _isPhysicalNode, Boolean _isPhysicalEndpoint, Boolean _isAbstract, Boolean _isViewable){
+        this.id = _id;
         this.isPhysicalNode = _isPhysicalNode;
         this.isPhysicalEndpoint = _isPhysicalEndpoint;
+        this.isAbstract = _isAbstract;
+        this.isViewable = _isViewable;
         this.className = _className;
-        this.packageName = _packageName;
         this.displayName = _displayName;
-        this.description = _description;
-        this.smallIcon = _smallIcon==null?null:Utils.getImageFromByteArray(_smallIcon);
+        this.smallIcon = _smallIcon==null ? null : Utils.getImageFromByteArray(_smallIcon);
     }
 
     public String getClassName() {
         return className;
-    }
-
-    public String getPackageName() {
-        return packageName;
     }
 
     public Long getOid() {
@@ -91,7 +93,7 @@ public class LocalClassMetadataLightImpl
         return className;
     }
 
-    public Boolean getIsAbstract() {
+    public Boolean isAbstract() {
         return isAbstract;
     }
 
@@ -103,6 +105,9 @@ public class LocalClassMetadataLightImpl
         return isPhysicalEndpoint;
     }
 
+    public Boolean isViewable(){
+        return this.isViewable;
+    }
 
    /**
     * The equals method is overwritten in order to make the comparison based on the id, which is
@@ -130,12 +135,12 @@ public class LocalClassMetadataLightImpl
         return displayName;
     }
     
-    public String getDescription(){
-        return description;
-    }
-    
     public Image getSmallIcon() {
         return smallIcon;
+    }
+
+    public void setSmallIcon(Image newIcon){
+        this.smallIcon = newIcon;
     }
 
     public DataFlavor[] getTransferDataFlavors() {

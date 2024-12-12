@@ -24,8 +24,9 @@ import java.util.List;
 import javax.swing.JComboBox;
 import javax.swing.filechooser.FileFilter;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 
 /**
  * This class provides the business logic to the associated component
@@ -93,24 +94,29 @@ public class ClassManagerService extends FileFilter implements ActionListener{
         return res;
     }
 
-    List<LocalClassMetadataLight> getAllMeta() {
-        List<LocalClassMetadataLight> res = new ArrayList<LocalClassMetadataLight>();
-        LocalClassMetadataLight[] allMeta = CommunicationsStub.getInstance().getAllLightMeta();
+    public List<LocalClassMetadata> getAllMeta() {
+        List<LocalClassMetadata> res = new ArrayList<LocalClassMetadata>();
+        LocalClassMetadata[] allMeta = CommunicationsStub.getInstance().getAllMeta(true);
         if (allMeta == null){
             cmf.getNotifier().showSimplePopup("Class List", NotificationUtil.ERROR, CommunicationsStub.getInstance().getError());
             return res;
         }
 
-        for (LocalClassMetadataLight myLight : allMeta)
-            if (!myLight.getIsAbstract())
+        for (LocalClassMetadata myLight : allMeta)
+            if (!myLight.isAbstract())
                 res.add(myLight);
         return res;
     }
 
     public void actionPerformed(ActionEvent e) {
-        LocalClassMetadataLight myClass = (LocalClassMetadataLight)((JComboBox)e.getSource()).getSelectedItem();
-        if (myClass == null)
+        LocalClassMetadata myClass = (LocalClassMetadata)((JComboBox)e.getSource()).getSelectedItem();
+        if (myClass == null){
+            cmf.getBtnSave().setEnabled(false);
+            cmf.getBtnRefresh().setEnabled(false);
             return;
+        }
+        cmf.getBtnSave().setEnabled(true);
+        cmf.getBtnRefresh().setEnabled(true);
         cmf.getTxtDisplayName().setText(myClass.getDisplayName()==null?"":myClass.getDisplayName());
         cmf.getTxtDescription().setText(myClass.getDescription()==null?"":myClass.getDescription());
         cmf.getTxtSmallIcon().setText("");

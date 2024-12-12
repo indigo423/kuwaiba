@@ -21,8 +21,8 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.communications.core.views.LocalNode;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.visual.LocalNode;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.widget.general.IconNodeWidget;
 import org.openide.util.ImageUtilities;
@@ -33,12 +33,13 @@ import org.openide.util.ImageUtilities;
  */
 public class ObjectNodeWidget extends IconNodeWidget implements ActionListener{
     private LocalObjectLight object;
+    public static final Font defaultFont = new Font(Font.SANS_SERIF,Font.BOLD,12);
 
     public ObjectNodeWidget(ViewScene scene, LocalNode node){
         super(scene);
         this.object = node.getObject();
         setLabel(node.getObject().getDisplayname());
-        getLabelWidget().setFont(new Font(Font.SANS_SERIF,Font.BOLD,12));
+        getLabelWidget().setFont(defaultFont);
         Image myIcon = CommunicationsStub.getInstance().getMetaForClass(node.getObject().getClassName(), false).getIcon();
         if(myIcon == null)
             myIcon = ImageUtilities.loadImage("org/inventory/views/objectview/res/default_32.png");
@@ -61,8 +62,6 @@ public class ObjectNodeWidget extends IconNodeWidget implements ActionListener{
     public LocalObjectLight getObject(){
         return this.object;
     }
-
-
 
     public void actionPerformed(ActionEvent e) {
         ((ViewScene)getScene()).fireChangeEvent(e);

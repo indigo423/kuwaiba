@@ -15,10 +15,8 @@
  */
 package org.inventory.navigation.applicationnodes.objectnodes.properties;
 
-import java.awt.Component;
 import java.beans.PropertyEditorSupport;
-import javax.swing.JLabel;
-import org.inventory.core.services.interfaces.LocalObjectListItem;
+import org.inventory.core.services.api.LocalObjectListItem;
 
 
 /**
@@ -41,7 +39,7 @@ public class ItemListPropertyEditor extends PropertyEditorSupport{
     @Override
     public void setAsText(String text){
         for (LocalObjectListItem loli : list)
-            if (text.equals(loli.getDisplayName())){
+            if (text.equals(loli.getDisplayname())){
                 setValue(loli);
                 break;
             }
@@ -54,18 +52,21 @@ public class ItemListPropertyEditor extends PropertyEditorSupport{
         String [] res = new String[list.length];
     
         for (int i = 0; i <list.length; i++)
-            res[i] = list[i].getDisplayName().equals("")?
-            list[i].getName():list[i].getDisplayName();
+            res[i] = list[i].getDisplayname().trim().equals("")?list[i].getName():list[i].getDisplayname();
         return res;
     }
 
-    @Override
+/**
+ * Implement this (returning true in supportsCustomEditor) when there's need of an advance, custom editor
+ *
+ * @Override
     public Component getCustomEditor(){
         return new JLabel("sfdfdgfdfgdsf");
     }
+ */
 
     @Override
     public boolean supportsCustomEditor(){
-        return true;
+        return false;
     }
 }

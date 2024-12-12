@@ -15,24 +15,26 @@
  */
 package org.inventory.communications.core;
 
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.LocalObjectListItem;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.LocalObjectListItem;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This is a local representation of an element within a list (enumerations and so on)
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalObjectListItem.class)
 public class LocalObjectListItemImpl extends LocalObjectLightImpl implements LocalObjectListItem{
     private String name;
 
 
     public LocalObjectListItemImpl(){
+        oid = LocalObjectListItem.NULL_ID;
     }
 
     public LocalObjectListItemImpl(LocalObjectLight lol){
         this.oid = lol.getOid();
         this.className = lol.getClassName();
-        this.packageName = lol.getPackageName();
         this.name = lol.getDisplayname();
     }
 
@@ -73,14 +75,4 @@ public class LocalObjectListItemImpl extends LocalObjectLightImpl implements Loc
                 return this.displayName;
         return this.name;
     }
-
-    public static LocalObjectListItem getNullValue() {
-        return new LocalObjectListItemImpl(LocalObjectListItemImpl.NULL_ID,null,"NULL","None");
-    }
-
-    //Workaround
-    public LocalObjectListItem getNull(){
-        return LocalObjectListItemImpl.getNullValue();
-    }
-
 }

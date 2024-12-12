@@ -18,8 +18,8 @@ package org.inventory.navigation.applicationnodes.listmanagernodes.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementChildren;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementNode;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeNode;
@@ -43,8 +43,7 @@ public final class Create extends AbstractAction{
     @Override
     public void actionPerformed(ActionEvent ev) {
         NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
-        LocalObjectLight myLol = com.createObject(node.getObject().getClassName(),
-                                        null,null);
+        LocalObjectLight myLol = com.createListType(node.getObject().getClassName());
             if (myLol == null)
                 nu.showSimplePopup(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATION_TITLE"), NotificationUtil.ERROR,
                     CommunicationsStub.getInstance().getError());

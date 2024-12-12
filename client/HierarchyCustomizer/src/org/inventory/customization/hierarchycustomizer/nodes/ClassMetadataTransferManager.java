@@ -26,7 +26,7 @@ import java.awt.dnd.DragSourceListener;
 import javax.swing.JComponent;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
 
 /**
  * This class implements DragGestureListener and extends from TransferHandler in order to manage
@@ -42,6 +42,9 @@ public class ClassMetadataTransferManager extends TransferHandler implements Dra
     }
 
     public void dragGestureRecognized(DragGestureEvent dge) {
+        //To avoid bogus drag and drop events trigger this behavior
+        if (dge == null)
+            return;
         ClassMetadataTransferManager tf = (ClassMetadataTransferManager)list.getTransferHandler();
         Transferable t = tf.createTransferable(list);
         dge.startDrag(null, t);

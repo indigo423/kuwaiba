@@ -16,7 +16,6 @@
 
 package org.inventory.queries;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -35,12 +34,12 @@ import javax.swing.JTextField;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalAttributeMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadata;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.LocalObjectListItem;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.LocalObjectListItem;
+import org.inventory.core.services.api.metadata.LocalAttributeMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.util.Lookup;
 
 /**
@@ -61,7 +60,7 @@ public class QueryBuilderService implements ListSelectionListener,ItemListener{
     }
 
     public void initComponents(){
-        LocalClassMetadataLight[] lcml = com.getAllLightMeta();
+        LocalClassMetadataLight[] lcml = com.getAllLightMeta(true);
 
         nu = Lookup.getDefault().lookup(NotificationUtil.class);
         if (lcml == null)
@@ -95,11 +94,8 @@ public class QueryBuilderService implements ListSelectionListener,ItemListener{
         ParallelGroup checkboxes = ((GroupLayout)qtf.getLeftPanel().getLayout()).createParallelGroup();
 
         for (LocalAttributeMetadata lam : currentLocalClassMetadata.getAttributes()){
-            if (lam.getIsVisible()){
+            if (lam.isVisible()){
                 JLabel lblAttribute = new JLabel(lam.getDisplayName());
-
-                if(lam.getIsAdministrative())
-                    lblAttribute.setForeground(Color.red);
 
                 JComponent component=null;
                 if (lam.getType().equals(Boolean.class)){
@@ -107,7 +103,7 @@ public class QueryBuilderService implements ListSelectionListener,ItemListener{
                     component = chkValue;
                 }
                 else{
-                    if(lam.getIsMultiple()){
+                    if(lam.isMultiple()){
                         LocalObjectListItem[] list = com.getList(lam.getListAttributeClassName(),false);
 
                         JComboBox cmbValue = new JComboBox(list);
@@ -195,7 +191,7 @@ public class QueryBuilderService implements ListSelectionListener,ItemListener{
                 if (component instanceof JComboBox){
                     LocalObjectListItem item =(LocalObjectListItem)((JComboBox)component).getSelectedItem();
                     //LocalClassMetadata itemClass = com.getMetaForClass(item.getClassName());
-                    values.add(item.getId().toString());
+                    values.add(item.getOid().toString());
                     //types.add(itemClass.getPackageName()+"."+itemClass.getClassName());
                     types.add(item.getClassName());
                     continue;

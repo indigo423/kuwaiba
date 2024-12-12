@@ -16,13 +16,15 @@
 
 package org.inventory.communications.core;
 
-import org.inventory.core.services.interfaces.LocalUserGroupObjectLight;
-import org.inventory.webservice.UserGroupInfoLight;
+import org.inventory.core.services.api.session.LocalUserGroupObjectLight;
+import org.kuwaiba.wsclient.UserGroupInfoLight;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Implementation for the local representation of the very basic information about an application users group
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalUserGroupObjectLight.class)
 public class LocalUserGroupObjectLightImpl implements LocalUserGroupObjectLight{
     protected  Long oid;
     protected  String name;

@@ -21,9 +21,11 @@ import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Date;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalObject;
-import org.inventory.core.services.interfaces.LocalObjectListItem;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.factories.ObjectFactory;
+import org.inventory.core.services.api.LocalObject;
+import org.inventory.core.services.api.LocalObjectListItem;
+import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.navigation.applicationnodes.listmanagernodes.ListElementNode;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.openide.nodes.PropertySupport.ReadWrite;
 import org.openide.util.Lookup;
@@ -62,7 +64,7 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
             this.value = _value;
         else
             //If it is a null value, we create a dummy null value from the generic method available in the interface
-            this.value = Lookup.getDefault().lookup(LocalObjectListItem.class).getNull();
+            this.value = ObjectFactory.createNullItem();
         this.list = _list;
         this.node = _node;
         this.getPropertyEditor().addPropertyChangeListener(this);
@@ -77,18 +79,22 @@ public class ObjectNodeProperty extends ReadWrite implements PropertyChangeListe
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         try{
             LocalObject update = Lookup.getDefault().lookup(LocalObject.class);
-
+            
             if (t instanceof LocalObjectListItem)
                 update.setLocalObject(node.getObject().getClassName(),
-                    new String[]{this.getName()}, new Object[]{((LocalObjectListItem)t).getId()});
+                    new String[]{this.getName()}, new Object[]{((LocalObjectListItem)t).getOid()});
             else
                 update.setLocalObject(node.getObject().getClassName(),
                     new String[]{this.getName()}, new Object[]{t});
             update.setOid(node.getObject().getOid());
-            if(!CommunicationsStub.getInstance().saveObject(update))
+            if(CommunicationsStub.getInstance().saveObject(update) == null)
                 throw new Exception("[saveObject]: Error "+ CommunicationsStub.getInstance().getError());
             else
                 value = t;
+            
+            if (node instanceof ListElementNode)
+                CommunicationsStub.getInstance().getList(node.getObject().getClassName(), true);
+            
         }catch(Exception e){
             NotificationUtil nu = Lookup.getDefault().lookup(NotificationUtil.class);
             nu.showSimplePopup("Object update", NotificationUtil.ERROR, "An error occurred while updating this object: "+e.getMessage());

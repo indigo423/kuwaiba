@@ -20,8 +20,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.nodes.Children.Array;
 import org.openide.nodes.Node;
 import org.openide.util.Lookup;
@@ -43,12 +43,16 @@ public class ObjectChildren extends Array{
      *  since they're going to be created on demand (see method addNotify)
      */
     public ObjectChildren(){
-        keys = new ArrayList<LocalObjectLight>();
+        //keys = new ArrayList<LocalObjectLight>();
     }
 
     @Override
     protected Collection<Node> initCollection(){
         List<Node> myNodes = new ArrayList<Node>();
+
+        if (keys == null)
+            keys = new ArrayList<LocalObjectLight>();
+
         for (LocalObjectLight lol : keys)
             myNodes.add(new ObjectNode(lol));
         return myNodes;
@@ -61,6 +65,10 @@ public class ObjectChildren extends Array{
     public void addNotify(){
         //The tree root is not an AbstractNode, but a RootObjectNode
         if (this.getNode() instanceof ObjectNode){
+
+            if (keys == null)
+                keys = new ArrayList<LocalObjectLight>();
+
             CommunicationsStub com = CommunicationsStub.getInstance();
             LocalObjectLight node = ((ObjectNode)this.getNode()).getObject();
             List <LocalObjectLight> children = com.getObjectChildren(node.getOid(),
@@ -84,10 +92,39 @@ public class ObjectChildren extends Array{
 
     @Override
     protected void removeNotify() {
-        keys.clear();
+        if (keys != null)
+            keys.clear();
     }
 
     public List<LocalObjectLight> getKeys() {
         return keys;
     }
+
+    @Override
+    public boolean add(Node[] arr) {
+        for (Node node : arr){
+            if (node instanceof ObjectNode){
+                if (keys == null)
+                    keys = new ArrayList<LocalObjectLight>();
+
+                if (!keys.contains(((ObjectNode)node).getObject()))
+                    keys.add(((ObjectNode)node).getObject());
+            }
+        }
+        return super.add(arr);
+    }
+
+    @Override
+    public boolean remove(Node[] arr) {
+        for (Node node : arr){
+            if (node instanceof ObjectNode){
+                if (keys == null)
+                    keys = new ArrayList<LocalObjectLight>();
+                
+                keys.remove(((ObjectNode)node).getObject());
+            }
+        }
+        return super.remove(arr);
+    }
+
 }

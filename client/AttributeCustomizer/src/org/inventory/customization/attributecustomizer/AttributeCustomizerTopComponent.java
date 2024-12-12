@@ -18,9 +18,9 @@ package org.inventory.customization.attributecustomizer;
 import org.inventory.customization.attributecustomizer.nodes.ClassMetadataChildren;
 import java.awt.BorderLayout;
 import java.util.logging.Logger;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
-import org.inventory.core.services.interfaces.RefreshableTopComponent;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.api.behaviors.RefreshableTopComponent;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -118,8 +118,6 @@ public final class AttributeCustomizerTopComponent extends TopComponent
         tblClassCustomizerMain = new TreeTableView();
         tblClassCustomizerMain.setRootVisible(false);
 
-        setRoot();
-
         pnlTableEnclosing.setLayout(new BorderLayout());
         pnlTableEnclosing.add(tblClassCustomizerMain,BorderLayout.CENTER);
         
@@ -168,11 +166,12 @@ public final class AttributeCustomizerTopComponent extends TopComponent
 
     @Override
     public void componentOpened() {
+        setRoot();
     }
 
     @Override
     public void componentClosed() {
-        // TODO add custom code on component closing
+        em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
     }
 
     void writeProperties(java.util.Properties p) {

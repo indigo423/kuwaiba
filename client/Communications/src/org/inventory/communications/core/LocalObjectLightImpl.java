@@ -8,20 +8,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.inventory.core.services.interfaces.LocalObjectLight;
-import org.inventory.webservice.RemoteObjectLight;
-import org.inventory.webservice.Validator;
+import org.inventory.core.services.api.LocalObjectLight;
+import org.kuwaiba.wsclient.RemoteObjectLight;
+import org.kuwaiba.wsclient.Validator;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This class is a simple representation of a business object with a very basic information
  * @author Charles Edward Bedon Cortazar <charles.bedon@zoho.com>
  */
+@ServiceProvider(service=LocalObjectLight.class)
 public class LocalObjectLightImpl implements LocalObjectLight{ //This class implements Transferable because of
                                                                //LocalObjectLight interface extends from it
 
     protected Long oid;
     protected String className;
-    protected String packageName;
     protected String displayName;
     /**
      * The list of property change listeners
@@ -41,7 +42,6 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
 
     public LocalObjectLightImpl(RemoteObjectLight rol){
         this.className = rol.getClassName();
-        this.packageName = rol.getPackageName();
         this.oid = rol.getOid();
         this.displayName = rol.getDisplayName();
         this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
@@ -52,7 +52,7 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
         }
     }
 
-    public final String getDisplayname(){
+    public String getDisplayname(){
         return this.displayName;
     }
 
@@ -62,14 +62,6 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
 
     public Long getOid() {
         return oid;
-    }
-
-    public String getDisplayName() {
-        return this.displayName;
-    }
-
-    public String getPackageName() {
-        return this.packageName;
     }
 
     public void setDisplayName(String text){
@@ -143,5 +135,10 @@ public class LocalObjectLightImpl implements LocalObjectLight{ //This class impl
             return this;
         else
             throw new UnsupportedFlavorException(flavor);
+    }
+
+    @Override
+    public String toString(){
+        return getDisplayname() +" ["+getClassName()+"]"; //NOI18N
     }
 }

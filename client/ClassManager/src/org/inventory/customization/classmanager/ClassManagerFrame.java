@@ -22,10 +22,12 @@ import java.awt.Toolkit;
 import java.io.IOException;
 import java.util.List;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JTextField;
-import org.inventory.core.services.interfaces.LocalClassMetadataLight;
-import org.inventory.core.services.interfaces.NotificationUtil;
+import org.inventory.core.services.api.metadata.LocalClassMetadata;
+import org.inventory.core.services.api.metadata.LocalClassMetadataLight;
+import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.Utils;
 import org.openide.util.Lookup;
 
@@ -91,6 +93,7 @@ public class ClassManagerFrame extends javax.swing.JFrame {
         btnSave.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/customization/classmanager/res/save.png"))); // NOI18N
         btnSave.setText(org.openide.util.NbBundle.getMessage(ClassManagerFrame.class, "ClassManagerFrame.btnSave.text")); // NOI18N
         btnSave.setToolTipText(org.openide.util.NbBundle.getMessage(ClassManagerFrame.class, "ClassManagerFrame.btnSave.toolTipText")); // NOI18N
+        btnSave.setEnabled(false);
         btnSave.setFocusable(false);
         btnSave.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         btnSave.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -104,6 +107,7 @@ public class ClassManagerFrame extends javax.swing.JFrame {
         btnRefresh.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/customization/classmanager/res/refresh.png"))); // NOI18N
         btnRefresh.setText(org.openide.util.NbBundle.getMessage(ClassManagerFrame.class, "ClassManagerFrame.btnRefresh.text")); // NOI18N
         btnRefresh.setToolTipText(org.openide.util.NbBundle.getMessage(ClassManagerFrame.class, "ClassManagerFrame.btnRefresh.toolTipText")); // NOI18N
+        btnRefresh.setEnabled(false);
         btnRefresh.setFocusable(false);
         btnRefresh.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         btnRefresh.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
@@ -177,9 +181,9 @@ public class ClassManagerFrame extends javax.swing.JFrame {
                         .addComponent(txtSmallIcon, javax.swing.GroupLayout.DEFAULT_SIZE, 499, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnSmallIconChooser))
-                    .addComponent(txtDescription, javax.swing.GroupLayout.DEFAULT_SIZE, 521, Short.MAX_VALUE)
-                    .addComponent(txtDisplayName, javax.swing.GroupLayout.DEFAULT_SIZE, 521, Short.MAX_VALUE)
-                    .addComponent(cmbClass, 0, 521, Short.MAX_VALUE))
+                    .addComponent(txtDescription, javax.swing.GroupLayout.DEFAULT_SIZE, 526, Short.MAX_VALUE)
+                    .addComponent(txtDisplayName, javax.swing.GroupLayout.DEFAULT_SIZE, 526, Short.MAX_VALUE)
+                    .addComponent(cmbClass, 0, 526, Short.MAX_VALUE))
                 .addContainerGap())
         );
         pnlMainLayout.setVerticalGroup(
@@ -235,20 +239,20 @@ public class ClassManagerFrame extends javax.swing.JFrame {
 
     private void btnSmallIconChooserActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSmallIconChooserActionPerformed
         if (fChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION){
-            txtSmallIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
             Image mySmallIcon = Toolkit.getDefaultToolkit().createImage(fChooser.getSelectedFile().getAbsolutePath());
             if (mySmallIcon == null)
                 getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "Image in "+fChooser.getSelectedFile().getAbsolutePath()+" couldn't be loaded");
             else{
                 //This image trick if useful because for some 8bits gif, the getHeight/Width returns -1
                 if((new ImageIcon(mySmallIcon)).getIconHeight() > 16) //We don't accept images of more tha 16x16 pixels
-                    getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The height if the given image exceeds 16 pixels");
+                    getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The height of the image exceeds 16 pixels");
                 else{
                     if((new ImageIcon(mySmallIcon)).getIconWidth() > 16) //We don't accept images of more tha 16x16 pixels
-                        getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The widtth if the given image exceeds 16 pixels");
+                        getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The width of the image exceeds 16 pixels");
                     else{
                         try {
                             smallIcon = Utils.getByteArrayFromImageFile(fChooser.getSelectedFile(), cms.getExtension(fChooser.getSelectedFile()));
+                            txtSmallIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
                         } catch (IOException ex) {
                             smallIcon = null;
                         }
@@ -266,21 +270,20 @@ public class ClassManagerFrame extends javax.swing.JFrame {
             if (mySmallIcon == null)
                 getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "Image in "+fChooser.getSelectedFile().getAbsolutePath()+" couldn't be loaded");
             else{
-                if(mySmallIcon.getHeight(null) > 48) //We don't accept images of more tha 48x48 pixels
-                    getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The height if the given image is bigger tha 16 pixels");
+                if(mySmallIcon.getHeight(null) > 32) //We don't accept images of more tha 48x48 pixels
+                    getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The height of the image is exceeds 32 pixels");
                 else{
-                    if(mySmallIcon.getWidth(null) > 48) //We don't accept images of more tha 48x48 pixels
-                        getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The widtth if the given image is bigger tha 16 pixels");
+                    if(mySmallIcon.getWidth(null) > 32) //We don't accept images of more tha 48x48 pixels
+                        getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The widtth of the image exceeds 32 pixels");
                     else{
                         try {
                             icon = Utils.getByteArrayFromImageFile(fChooser.getSelectedFile(), cms.getExtension(fChooser.getSelectedFile()));
+                            txtIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
                         } catch (IOException ex) {
                             icon = null;
                         }
                         if (icon == null)
                             getNotifier().showSimplePopup("Image Load", NotificationUtil.ERROR, "The file couldn't be converted");
-                        else
-                            txtIcon.setText(fChooser.getSelectedFile().getAbsolutePath());
                     }
                 }
             }
@@ -341,9 +344,17 @@ public class ClassManagerFrame extends javax.swing.JFrame {
         return txtSmallIcon;
     }
 
+    public JButton getBtnSave(){
+        return btnSave;
+    }
+
+    public JButton getBtnRefresh(){
+        return btnRefresh;
+    }
+
     public void setRoot(){
-        List<LocalClassMetadataLight> lcml = cms.getAllMeta();
-        for (LocalClassMetadataLight lcm : lcml)
+        List<LocalClassMetadata> lcml = cms.getAllMeta();
+        for (LocalClassMetadata lcm : lcml)
             cmbClass.addItem(lcm);
         cmbClass.setSelectedIndex(-1);
         cmbClass.addActionListener(cms);
