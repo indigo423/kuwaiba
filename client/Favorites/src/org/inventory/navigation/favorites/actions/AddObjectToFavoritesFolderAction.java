@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.communications.core.LocalFavoritesFolder;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.windows.SelectValueFrame;
 import org.inventory.core.services.i18n.I18N;
@@ -33,7 +34,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Action to add object to a favorite folder
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -44,7 +45,7 @@ public class AddObjectToFavoritesFolderAction extends GenericObjectNodeAction im
     }
             
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
     
@@ -82,11 +83,11 @@ public class AddObjectToFavoritesFolderAction extends GenericObjectNodeAction im
                 JOptionPane.showMessageDialog(null, I18N.gm("select_a_favorites_folder"));
             else {
                 List<String> objectsClassName = new ArrayList<>();
-                List<Long> objectsId = new ArrayList<>();
+                List<String> objectsId = new ArrayList<>();
                 
                 for (LocalObjectLight selectedObject : selectedObjects) {
                     objectsClassName.add(selectedObject.getClassName());
-                    objectsId.add(selectedObject.getOid());
+                    objectsId.add(selectedObject.getId());
                     
                     if (CommunicationsStub.getInstance()
                         .addObjectsToFavoritesFolder(objectsClassName, objectsId, ((LocalFavoritesFolder) selectedValue).getId())) {

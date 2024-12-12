@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.openide.util.Utilities;
 
 /**
  * Action to remove a possible special child
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class RemovePossibleSpecialChildAction extends GenericInventoryAction {
     private static RemovePossibleSpecialChildAction instance;
@@ -50,8 +50,8 @@ public class RemovePossibleSpecialChildAction extends GenericInventoryAction {
     public void actionPerformed(ActionEvent e) {
         ClassMetadataNode selectedNode = Utilities.actionsGlobalContext().lookup(ClassMetadataSpecialNode.class);
         if (selectedNode != null) {
-            long childId = selectedNode.getObject().getOid();
-            long parentId = ((ClassMetadataNode) selectedNode.getParentNode()).getObject().getOid();
+            long childId = selectedNode.getObject().getId();
+            long parentId = ((ClassMetadataNode) selectedNode.getParentNode()).getObject().getId();
             
             if (CommunicationsStub.getInstance().removePossibleSpecialChildren(parentId, new long [] {childId})) {
                 ((ClassMetadataSpecialChildren) selectedNode.getParentNode().getChildren()).remove(new Node[] {selectedNode});

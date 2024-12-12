@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a contract pool
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class DeleteContractPoolAction extends GenericInventoryAction implements Presenter.Popup {
     private final JMenuItem popupPresenter;
@@ -64,7 +64,7 @@ public class DeleteContractPoolAction extends GenericInventoryAction implements 
 
             ContractPoolNode selectedNode = selectedNodes.next();
 
-            if (CommunicationsStub.getInstance().deletePool(selectedNode.getPool().getOid())) {
+            if (CommunicationsStub.getInstance().deletePool(selectedNode.getPool().getId())) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, I18N.gm("pool_was_deleted"));
                 ((ContractManagerRootNode.ContractManagerRootChildren)selectedNode.getParentNode().getChildren()).addNotify();
             }

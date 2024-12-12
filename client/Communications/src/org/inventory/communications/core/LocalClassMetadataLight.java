@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import org.inventory.communications.util.Utils;
 
@@ -32,7 +31,7 @@ import org.inventory.communications.util.Utils;
  * Implementation of the common interface to represent the class metadata in a simple
  * way so it can be shown in trees and lists. This is done because to bring the whole
  * metadata is not necessary (ie. Container Hierarchy Manager)
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class LocalClassMetadataLight implements Transferable, Comparable<LocalClassMetadataLight> {
     /**
@@ -81,10 +80,6 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
     private Color color;
     
     /**
-     * Misc validators. Validators tell you states of this class related to business rules
-     */
-    protected HashMap<String, Integer> validators;
-    /**
      * The list of property change listeners
      */
     protected List<PropertyChangeListener> propertyChangeListeners;
@@ -97,7 +92,7 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
 
     public LocalClassMetadataLight(long id, String className, String displayName, 
             String parentName, boolean _abstract, boolean viewable, boolean listType, 
-            boolean custom, boolean inDesign,byte[] smallIcon, int color, HashMap<String, Integer> validators) {
+            boolean custom, boolean inDesign,byte[] smallIcon, int color) {
         this.id = id;
         this.className = className;
         this.displayName = displayName;
@@ -110,7 +105,6 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
         this.smallIcon = Utils.getIconFromByteArray(smallIcon, new Color(color),
                 Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT);
         this.color = new Color(color);
-        this.validators = validators;
     }
 
     public String getClassName() {
@@ -121,12 +115,8 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
     public void setClassName(String className) {
         this.className = className;
     }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
     
-    public long getOid() {
+    public long getId() {
         return id;
     }
 
@@ -159,7 +149,7 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
        if (!(obj instanceof LocalClassMetadataLight)) {
            return false;
        }
-       return (this.getOid() == ((LocalClassMetadataLight)obj).getOid() && this.getDisplayName().equals(((LocalClassMetadataLight)obj).getDisplayName()));
+       return (this.getId() == ((LocalClassMetadataLight)obj).getId());
    }
 
     @Override
@@ -196,15 +186,6 @@ public class LocalClassMetadataLight implements Transferable, Comparable<LocalCl
     @Override
     public DataFlavor[] getTransferDataFlavors() {
         return new DataFlavor[]{DATA_FLAVOR};
-    }
-
-    /**
-     * Retrieves the value of a given validator
-     * @param validatorName validator's name
-     * @return value for the given validator. false if the validator is not present
-     */
-    public int getValidator(String validatorName){
-        return validators.get(validatorName) == null ? 0 : validators.get(validatorName);
     }
 
     @Override

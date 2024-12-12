@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.openide.nodes.Node;
 
 /**
  * <code>ProjectNode</code> children
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ProjectChildren extends AbstractChildren {
 
@@ -34,7 +34,7 @@ public class ProjectChildren extends AbstractChildren {
     public void addNotify() {
         ProjectNode selectedNode = (ProjectNode) getNode();
         String projectClass = selectedNode.getObject().getClassName();
-        long projectId = selectedNode.getObject().getOid();
+        String projectId = selectedNode.getObject().getId();
         
         List<LocalObjectLight> activities = CommunicationsStub.getInstance()
             .getProjectActivities(projectClass, projectId);

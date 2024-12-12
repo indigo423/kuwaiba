@@ -131,3 +131,13 @@
 * It's now possible also move links out of a container choosing the links container from the object view.
 * It's now possible to move one or several links into a container from the object view. 
 * The tasks can now make commit if something is created in the task.
+
+2.0
+* New module to manage scripts to be used by other modules or tasks (Script Query Manager)
+* Added a Process Manager that allows to design processes using BPMN
+* Revamped web interface
+* More than one session for the same user can be created, as long as they have different types (for example a mobile session and a desktop session)
+* More Sync Providers added
+* Migration to Java 8, Neo4J 3.x and Vaadin 8.x
+* Added a preliminary Outside Plant module version
+* Service Manager partly ported to the web interface

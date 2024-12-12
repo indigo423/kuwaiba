@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.windows.TopComponent;
 
 /**
  * Displays the results of a task that was executed on demand
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ExecuteTaskResultTopComponent extends TopComponent {
     private JTable tblResult;
@@ -118,22 +118,24 @@ public class ExecuteTaskResultTopComponent extends TopComponent {
         
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value.toString());
-            LocalTaskResultMessage cellContent = (LocalTaskResultMessage)value;
-            if (isSelected)
-                setBackground(UIManager.getColor("Button.focus"));
-            else {
-                switch (cellContent.getMessageType()) {
-                    case LocalTaskResultMessage.STATUS_ERROR:
-                        setBackground(Color.PINK);
-                        break;
-                    case LocalTaskResultMessage.STATUS_WARNING:
-                        setBackground(Color.YELLOW);
-                        break;
-                    default:
-                    case LocalTaskResultMessage.STATUS_SUCCESS:
-                        setBackground(Color.GREEN);
-                        break;
+            if (value != null) {
+                setText(value.toString());
+                LocalTaskResultMessage cellContent = (LocalTaskResultMessage)value;
+                if (isSelected)
+                    setBackground(UIManager.getColor("Button.focus"));
+                else {
+                    switch (cellContent.getMessageType()) {
+                        case LocalTaskResultMessage.STATUS_ERROR:
+                            setBackground(Color.PINK);
+                            break;
+                        case LocalTaskResultMessage.STATUS_WARNING:
+                            setBackground(Color.YELLOW);
+                            break;
+                        default:
+                        case LocalTaskResultMessage.STATUS_SUCCESS:
+                            setBackground(Color.GREEN);
+                            break;
+                    }
                 }
             }
             return this;

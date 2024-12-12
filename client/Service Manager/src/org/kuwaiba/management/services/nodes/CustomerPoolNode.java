@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.util.ImageUtilities;
 
 /**
  * Represents a pool of customers
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class CustomerPoolNode extends PoolNode {
 
@@ -53,7 +53,7 @@ public class CustomerPoolNode extends PoolNode {
     public Action[] getActions(boolean context){
         return new Action[]{ ServiceManagerActionFactory.getCreateCustomerAction(), 
             ServiceManagerActionFactory.getDeleteCustomerPoolAction(), 
-            ShowMoreInformationAction.getInstance(getPool().getOid(), getPool().getClassName())};
+            ShowMoreInformationAction.getInstance(getPool().getId(), getPool().getClassName())};
     }
    
     @Override
@@ -71,7 +71,7 @@ public class CustomerPoolNode extends PoolNode {
         @Override
         public void addNotify() {
             LocalPool customerPool = ((CustomerPoolNode)getNode()).getPool();
-            List<LocalObjectLight> customers = CommunicationsStub.getInstance().getPoolItems(customerPool.getOid());
+            List<LocalObjectLight> customers = CommunicationsStub.getInstance().getPoolItems(customerPool.getId());
             if (customers == null) {
                 setKeys(Collections.EMPTY_SET);
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

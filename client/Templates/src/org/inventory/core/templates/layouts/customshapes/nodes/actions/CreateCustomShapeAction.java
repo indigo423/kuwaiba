@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package org.inventory.core.templates.layouts.customshapes.nodes.actions;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.util.HashMap;
 import javax.xml.bind.DatatypeConverter;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -35,7 +36,7 @@ import org.openide.util.Utilities;
 
 /**
  * This action crates custom shape items
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CreateCustomShapeAction extends GenericInventoryAction {
     public CreateCustomShapeAction() {
@@ -66,19 +67,19 @@ public class CreateCustomShapeAction extends GenericInventoryAction {
                 byte[] byteArray = Utils.getByteArrayFromImage(Utils.createRectangleIcon(Color.BLACK, 33, 33), null);
                 
                 String byteArrayEncode = DatatypeConverter.printBase64Binary(byteArray);                
-                String iconAttributeValue = "defaultIcon" + ";/;" +  "png" + ";/;" + byteArrayEncode; //NOI18N
-
-                LocalObject updateCustomShape = new LocalObject(loli.getClassName(), loli.getId(), 
-                    new String[] {"icon"}, new Object[] {iconAttributeValue});
-
-                if (!CommunicationsStub.getInstance().saveObject(updateCustomShape)) {
-                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
-                        NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-                    return;
-                }
+////                String iconAttributeValue = "defaultIcon" + ";/;" +  "png" + ";/;" + byteArrayEncode; //NOI18N
+////
+////                HashMap<String, Object> attributesToUpdate = new HashMap<>();
+////                attributesToUpdate.put(Constants.PROPERTY_ICON, iconAttributeValue);
+////
+////                if(!CommunicationsStub.getInstance().updateObject(loli.getClassName(), loli.getId(), attributesToUpdate)) {
+////                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
+////                        NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+////                    return;
+////                }
             } catch (IOException ex) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
-                    NotificationUtil.ERROR_MESSAGE, "The default icon can not be created");
+                    NotificationUtil.ERROR_MESSAGE, "The default icon could not be created");
                 return;
             }
             ((AbstractChildren) node.getChildren()).addNotify();

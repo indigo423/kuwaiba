@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -25,6 +25,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPool;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -36,7 +37,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Actions to relate a Generic port to an IP address
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -48,7 +49,7 @@ public class RelateEndPointToIPAddressAction extends GenericObjectNodeAction {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        List<LocalPool> subnets = CommunicationsStub.getInstance().getSubnetPools(-1, null);
+        List<LocalPool> subnets = CommunicationsStub.getInstance().getSubnetPools("-1", null);
         Lookup.Result<LocalObjectLight> selectedNodes = Utilities.actionsGlobalContext().lookupResult(LocalObjectLight.class);
         
         if(subnets == null)
@@ -67,7 +68,7 @@ public class RelateEndPointToIPAddressAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

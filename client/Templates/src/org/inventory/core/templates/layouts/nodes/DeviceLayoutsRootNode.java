@@ -16,17 +16,15 @@
  */
 package org.inventory.core.templates.layouts.nodes;
 
-import java.util.List;
-import org.inventory.communications.core.LocalObjectLight;
 import org.openide.nodes.AbstractNode;
 
 /**
  * Root node of nodes of device layouts
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutsRootNode extends AbstractNode {
 
-    public DeviceLayoutsRootNode(List<LocalObjectLight> devices) {
-        super(new DeviceLayoutChildren(devices));
+    public DeviceLayoutsRootNode() {
+        super(new DeviceLayoutChildren());
     }    
 }

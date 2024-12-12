@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Create template to child of special
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CreateTemplateElementSpecialAction extends GenericInventoryAction implements Presenter.Popup {
     
@@ -63,7 +63,7 @@ public class CreateTemplateElementSpecialAction extends GenericInventoryAction i
             LocalObjectLight selectedObject = selectedNode.getLookup().lookup(LocalObjectLight.class);
             
             LocalObjectLight newTemplateElement = com.createTemplateSpecialElement(((JMenuItem)e.getSource()).getName(), selectedObject.getClassName(), 
-                    selectedObject.getOid(), ((JTextField)pnlGeneralInfo.getComponent("txtTemplateSpecialElementName")).getText());
+                    selectedObject.getId(), ((JTextField)pnlGeneralInfo.getComponent("txtTemplateSpecialElementName")).getText());
             
             if (newTemplateElement == null)
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -22,6 +22,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -34,7 +35,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Release a port from an IP address
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -48,7 +49,7 @@ public class ReleaseEndPointFromIPAddresAction extends GenericObjectNodeAction i
     public void actionPerformed(ActionEvent e) {
         LocalObjectLight selectedObject = selectedObjects.get(0);
         List<LocalObjectLight> ipAddresses = CommunicationsStub.getInstance().getSpecialAttribute(
-            selectedObject.getClassName(), selectedObject.getOid(), Constants.RELATIONSHIP_IPAMHASADDRESS);
+            selectedObject.getClassName(), selectedObject.getId(), Constants.RELATIONSHIP_IPAMHASADDRESS);
         
         if (ipAddresses != null) {
             if (ipAddresses.isEmpty()) {
@@ -59,8 +60,8 @@ public class ReleaseEndPointFromIPAddresAction extends GenericObjectNodeAction i
                 for (LocalObjectLight ipAddress : ipAddresses) {
                     SubMenuItem subMenuItem = new SubMenuItem(ipAddress.toString());
                     subMenuItem.addProperty("portClassName", selectedObject.getClassName()); //NOI18N
-                    subMenuItem.addProperty("portId", selectedObject.getOid()); //NOI18N
-                    subMenuItem.addProperty("ipAddressId", ipAddress.getOid()); //NOI18N
+                    subMenuItem.addProperty("portId", selectedObject.getId()); //NOI18N
+                    subMenuItem.addProperty("ipAddressId", ipAddress.getId()); //NOI18N
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -70,7 +71,7 @@ public class ReleaseEndPointFromIPAddresAction extends GenericObjectNodeAction i
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
     
@@ -86,8 +87,8 @@ public class ReleaseEndPointFromIPAddresAction extends GenericObjectNodeAction i
                    I18N.gm("warning"),JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
                 if (CommunicationsStub.getInstance().releasePortFromIPAddress(
                     (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty("portClassName"), //NOI18N
-                    (long) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty("portId"), //NOI18N
-                    (long) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty("ipAddressId")) //NOI18N
+                    (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty("portId"), //NOI18N
+                    (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty("ipAddressId")) //NOI18N
                    ) {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
                         I18N.gm("element_release_successfully"));
@@ -99,7 +100,7 @@ public class ReleaseEndPointFromIPAddresAction extends GenericObjectNodeAction i
     
     @Override
     public String[] appliesTo() {
-        return new String [] {Constants.CLASS_GENERICPORT};
+        return new String [] {Constants.CLASS_GENERICPORT, Constants.CLASS_MPLSTUNNEL};
     }
     
     @Override

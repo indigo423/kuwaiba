@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -41,7 +41,7 @@ import org.inventory.communications.core.LocalObjectLight;
 
 /**
  * Show the existing VLANS that can be associated to a subnet
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class VlansFrame extends JFrame{
     private JTextField txtField;
@@ -119,7 +119,7 @@ public class VlansFrame extends JFrame{
                 JOptionPane.showMessageDialog(null, java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_INSTRUCTIONS_SELECT_VLAN"));
             else {
                 if (CommunicationsStub.getInstance().relateSubnetToVLAN(
-                        selectedObjects.get(0).getOid(), selectedObjects.get(0).getClassName(), lstAvailableVlans.getSelectedValue().getOid())){
+                        selectedObjects.get(0).getId(), selectedObjects.get(0).getClassName(), lstAvailableVlans.getSelectedValue().getId())){
                     JOptionPane.showMessageDialog(null, String.format("The %s subnet was related to VLAN %s", selectedObjects.get(0).getName(), 
                             lstAvailableVlans.getSelectedValue().getName()));
                         dispose();

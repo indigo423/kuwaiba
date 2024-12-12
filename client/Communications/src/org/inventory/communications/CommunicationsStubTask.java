@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.inventory.communications.core.LocalObjectLight;
 
 /**
  * Manage the thread pool and create communications stub callable methods
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CommunicationsStubTask {    
     private static CommunicationsStubTask instance;
@@ -42,7 +42,7 @@ public class CommunicationsStubTask {
         return fixedThreadPool == null ? fixedThreadPool = Executors.newFixedThreadPool(10) : fixedThreadPool;
     }
     
-    public Callable<List<LocalObjectLight>> getObjectChildrenCallable(final long oid, final String className) {
+    public Callable<List<LocalObjectLight>> getObjectChildrenCallable(final String oid, final String className) {
         return new Callable<List<LocalObjectLight>>() {
 
             @Override
@@ -52,7 +52,7 @@ public class CommunicationsStubTask {
         };
     }
     
-    public Callable<LocalObject> getObjectInfoCallable(final String objectClass, final long oid) {
+    public Callable<LocalObject> getObjectInfoCallable(final String objectClass, final String oid) {
         return new Callable<LocalObject>() {
 
             @Override
@@ -62,7 +62,7 @@ public class CommunicationsStubTask {
         };
     }
     
-    public Callable<HashMap<String, LocalObjectLight[]>> getSpecialAttributesCallable(final String objectClass, final long objectId) {
+    public Callable<HashMap<String, LocalObjectLight[]>> getSpecialAttributesCallable(final String objectClass, final String objectId) {
         return new Callable<HashMap<String, LocalObjectLight[]>>() {
             @Override
             public HashMap<String, LocalObjectLight[]> call() throws Exception {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package com.neotropic.inventory.modules.sync.nodes.properties;
 
-import com.neotropic.inventory.modules.sync.nodes.SyncConfigurationNode;
+import com.neotropic.inventory.modules.sync.nodes.SyncDataSourceConfigurationNode;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalSyncDataSourceConfiguration;
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -29,13 +29,14 @@ import org.openide.nodes.PropertySupport;
 
 /**
  * Properties to Sync Configuration Nodes
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class SyncConfigurationNativeTypeProperty extends PropertySupport.ReadWrite {
-    private final SyncConfigurationNode syncConfigNode;
+    private final SyncDataSourceConfigurationNode syncConfigNode;
     private Object value;
     
-    public SyncConfigurationNativeTypeProperty(String name, Class type, String displayName, String shortDescription, SyncConfigurationNode syncConfigNode, Object value) {
+    public SyncConfigurationNativeTypeProperty(String name, Class type, 
+            String displayName, String shortDescription, SyncDataSourceConfigurationNode syncConfigNode, Object value) {
         super(name, type, displayName, shortDescription);
         this.syncConfigNode = syncConfigNode;
         this.value = value;

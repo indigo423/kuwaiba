@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -40,7 +40,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes an attribute
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class DeleteAttributeAction extends GenericInventoryAction implements ComposedAction, Presenter.Popup {
 
@@ -89,7 +89,7 @@ public class DeleteAttributeAction extends GenericInventoryAction implements Com
         if (e != null && e.getSource() instanceof SubMenuDialog) {
             if (JOptionPane.showConfirmDialog(null, I18N.gm("confirm_attribute_class_operation"), 
                     I18N.gm("class_metadata_operation"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
-                if (com.deleteAttribute(classNode.getClassMetadata().getOid(), ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getCaption())) {
+                if (com.deleteAttribute(classNode.getClassMetadata().getId(), ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getCaption())) {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, I18N.gm("attribute_deleted"));
                     //Force a cache reload
                     Cache.getInstace().resetAll();

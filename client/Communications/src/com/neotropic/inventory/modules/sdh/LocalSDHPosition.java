@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package com.neotropic.inventory.modules.sdh;
 
 /**
  * Mirror of the remote class with the same name
- * @author Charles Edward Bedon Cortazar<charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar{@literal <charles.bedon@kuwaiba.org>}
  */
 public class LocalSDHPosition {
    /**
    * Id of the connection being used (a TransportLink or a ContainerLink)
    */
-  private long connectionId;
+  private String connectionId;
   /**
    * Id of the connection being used (a TransportLink or a ContainerLink)
    */
@@ -34,17 +34,17 @@ public class LocalSDHPosition {
   private int position;
 
 
-  public LocalSDHPosition(String connectionClass, long connectionId, int position) {
+  public LocalSDHPosition(String connectionClass, String connectionId, int position) {
       this.connectionId = connectionId;
       this.connectionClass = connectionClass;
       this.position = position;
   }
 
-  public long getLinkId() {
+  public String getLinkId() {
       return connectionId;
   }
 
-  public void setLinkId(long connectionId) {
+  public void setLinkId(String connectionId) {
       this.connectionId = connectionId;
   }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import java.io.ByteArrayInputStream;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -32,7 +31,7 @@ import org.inventory.core.services.api.xml.ClassHierarchyReader;
 
 /**
  * Implementation of Class Hierarchy Reader used for Class Hierarchy Service
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ClassHierarchyReaderImpl implements ClassHierarchyReader {
     private String documentVersion;
@@ -132,10 +131,10 @@ public class ClassHierarchyReaderImpl implements ClassHierarchyReader {
         LocalClassMetadata lcm = new LocalClassMetadata(
                 id, className, "", parentName, 
                 Modifier.isAbstract(javaModifiers), false, false, false, false, 
-                new byte[0], 0, new HashMap(), new byte[0], "", new ArrayList<Long>(), 
+                new byte[0], 0, new byte[0], "", new ArrayList<>(), 
                 attributesNames.toArray(new String[0]), 
-                attributesTypes.toArray(new String[0]), new String[0], 
-                new ArrayList<Boolean>(),new ArrayList<Boolean>(), new ArrayList<Boolean>(), new String[0]);
+                attributesTypes.toArray(new String[0]), new String[0], new String[0], 
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         
         return lcm;
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.kuwaiba.management.services.nodes.CustomerPoolNode;
 import org.openide.nodes.Node;
 import org.openide.util.Utilities;
@@ -34,7 +35,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * This action allows to create a customer
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class CreateCustomerAction extends GenericInventoryAction implements Presenter.Popup {
     
@@ -53,7 +54,7 @@ public class CreateCustomerAction extends GenericInventoryAction implements Pres
         Node selectedNode = selectedNodes.next();
         
         LocalObjectLight newCustomer = CommunicationsStub.getInstance().
-                createPoolItem(((CustomerPoolNode)selectedNode).getPool().getOid(), 
+                createPoolItem(((CustomerPoolNode)selectedNode).getPool().getId(), 
                 ((JMenuItem)e.getSource()).getName());
         if (newCustomer == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -65,15 +66,23 @@ public class CreateCustomerAction extends GenericInventoryAction implements Pres
   
     @Override
     public JMenuItem getPopupPresenter() {
+        JMenuItem menu = new JMenu(java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_CUSTOMER"));
         List<LocalClassMetadataLight> customerClasses = CommunicationsStub.getInstance().
                 getLightSubclasses(Constants.CLASS_GENERICCUSTOMER, false, false);
-        JMenuItem menu = new JMenu(java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_CUSTOMER"));
-        for (LocalClassMetadataLight customerClass : customerClasses){
-            JMenuItem customerEntry = new JMenuItem(customerClass.getClassName());
-            customerEntry.setName(customerClass.getClassName());
-            customerEntry.addActionListener(this);
-            menu.add(customerEntry);
+        
+        if (customerClasses == null) {
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
+                    NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            menu.setEnabled(false);
+        } else {
+            for (LocalClassMetadataLight customerClass : customerClasses){
+                JMenuItem customerEntry = new JMenuItem(customerClass.getClassName());
+                customerEntry.setName(customerClass.getClassName());
+                customerEntry.addActionListener(this);
+                menu.add(customerEntry);
+            }
         }
+        
         return menu;
     }
 

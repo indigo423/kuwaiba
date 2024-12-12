@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -39,7 +40,7 @@ import org.openide.util.actions.Presenter.Popup;
 
 /**
  * Creates an special object from a template
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CreateSpecialBusinessObjectFromTemplateAction extends GenericObjectNodeAction 
     implements Popup, ComposedAction {
@@ -112,7 +113,7 @@ public class CreateSpecialBusinessObjectFromTemplateAction extends GenericObject
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -130,7 +131,7 @@ public class CreateSpecialBusinessObjectFromTemplateAction extends GenericObject
                 LocalObjectLight selectedObject = Utilities.actionsGlobalContext().lookup(LocalObjectLight.class);
 
                 LocalObjectLight newObject = CommunicationsStub.getInstance().createSpecialObject(((LocalObjectLight) selectedTemplate).getClassName(), 
-                    selectedObject.getClassName(), selectedObject.getOid(), attributes, ((LocalObjectLight) selectedTemplate).getOid());
+                    selectedObject.getClassName(), selectedObject.getId(), attributes, ((LocalObjectLight) selectedTemplate).getId());
 
                 if (newObject == null) {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,11 +41,11 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Node that wraps a LocalTask object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class TaskNode extends AbstractNode {
     
-    private static final Image defaultIcon = Utils.createRectangleIcon(Color.PINK, 10, 10);
+    private static final Image ICON_DEFAULT = Utils.createRectangleIcon(Color.PINK, 10, 10);
     private static final IntegerEntry[] NOTIFICATION_TYPES 
                         = new IntegerEntry[] { new IntegerEntry(LocalTaskNotificationDescriptor.TYPE_NOTHING, "No Notification"), 
                                                new IntegerEntry(LocalTaskNotificationDescriptor.TYPE_CLIENT, "Client Managed"), 
@@ -75,12 +75,12 @@ public class TaskNode extends AbstractNode {
     
     @Override
     public Image getOpenedIcon(int type) {
-        return defaultIcon;
+        return ICON_DEFAULT;
     }
 
     @Override
     public Image getIcon(int type) {
-        return defaultIcon;
+        return ICON_DEFAULT;
     }
     
     @Override

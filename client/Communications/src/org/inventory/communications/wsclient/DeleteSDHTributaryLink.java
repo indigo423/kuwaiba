@@ -17,8 +17,7 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="tributaryLinkClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="tributaryLinkId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="forceDelete" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
+ *         &lt;element name="tributaryLinkId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -32,14 +31,12 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "deleteSDHTributaryLink", propOrder = {
     "tributaryLinkClass",
     "tributaryLinkId",
-    "forceDelete",
     "sessionId"
 })
 public class DeleteSDHTributaryLink {
 
     protected String tributaryLinkClass;
-    protected long tributaryLinkId;
-    protected boolean forceDelete;
+    protected String tributaryLinkId;
     protected String sessionId;
 
     /**
@@ -69,33 +66,25 @@ public class DeleteSDHTributaryLink {
     /**
      * Gets the value of the tributaryLinkId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getTributaryLinkId() {
+    public String getTributaryLinkId() {
         return tributaryLinkId;
     }
 
     /**
      * Sets the value of the tributaryLinkId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setTributaryLinkId(long value) {
+    public void setTributaryLinkId(String value) {
         this.tributaryLinkId = value;
-    }
-
-    /**
-     * Gets the value of the forceDelete property.
-     * 
-     */
-    public boolean isForceDelete() {
-        return forceDelete;
-    }
-
-    /**
-     * Sets the value of the forceDelete property.
-     * 
-     */
-    public void setForceDelete(boolean value) {
-        this.forceDelete = value;
     }
 
     /**

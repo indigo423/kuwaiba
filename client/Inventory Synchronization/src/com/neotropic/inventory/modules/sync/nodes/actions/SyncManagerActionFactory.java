@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import org.inventory.core.services.api.actions.GenericInventoryAction;
 
 /**
  * Action factory for the Inventory Sync Module
- * @author Charles Edward Bedon Cortazar <johny.ortega@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <johny.ortega@kuwaiba.org>}
  */
 public class SyncManagerActionFactory {
     /**
@@ -34,7 +34,7 @@ public class SyncManagerActionFactory {
      * Action that adds data source configurations to a given sync group
      */
     private static NewSyncDataSourceConfigurationAction newSyncDataSourceConfigurationAction;
-        
+       
     public static GenericInventoryAction getNewSyncGroupAction() {
         return newSyncGroupAction == null ? newSyncGroupAction = new NewSyncGroupAction() : newSyncGroupAction;
     }

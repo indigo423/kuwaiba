@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.util.HashMap;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -31,9 +32,9 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.xml.bind.DatatypeConverter;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.imports.filters.ImageFileFilter;
@@ -44,7 +45,7 @@ import org.openide.util.Utilities;
 
 /**
  * This action sets the icon for a Custom shape in the palette
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class SetPaletteIconAction extends GenericInventoryAction {
     public SetPaletteIconAction() {
@@ -104,18 +105,19 @@ public class SetPaletteIconAction extends GenericInventoryAction {
 
                         String byteArrayEncode = DatatypeConverter.printBase64Binary(byteArray);
 
-                        String iconAttributeValue = fileName + ";/;" +  fileExtension + ";/;" + byteArrayEncode;
-
-                        LocalObject updateCustomShape = new LocalObject(customShape.getClassName(), customShape.getId(), 
-                            new String[] {"icon"}, new Object[] {iconAttributeValue});
-
-                        if (!CommunicationsStub.getInstance().saveObject(updateCustomShape)) {
-                            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
-                                NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-                        } else {
-                            NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), 
-                                NotificationUtil.INFO_MESSAGE, "The icon was set successfully");
-                        }                     
+////                        String iconAttributeValue = fileName + ";/;" +  fileExtension + ";/;" + byteArrayEncode;
+////
+////                        HashMap<String, Object> attributesToUpdate = new HashMap<>();
+////                        attributesToUpdate.put(Constants.PROPERTY_ICON, iconAttributeValue);
+////
+//                        if(!CommunicationsStub.getInstance().updateObject(customShape.getClassName(), 
+//                                customShape.getId(), attributesToUpdate)) {
+//                            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
+//                                NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+//                        } else {
+//                            NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), 
+//                                NotificationUtil.INFO_MESSAGE, "The icon was set successfully");
+//                        }                     
                     } catch (IOException ex) {
                         Exceptions.printStackTrace(ex);
                     }

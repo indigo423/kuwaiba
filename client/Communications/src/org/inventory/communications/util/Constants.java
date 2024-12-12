@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.inventory.communications.util;
 
 /**
  * Misc constants
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class Constants {
     /**
@@ -39,26 +39,6 @@ public class Constants {
      * IP address type for IPv6
      */
     public static final int IPV6_TYPE = 6;
-    /**
-     * Name of the validator to indicate if a given class is a container
-     */
-    public static final String VALIDATOR_PHYSICAL_CONTAINER = "physicalContainer";
-    /**
-     * Name of the validator to indicate if a given class is the endpoint to a connection
-     */
-    public static final String VALIDATOR_PHYSICAL_NODE = "physicalNode";
-    /**
-     * Name of the validator to indicate if a given class is the endpoint to a link
-     */
-    public static final String VALIDATOR_SERVICE_INSTANCE = "serviceInstance";
-    /**
-     * All instances of classes tagged with this validator may be related to a subnet
-     */
-    public static final String VALIDATOR_SUBNET = "subnet";
-    /**
-     * The validator to indicate if a given class is a GenericCommunicationsElement
-     */
-    public static final String VALIDATOR_GENERIC_COMMUNICATIONS_ELEMENT = "communicationsElement";
     /**
      * DummyRoot constant. It's a pseudo class
      */
@@ -92,6 +72,10 @@ public class Constants {
      */
     public static final String CLASS_GENERICPORT = "GenericPort";
     /**
+     * Virtual port
+     */
+    public static final String CLASS_GENERICLOGICALPORT = "GenericLogicalPort";
+    /**
      * Root class to all physical containers (wire, wireless, etc)
      */
     public static final String CLASS_GENERICPHYSICALCONTAINER = "GenericPhysicalContainer";
@@ -102,7 +86,11 @@ public class Constants {
     /**
      * Root class of all communications equipment (GenericDataLinkLayerElement, GenericNetworkElement, etc)
      */
-    public static final String CLASS_GENERICCOMMUNICATIONSELEMENT = "GenericCommunicationsElement";    
+    public static final String CLASS_GENERICCOMMUNICATIONSELEMENT = "GenericCommunicationsElement";   
+    /**
+     * Class GenericPhysicalNode
+     */
+    public static final String CLASS_GENERICPHYSICALNODE = "GenericPhysicalNode";
     /**
      * Root class of all network element
      */
@@ -151,6 +139,18 @@ public class Constants {
      * Name for class VLAN this constant is used in the IPAM  module
      */
     public static final String CLASS_VLAN = "VLAN";
+     /**
+     * Class EVLAN
+     */
+    public static final String CLASS_EVLAN = "EVLAN";
+    /**
+     * Class EGVLAN
+     */
+    public static final String CLASS_EGVLAN = "EGVLAN";
+    /**
+     * Class CVLAN
+     */
+    public static final String CLASS_CVLAN = "CVLAN";
     /**
      * Name for class GenericContract
      */
@@ -188,6 +188,10 @@ public class Constants {
      */
     public static final String CLASS_VIEWABLEOBJECT = "ViewableObject";
     /**
+     * Class BridgeDomain
+     */
+    public static final String CLASS_BRIDGEDOMAIN = "BridgeDomain";
+    /**
      * Class BridgeDomainInterface
      */
     public static final String CLASS_BRIDGEDOMAININTERFACE = "BridgeDomainInterface";
@@ -208,6 +212,19 @@ public class Constants {
      */
     public static final String CLASS_MPLSLINK = "MPLSLink";
     /**
+     * Class Warehouse
+     */
+    public static final String CLASS_WAREHOUSE = "Warehouse";
+    /**
+     * Class VirualWarehouse
+     */
+    public static final String CLASS_VIRTUALWAREHOUSE = "VirtualWarehouse";
+    
+    /**
+     * Class VirtualPort
+     */
+    public static final String CLASS_VIRTUALPORT = "VirtualPort";
+    /**
      * Default type for a new attribute
      */
     public static final String DEFAULT_ATTRIBUTE_TYPE = "String";
@@ -223,10 +240,6 @@ public class Constants {
      * Timestamp
      */
     public static final int MAPPING_TIMESTAMP = 3;
-    /**
-     * Binary
-     */
-    public static final int MAPPING_BINARY = 4;
     /**
      * Many to one relationship (such as types)
      */
@@ -259,8 +272,7 @@ public class Constants {
     /**
      * Possible attributes types
      */
-    public static final String [] ATTRIBUTE_TYPES = new String[]{"String", "Integer", "Long", "Float", "Boolean", "Date", "Timestamp", 
-        /*"Binary" //TODO: This attribute type will be supported in a future release. The current use of this attribute type are in the CustomShape class*/};
+    public static final String [] ATTRIBUTE_TYPES = new String[]{"String", "Integer", "Long", "Float", "Boolean", "Date", "Timestamp"};
     public static final String ATTRIBUTE_MODEL = "model";
     /**
      * Property name
@@ -371,10 +383,18 @@ public class Constants {
      * Defines if the attribute of a class is mandatory or not
      */
     public static final String PROPERTY_MANDATORY = "mandatory"; //NOI18N
+    /** 
+     * Defines if an attribute is a multiple selection list type
+     */
+    public static final String PROPERTY_MULTIPLE = "multiple"; //NOI18N
     /**
      * Property visible
      */
     public static final String PROPERTY_VISIBLE = "visible";
+    /**
+     * Property order
+     */
+    public static final String PROPERTY_ORDER = "order";
     /**
      * Property read only
      */
@@ -391,6 +411,14 @@ public class Constants {
      * Property rackUnits
      */
     public static final String PROPERTY_RACK_UNITS = "rackUnits";
+    /**
+     * Property mask in a ip address
+     */
+    public static final String PROPERTY_IP_MASK = "mask";
+    /**
+     * Property tags (as in File Object tags)
+     */
+    public static final String PROPERTY_TAGS = "tags";
     /**
      * Property numberingAscending
      */
@@ -464,16 +492,13 @@ public class Constants {
      * Generic classes
      */
     public static final String CLASS_GENERICPHYSICALCONNECTION="GenericPhysicalConnection";
-
-
     //Misc versions
     /**
      * Version for the XML document to save views (see http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_Save_Object_Views for details)
      */
-     public static final String VIEW_FORMAT_VERSION = "1.1";
+     public static final String VIEW_FORMAT_VERSION = "1.2";
      /**
       * Version of the current Topology View XML document
       */
      public static final String TOPOLOGYVIEW_FORMAT_VERSION = "1.2";
-    
 }

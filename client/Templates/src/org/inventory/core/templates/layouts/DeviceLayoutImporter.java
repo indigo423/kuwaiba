@@ -20,6 +20,7 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import javax.swing.AbstractAction;
@@ -35,12 +36,11 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalFileObject;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.core.views.LocalObjectView;
 import org.inventory.communications.core.views.LocalObjectViewLight;
-import org.inventory.communications.util.Binary;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -50,14 +50,14 @@ import org.openide.util.Exceptions;
 
 /**
  * Class to manage the import of device layout files
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutImporter {
     private final String path;
     private final byte[] structure;
     private final List<String> layouts;
     private final List<LocalObjectLight> objects;
-    private final List<Binary> icons;
+    private final List<LocalFileObject> icons;
     private final HashMap<LocalObjectLight, LocalObjectListItem> localMap;
     private final LocalObjectListItem deviceModel;
     private final DeviceLayoutScene scene;
@@ -116,14 +116,14 @@ public class DeviceLayoutImporter {
             btnImport.setPreferredSize(new Dimension(120, 25));
             btnImport.setMinimumSize(new Dimension(120, 25));
             btnImport.setMinimumSize(new Dimension(120, 25));
-            btnImport.setName("action" + String.valueOf(customShape.getOid()));
+            btnImport.setName("action" + String.valueOf(customShape.getId()));
             
             final JRadioButton btnIsSelected = new JRadioButton();
             btnIsSelected.setPreferredSize(new Dimension(25, 25));
             btnIsSelected.setMinimumSize(new Dimension(25, 25));
             btnIsSelected.setMinimumSize(new Dimension(25, 25));
             btnIsSelected.setEnabled(false);
-            btnIsSelected.setName("execute" + String.valueOf(customShape.getOid()));
+            btnIsSelected.setName("execute" + String.valueOf(customShape.getId()));
             
             btnImport.setAction(new AbstractAction() {
                 
@@ -144,7 +144,7 @@ public class DeviceLayoutImporter {
             }
             pnlCustomShape.add(btnImport);
             pnlCustomShape.add(btnIsSelected);
-            pnlCustomShape.setName("pnlCustomShape" + String.valueOf(customShape.getOid()));
+            pnlCustomShape.setName("pnlCustomShape" + String.valueOf(customShape.getId()));
                         
             labels.add(customShape.getName());
             components.add(pnlCustomShape);
@@ -155,8 +155,8 @@ public class DeviceLayoutImporter {
             List<LocalObjectLight> customShapesToImport = new ArrayList();
             
             for (LocalObjectLight customShape : customShapes) {
-                String action = ((JButton) ((JPanel) pnlImportDeviceLayout.getComponent("pnlCustomShape" + String.valueOf(customShape.getOid()))).getComponent(0)).getText();
-                boolean execute = ((JRadioButton) ((JPanel) pnlImportDeviceLayout.getComponent("pnlCustomShape" + String.valueOf(customShape.getOid()))).getComponent(1)).isSelected();
+                String action = ((JButton) ((JPanel) pnlImportDeviceLayout.getComponent("pnlCustomShape" + String.valueOf(customShape.getId()))).getComponent(0)).getText();
+                boolean execute = ((JRadioButton) ((JPanel) pnlImportDeviceLayout.getComponent("pnlCustomShape" + String.valueOf(customShape.getId()))).getComponent(1)).isSelected();
                 
                 if ("Import".equals(action) && execute)
                     customShapesToImport.add(customShape);
@@ -187,8 +187,8 @@ public class DeviceLayoutImporter {
                 if (Constants.CLASS_CUSTOMSHAPE.equals(object.getClassName())) {
                     LocalObjectListItem localCustomShape = getLocalCustomShape(object);
                     if (localCustomShape != null) {                                                
-                        String id = "id=\"" + object.getOid() + "\"";
-                        String localId = "id=\"" + localCustomShape.getOid() + "x\"";
+                        String id = "id=\"" + object.getId() + "\"";
+                        String localId = "id=\"" + localCustomShape.getId() + "x\"";
 
                         layoutStr = layoutStr.replaceAll(id, localId);
                     }
@@ -200,8 +200,8 @@ public class DeviceLayoutImporter {
                 if (Constants.CLASS_CUSTOMSHAPE.equals(object.getClassName())) {
                     LocalObjectListItem localCustomShape = getLocalCustomShape(object);
                     if (localCustomShape != null) {                                                
-                        String id = "id=\"" + localCustomShape.getOid() + "x\"";
-                        String localId = "id=\"" + localCustomShape.getOid() + "\"";
+                        String id = "id=\"" + localCustomShape.getId() + "x\"";
+                        String localId = "id=\"" + localCustomShape.getId() + "\"";
 
                         layoutStr = layoutStr.replaceAll(id, localId);
                     }
@@ -263,14 +263,15 @@ public class DeviceLayoutImporter {
                 getLocalCustomShape(customShape);
             }
             int customShapeIdx = objects.indexOf(customShape);
-            Binary customShapeIcon = icons.get(customShapeIdx);            
-            String customShapeIconEncode = customShapeIcon.getFileName() + ";/;" + customShapeIcon.getFileExtension() + ";/;" + DatatypeConverter.printBase64Binary(customShapeIcon.getByteArray());
+            LocalFileObject customShapeIcon = icons.get(customShapeIdx);            
+            String customShapeIconEncode = customShapeIcon.getName() + ";/;" + "-" + ";/;" + DatatypeConverter.printBase64Binary(customShapeIcon.getFile());
                         
-            LocalObject localCustomShapeObj = new LocalObject(localCustomShape.getClassName(), localCustomShape.getId(), 
-                new String[] {Constants.PROPERTY_NAME, Constants.PROPERTY_ICON}, 
-                new Object[] {customShape.getName(), customShapeIconEncode});
-            
-            if (!CommunicationsStub.getInstance().saveObject(localCustomShapeObj)) {
+            HashMap<String, Object> attributesToUpdate = new HashMap<>();
+            attributesToUpdate.put(Constants.PROPERTY_NAME, customShape.getName());
+            attributesToUpdate.put(Constants.PROPERTY_ICON, customShapeIconEncode);
+
+            if(!CommunicationsStub.getInstance().updateObject(localCustomShape.getClassName(), 
+                    localCustomShape.getId(), attributesToUpdate)) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             }
@@ -367,18 +368,18 @@ public class DeviceLayoutImporter {
                         String className = reader.getAttributeValue(null, Constants.PROPERTY_CLASSNAME);
                         String name = reader.getAttributeValue(null, Constants.PROPERTY_NAME);
                         
-                        objects.add(new LocalObjectLight(Long.valueOf(id), name, className));
+                        objects.add(new LocalObjectLight(id, name, className));
                     }
                     if (reader.getName().equals(tagIcon)) {
                         String strIcon = reader.getElementText();
-                        icons.add(new Binary(strIcon));
+                        icons.add(new LocalFileObject(0l, "-", new Date().getTime(), "", new byte[0]));
                     }
                     if (reader.getName().equals(tagDevice)) {
                         String id = reader.getAttributeValue(null, Constants.PROPERTY_ID);
                         String className = reader.getAttributeValue(null, Constants.PROPERTY_CLASSNAME);
                         String name = reader.getAttributeValue(null, Constants.PROPERTY_NAME);
                         
-                        objects.add(new LocalObjectLight(Long.valueOf(id), name, className));
+                        objects.add(new LocalObjectLight(id, name, className));
                     }
                 }
                 reader.close();

@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.kuwaiba.org/}remoteBusinessObjectLightList" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}remoteObjectLightList" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -35,7 +35,7 @@ import javax.xml.bind.annotation.XmlType;
 public class FindSDHRoutesUsingContainerLinksResponse {
 
     @XmlElement(name = "return")
-    protected List<RemoteBusinessObjectLightList> _return;
+    protected List<RemoteObjectLightList> _return;
 
     /**
      * Gets the value of the return property.
@@ -55,13 +55,13 @@ public class FindSDHRoutesUsingContainerLinksResponse {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link RemoteBusinessObjectLightList }
+     * {@link RemoteObjectLightList }
      * 
      * 
      */
-    public List<RemoteBusinessObjectLightList> getReturn() {
+    public List<RemoteObjectLightList> getReturn() {
         if (_return == null) {
-            _return = new ArrayList<RemoteBusinessObjectLightList>();
+            _return = new ArrayList<RemoteObjectLightList>();
         }
         return this._return;
     }

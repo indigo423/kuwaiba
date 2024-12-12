@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package org.inventory.navigation.navigationtree.nodes.actions;
 
 /**
  * Class as factory to the actions that belong to the same group
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ActionGroupActionsFactory {
     private static ActionsGroup openViewGroupActions;
@@ -25,6 +25,7 @@ public class ActionGroupActionsFactory {
     private static ActionsGroup releaseFromGroupActions;
     private static ActionsGroup mirrorPortActions;
     private static ActionsGroup diagnosticActions;
+    private static ActionsGroup syncActions;
     
     public static ActionsGroup getInstanceOfOpenViewGroupActions() {
         if (openViewGroupActions == null)
@@ -56,9 +57,17 @@ public class ActionGroupActionsFactory {
             ActionsGroupType.Group.MIRROR_PORT) : mirrorPortActions;
     }
     
-    public static ActionsGroup getInstanceDiagnosticActions() {
+    public static ActionsGroup getInstanceDiagnosticsActions() {
         return diagnosticActions == null ? diagnosticActions = new ActionsGroup("Diagnostics", 
             "org/inventory/navigation/navigationtree/res/diagnostic_actions_group.png", 
-            ActionsGroupType.Group.DIAGNOSTIC) : diagnosticActions;
+            ActionsGroupType.Group.DIAGNOSTICS) : diagnosticActions;
+    }
+    
+    public static ActionsGroup getInstanceSyncActions() {
+       if (syncActions == null)
+            syncActions = new ActionsGroup("Sync", 
+                "org/inventory/navigation/navigationtree/res/sync_group.png", 
+                ActionsGroupType.Group.DEVICE_CONFIGURATION);
+        return syncActions;
     }
 }

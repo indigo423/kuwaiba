@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.JComplexDialogPanel;
@@ -40,7 +41,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action that requests multiple business objects creation
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeAction 
     implements Presenter.Popup {
@@ -96,7 +97,7 @@ public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeA
             List<LocalObjectLight> newObjects = com.createBulkObjects(
                 ((JMenuItem) e.getSource()).getName(), 
                 node instanceof RootObjectNode ? null : ((ObjectNode) node).getObject().getClassName(), 
-                node instanceof RootObjectNode ? -1 : ((ObjectNode) node).getObject().getOid(), 
+                node instanceof RootObjectNode ? "-1" : ((ObjectNode) node).getObject().getId(), 
                 numberOfObjects, 
                 namePattern);
             
@@ -148,7 +149,7 @@ public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeA
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

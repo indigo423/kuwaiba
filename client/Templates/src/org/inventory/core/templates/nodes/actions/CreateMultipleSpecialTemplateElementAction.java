@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action to create multiple special template elements
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public final class CreateMultipleSpecialTemplateElementAction extends CreateTemplateElementSpecialAction implements Presenter.Popup {
     
@@ -72,7 +72,7 @@ public final class CreateMultipleSpecialTemplateElementAction extends CreateTemp
             LocalObjectLight selectedObject = selectedNode.getLookup().lookup(LocalObjectLight.class);
             
             List<LocalObjectLight> specialTemplateElements = CommunicationsStub.getInstance().createBulkSpecialTemplateElement(
-                ((JMenuItem)e.getSource()).getName(), selectedObject.getClassName(), selectedObject.getOid(), numberOfObjects, namePattern);
+                ((JMenuItem)e.getSource()).getName(), selectedObject.getClassName(), selectedObject.getId(), numberOfObjects, namePattern);
             
             if (specialTemplateElements == null) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

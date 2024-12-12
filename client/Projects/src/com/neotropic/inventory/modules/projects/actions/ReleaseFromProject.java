@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -36,7 +37,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Action to release an object associated with a project
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -53,7 +54,7 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
         LocalObjectLight selectedObject = selectedObjects.get(0);
         
         List<LocalObjectLight> projects = CommunicationsStub.getInstance()
-            .getProjectsAssociateToObject(selectedObject.getClassName(), selectedObject.getOid());
+            .getProjectsAssociateToObject(selectedObject.getClassName(), selectedObject.getId());
         
         if (projects != null) {
             if (!projects.isEmpty()) {
@@ -61,7 +62,7 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
                 for (LocalObjectLight project : projects) {
                     SubMenuItem subMenuItem = new SubMenuItem(project.toString());
                     subMenuItem.addProperty(Constants.PROPERTY_CLASSNAME, project.getClassName());
-                    subMenuItem.addProperty(Constants.PROPERTY_ID, project.getOid());
+                    subMenuItem.addProperty(Constants.PROPERTY_ID, project.getId());
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -76,7 +77,7 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -90,9 +91,9 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
         if (e != null && e.getSource() instanceof SubMenuDialog) {
             SubMenuDialog eventSource = (SubMenuDialog) e.getSource();
             String objectClass = selectedObjects.get(0).getClassName();
-            long objectId = selectedObjects.get(0).getOid();
+            String objectId = selectedObjects.get(0).getId();
             String projectClass = (String) eventSource.getSelectedSubMenuItem().getProperty(Constants.PROPERTY_CLASSNAME);
-            long projectId = (long) eventSource.getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID);
+            String projectId = (String) eventSource.getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID);
 
             if (CommunicationsStub.getInstance().releaseObjectFromProject(objectClass, objectId, projectClass, projectId)) {
                 NotificationUtil.getInstance().showSimplePopup(

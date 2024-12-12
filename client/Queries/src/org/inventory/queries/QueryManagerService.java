@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -42,11 +42,10 @@ import org.inventory.queries.scene.QueryEditorNodeWidget;
 import org.inventory.queries.scene.QueryEditorScene;
 import org.inventory.queries.scene.ClassNodeWidget;
 import org.inventory.queries.scene.filters.ListTypeFilter;
-import org.netbeans.api.visual.widget.Widget;
 
 /**
  * This class will replace the old QueryManagerService in next releases
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class QueryManagerService implements ActionListener {
 
@@ -88,8 +87,8 @@ public class QueryManagerService implements ActionListener {
         return res;
     }
 
-    public LocalResultRecord[] executeQuery(LocalTransientQuery oldTrasientQuery) {
-        LocalResultRecord[] res = com.executeQuery(oldTrasientQuery == null ? currentTransientQuery : oldTrasientQuery);
+    public LocalResultRecord[] executeQuery(LocalTransientQuery oldTransientQuery) {
+        LocalResultRecord[] res = com.executeQuery(oldTransientQuery == null ? currentTransientQuery : oldTransientQuery);
         if (res == null)
             qbtc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         return res;
@@ -99,7 +98,7 @@ public class QueryManagerService implements ActionListener {
          LocalTransientQuery temp = qbtc.getQueryScene().getTransientQuery(qbtc.getQueryScene().getCurrentSearchedClass(),
                         qbtc.getChkAnd().isSelected() ? LocalTransientQuery.CONNECTOR_AND : LocalTransientQuery.CONNECTOR_OR,
                         Integer.valueOf(qbtc.getTxtResultLimit().getText()), page, false);
-        //this keep the last TrasientQuery in case that the top component it been closed
+        //this keep the last TransientQuery in case that the top component it been closed
         if(temp != null)
             currentTransientQuery = temp;
         else
@@ -241,17 +240,16 @@ public class QueryManagerService implements ActionListener {
                         }
                     }
                     
-                    else{
+                    else
                         myMetadata = com.getMetaForClass((String)insideCheck.getClientProperty("className"),false);
-                        myMetadata.setDisplayName(((LocalAttributeMetadata)insideCheck.getClientProperty("attribute")).getName());
-                    }
+                    
                     LocalClassMetadataLight myMetadataLight;
                     if(!isParentMenu){
-                        myMetadataLight = new LocalClassMetadataLight(myMetadata.getOid(), 
+                        myMetadataLight = new LocalClassMetadataLight(myMetadata.getId(), 
                         myMetadata.getClassName(), myMetadata.getDisplayName(),
                         myMetadata.getParentName(), myMetadata.isAbstract(), 
                         myMetadata.isViewable(), myMetadata.isListType(), myMetadata.isCustom(), 
-                                myMetadata.isInDesign(), null, 0, null);
+                                myMetadata.isInDesign(), null, 0);
                     }
                     else 
                         myMetadataLight = myMetadata;

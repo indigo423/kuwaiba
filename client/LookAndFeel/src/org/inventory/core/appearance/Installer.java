@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,11 +19,10 @@ import com.jtattoo.plaf.fast.FastLookAndFeel;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import org.openide.modules.ModuleInstall;
-import org.openide.util.Exceptions;
 
 /**
  * Standard installer class to initialize the application's look and feel
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class Installer extends ModuleInstall {
 
@@ -34,7 +33,7 @@ public class Installer extends ModuleInstall {
             FastLookAndFeel.setTheme("Default", "", ""); //This removes the big "JTattoo" label in the drop-down menus
                                                          //Replace the last argument for any string if you want to actually show something there
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
-            Exceptions.printStackTrace(ex); //Should not happen
+             //Should not happen
         }
         
     }

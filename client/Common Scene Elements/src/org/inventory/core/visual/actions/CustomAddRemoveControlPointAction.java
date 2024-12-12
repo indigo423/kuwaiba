@@ -41,7 +41,7 @@
  * Version 2 license, then the option applies only if the new code is
  * made subject to such option by the copyright holder.
  *
- * Modified by Charles Bedon for project Kuwaiba 2014
+ * Modified by Charles Edward Bedon Cortazar for project Kuwaiba 2014
  */
 
 package org.inventory.core.visual.actions;
@@ -61,7 +61,7 @@ import org.netbeans.api.visual.widget.Widget;
  * track the change and notify the TopComponent to mark the scene as unsaved. 
  * org.netbeans.modules.visual.action.AddRemoveControlPointAction does not report 
  * when the action is performed successfully
-  * @author Alex, modified by Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+  * @author Alex, modified by Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class CustomAddRemoveControlPointAction extends WidgetAction.Adapter {
 

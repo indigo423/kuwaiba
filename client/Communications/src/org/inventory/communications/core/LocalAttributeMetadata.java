@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import org.inventory.communications.util.Utils;
 
 /**
  * Represents the metadata associated to a single attribute
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
-public class LocalAttributeMetadata {
+public class LocalAttributeMetadata implements Comparable<LocalAttributeMetadata>{
 
     private String name;
     private long id;
@@ -35,32 +35,35 @@ public class LocalAttributeMetadata {
     private boolean noCopy;
     private boolean unique;
     private boolean mandatory;
+    private boolean multiple;
     private boolean readOnly;
-    private String listAttributeClassName = null;
+    private int order;
+    private String listAttributeClassName;
 
     public LocalAttributeMetadata() {
         this.displayName = "";
     }
 
-    public LocalAttributeMetadata(long oid, String name, String type, String displayName,
-            boolean isVisible, boolean mandatory, boolean unique, String description) 
+    public LocalAttributeMetadata(long oid, String name, String type, String displayName, String description,
+            boolean isVisible, boolean mandatory, boolean multiple, boolean unique, int order) 
     {
         this.id = oid;
         this.name = name;
         this.type = Utils.getRealType(type);
         this.displayName = displayName;
         this.mandatory = mandatory;
+        this.multiple = multiple;
         this.unique = unique;
         this.isVisible = isVisible;
-        this.mapping = getMappingFromType(type);
+        this.mapping = getMappingFromType(type, multiple);
         this.description = description;
+        this.order = order;
         if (this.type.equals(LocalObjectLight.class)) 
             listAttributeClassName = type;
     }
     
-    public LocalAttributeMetadata(long oid, String name, Class type, String displayName,
-            boolean isVisible, boolean mandatory, boolean unique, 
-            Integer mapping, String description) 
+    public LocalAttributeMetadata(long oid, String name, Class type, String displayName, String description,
+            boolean isVisible, boolean mandatory, boolean unique, Integer mapping, int order) 
     {
         this.id = oid;
         this.name = name;
@@ -71,6 +74,7 @@ public class LocalAttributeMetadata {
         this.isVisible = isVisible;
         this.mapping = mapping;
         this.description = description;
+        this.order = order;
     }
 
     public String getDescription() {
@@ -132,6 +136,14 @@ public class LocalAttributeMetadata {
     public void setMandatory(boolean mandatory) {
         this.mandatory = mandatory;
     }
+
+    public boolean isMultiple() {
+        return multiple;
+    }
+
+    public void setMultiple(boolean multiple) {
+        this.multiple = multiple;
+    }
     
     public boolean isUnique(){
         return unique;
@@ -152,6 +164,14 @@ public class LocalAttributeMetadata {
         return this.getId() == ((LocalAttributeMetadata) obj).getId();
     }
 
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
     @Override
     public int hashCode() {
         int hash = 3;
@@ -159,15 +179,18 @@ public class LocalAttributeMetadata {
         return hash;
     }
     
-    public final int getMappingFromType(String type){
+    public final int getMappingFromType(String type, boolean multiple) {
         if (type.equals("String") || type.equals("Integer") || type.equals("Float") || type.equals("Long") || type.equals("Boolean"))
             return Constants.MAPPING_PRIMITIVE;
         if (type.equals("Timestamp"))
             return Constants.MAPPING_TIMESTAMP;
         if (type.equals("Date"))
             return Constants.MAPPING_DATE;
-        if (type.equals("Binary"))
-            return Constants.MAPPING_BINARY;
-        return Constants.MAPPING_MANYTOONE;
+        return multiple ? Constants.MAPPING_MANYTOMANY : Constants.MAPPING_MANYTOONE;
+    }
+
+    @Override
+    public int compareTo(LocalAttributeMetadata o) {
+        return Integer.compare(order, o.getOrder());
     }
 }

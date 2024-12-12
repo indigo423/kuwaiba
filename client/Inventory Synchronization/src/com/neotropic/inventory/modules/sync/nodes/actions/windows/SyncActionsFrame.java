@@ -15,6 +15,7 @@
 
 package com.neotropic.inventory.modules.sync.nodes.actions.windows;
 
+import com.neotropic.inventory.modules.sync.LocalSyncAction;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -45,9 +46,10 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.communications.core.LocalObjectListItem;
-import org.inventory.communications.core.LocalSyncFinding;
-import org.inventory.communications.core.LocalSyncGroup;
-import org.inventory.communications.core.LocalSyncResult;
+import com.neotropic.inventory.modules.sync.LocalSyncFinding;
+import com.neotropic.inventory.modules.sync.LocalSyncGroup;
+import com.neotropic.inventory.modules.sync.LocalSyncResult;
+
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.i18n.I18N;
 import org.netbeans.api.progress.ProgressHandle;
@@ -57,7 +59,7 @@ import org.openide.util.RequestProcessor;
 /**
  * This frame will be used to display the findings in the synchronization process and 
  * launch the respective action
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class SyncActionsFrame extends JFrame {
     /**
@@ -67,7 +69,7 @@ public class SyncActionsFrame extends JFrame {
     /**
      * Sync group associated to this sync process
      */
-    private LocalSyncGroup syncGroup;
+    private final LocalSyncGroup syncGroup;
     /**
      * Label that displays the finding's textual description
      */
@@ -77,9 +79,9 @@ public class SyncActionsFrame extends JFrame {
     private JButton btnClose;
     private JButton btnSkip;
     private List<LocalSyncFinding> allFindings;
-    private List<LocalSyncFinding> findingsToBeProcessed;
-    private static final Border normalBorder = new EmptyBorder(2, 2, 2, 2);
-    private static final Border alarmBorder = new LineBorder(Color.RED, 1);
+    private List<LocalSyncAction> findingsToBeProcessed;
+    private static final Border BORDER_NORMAL = new EmptyBorder(2, 2, 2, 2);
+    private static final Border BORDER_ALARM = new LineBorder(Color.RED, 1);
     
     /**
      * Default constructor
@@ -87,7 +89,7 @@ public class SyncActionsFrame extends JFrame {
      * @param findings The list of findings to be displayed
      * @param listener The callback object that will listen for 
      */
-    public SyncActionsFrame(LocalSyncGroup syncGroup, final List<LocalSyncFinding> findings) throws IllegalArgumentException {
+    public SyncActionsFrame(final LocalSyncGroup syncGroup, final List<LocalSyncFinding> findings) throws IllegalArgumentException {
         this.allFindings = findings;
         this.syncGroup = syncGroup;
         this.findingsToBeProcessed = new ArrayList<>();
@@ -136,22 +138,26 @@ public class SyncActionsFrame extends JFrame {
                 if (currentFinding == allFindings.size() - 1) {
                     JOptionPane.showMessageDialog(SyncActionsFrame.this, "You have reviewed all the synchronization findings. The selected actions will be performed now", "Information", JOptionPane.INFORMATION_MESSAGE);
                     dispose();
-                    
+                    if(allFindings.get(currentFinding).getType() == LocalSyncFinding.EVENT_INFO)
+                        findingsToBeProcessed.add(new LocalSyncAction(allFindings.get(currentFinding), LocalSyncAction.ACTION_SKIP));
+                        
                     final ProgressHandle progr = ProgressHandleFactory.createHandle(String.format("Executing sync actions for %s", SyncActionsFrame.this.syncGroup.getName()));
                     Runnable executeSyncActions = new Runnable() {
-                        
                         @Override
                         public void run() {
-                            List<LocalSyncResult> executSyncActions = CommunicationsStub.getInstance().executeSyncActions(findingsToBeProcessed);
-                            SyncResultsFrame syncResultFrame = new SyncResultsFrame(SyncActionsFrame.this.syncGroup, executSyncActions);
-                            syncResultFrame.setVisible(true);
+                            List<LocalSyncResult> executedSyncActions = CommunicationsStub.getInstance().executeSyncActions(syncGroup.getId(), findingsToBeProcessed);
+//                            SyncResultsFrame syncResultFrame = new SyncResultsFrame(SyncActionsFrame.this.syncGroup, executedSyncActions);
+//                            syncResultFrame.setVisible(true);
                             progr.finish();
                         }
-
                     };
+
                     RequestProcessor.getDefault().post(executeSyncActions);
                     progr.start();
-                } else {
+                }else {
+                    if(allFindings.get(currentFinding).getType() == LocalSyncFinding.EVENT_INFO)
+                        findingsToBeProcessed.add(new LocalSyncAction(allFindings.get(currentFinding), LocalSyncAction.ACTION_SKIP));
+                    
                     currentFinding++;
                     renderCurrentFinding();
                 }
@@ -162,7 +168,7 @@ public class SyncActionsFrame extends JFrame {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                findingsToBeProcessed.add(allFindings.get(currentFinding));
+                findingsToBeProcessed.add(new LocalSyncAction(allFindings.get(currentFinding), LocalSyncAction.ACTION_EXECUTE));
                 
                 if (currentFinding == allFindings.size() - 1) {
                     if (findingsToBeProcessed.isEmpty())
@@ -171,9 +177,9 @@ public class SyncActionsFrame extends JFrame {
                     else {
                         JOptionPane.showMessageDialog(SyncActionsFrame.this, 
                                 "You have reviewed all the synchronization findings. The selected actions will be performed now", "Information", JOptionPane.INFORMATION_MESSAGE);
-                        List<LocalSyncResult> executSyncActions = CommunicationsStub.getInstance().executeSyncActions(findingsToBeProcessed);
-                        SyncResultsFrame syncResultFrame = new SyncResultsFrame(SyncActionsFrame.this.syncGroup, executSyncActions);
-                        syncResultFrame.setVisible(true);
+                        List<LocalSyncResult> executSyncActions = CommunicationsStub.getInstance().executeSyncActions(syncGroup.getId(), findingsToBeProcessed);
+//                        SyncResultsFrame syncResultFrame = new SyncResultsFrame(SyncActionsFrame.this.syncGroup, executSyncActions);
+//                        syncResultFrame.setVisible(true);
                     }
                     dispose();
                 } else {
@@ -197,16 +203,16 @@ public class SyncActionsFrame extends JFrame {
             btnSkip.setText("Skip and Finish");
         }
         
-        if (finding.getType() == LocalSyncFinding.EVENT_ERROR) {
+        if (finding.getType() == LocalSyncFinding.EVENT_ERROR || finding.getType() == LocalSyncFinding.EVENT_INFO) {
             btnExecute.setEnabled(false);
-            pnlScrollMain.setBorder(alarmBorder);
+            pnlScrollMain.setBorder(BORDER_ALARM);
             btnSkip.setText("Next");
         }
         else if (finding.getType() == LocalSyncFinding.EVENT_DELETE)
-            pnlScrollMain.setBorder(alarmBorder);
+            pnlScrollMain.setBorder(BORDER_ALARM);
         else {
             btnExecute.setEnabled(true);
-            pnlScrollMain.setBorder(normalBorder);
+            pnlScrollMain.setBorder(BORDER_NORMAL);
             btnSkip.setText("Skip");
         }
     }
@@ -224,86 +230,94 @@ public class SyncActionsFrame extends JFrame {
         
         JsonReader jsonReader = Json.createReader(new StringReader(jsonString));
         JsonObject root = jsonReader.readObject();
+        if(root.get("type") != null){
         String type = root.getString("type");
-        switch (type) {
-            case "branch":
-                DefaultMutableTreeNode rootNode =
-                        new DefaultMutableTreeNode("Root Device");
-                
-                JTree tree = new JTree(rootNode);
-                JsonArray children = root.getJsonArray("children");
-                
-                int row = 0;
-                DefaultMutableTreeNode currentNode = rootNode;
-                
-                for (JsonValue item : children) {
-                    jsonReader = Json.createReader(new StringReader(item.toString()));
-                    JsonObject obj = jsonReader.readObject().getJsonObject("child");
-                    if(row == 0)
-                        rootNode.setUserObject(obj.getString("parentName") + "["+obj.getString("parentClassName")+"]");
-                    DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(obj.getJsonObject("attributes").getString("name") + "[" + obj.getString("className")+"]");
-                    currentNode.add(newNode);
-                    tree.expandRow(row);
-                    currentNode = newNode;
-                    row++;
-                }
-                
-                return tree;
-            case "object_port_move":
-                String className = root.getString("className");
-                JsonObject jsonPortAttributes = root.getJsonObject("attributes");
-                
-                return new JLabel("The port: " + jsonPortAttributes.getString("name") + "[" + className + "] "
-                            + "will be updated with these attributes " + getAttributesWithNames(root,Json.createObjectBuilder().build() , jsonPortAttributes));
-            case "device":
-                return new JLabel("The atributes will be updated" + 
-                        getAttributesWithNames(root, root.getJsonObject("oldAttributes"), root.getJsonObject("attributes")));
-            
-            case "error":
-                className="";
-                if(root.get("className") != null)
-                    className = root.getString("className");
-                String attributeName = "";
-                type = "";
-                String instanceId = "";
-                if(root.get("attributeName") != null)
-                    attributeName = root.getString("attributeName");
-                if(root.get("InstanceId") != null)
-                    instanceId = root.getString("InstanceId");
-                if(root.get("attributeType") != null)
-                    type = root.getString("attributeType");
-                if(!instanceId.isEmpty())
-                    return new JLabel((String.format(I18N.gm("class_name_undertemined"), 
-                        instanceId, className)));
-                else
-                    return new JLabel((String.format(I18N.gm("create_an_attribute_in_class"), 
-                        attributeName, type, className)));
-                
-            case "object_port_no_match":
-                className = root.getString("className");
-                jsonPortAttributes = root.getJsonObject("attributes");
-                String id;
-                if(root.get("id") != null){
-                    id = root.getString("id");
-                    return new JLabel("The port with id: " + id+ " " + jsonPortAttributes.getString("name") + "["+className+"]");
-                }
-            case "hierarchy":
-                String msg = "";
-                JsonObject jsonObject = root.getJsonObject("hierarchy");
-                for (Map.Entry<String, JsonValue> entry : jsonObject.entrySet()) {
-                    String theClass = "";
-                    String theChildren = "";
-                    JsonReader childReader = Json.createReader(new StringReader(entry.getValue().toString()));
-                    children = childReader.readArray();
-                    theClass = entry.getKey();
-                    for (JsonValue child : children) {
-                        JsonReader classReader = Json.createReader(new StringReader(child.toString()));
-                        JsonObject childObj = classReader.readObject();
-                        theChildren += childObj.getString("child") + ", ";
+            switch (type) {
+                case "branch":
+                    DefaultMutableTreeNode rootNode =
+                            new DefaultMutableTreeNode("Root Device");
+
+                    JTree tree = new JTree(rootNode);
+                    JsonArray children = root.getJsonArray("children");
+
+                    int row = 0;
+                    DefaultMutableTreeNode currentNode = rootNode;
+
+                    for (JsonValue item : children) {
+                        jsonReader = Json.createReader(new StringReader(item.toString()));
+                        JsonObject obj = jsonReader.readObject().getJsonObject("child");
+                        if(row == 0)
+                            rootNode.setUserObject(obj.getString("parentName") + "["+obj.getString("parentClassName")+"]");
+                        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(obj.getJsonObject("attributes").getString("name") + "[" + obj.getString("className")+"]");
+                        currentNode.add(newNode);
+                        tree.expandRow(row);
+                        currentNode = newNode;
+                        row++;
                     }
-                    msg += theClass + " => " + theChildren + " - ";
-                }
-                return new JLabel(msg);
+
+                    return tree;
+                case "object_port_move":
+                    String className = root.getString("className");
+                    JsonObject jsonPortAttributes = root.getJsonObject("attributes");
+
+                    return new JLabel("The port: " + jsonPortAttributes.getString("name") + "[" + className + "] "
+                                + "will be updated with these attributes " + getAttributesWithNames(root,Json.createObjectBuilder().build() , jsonPortAttributes));
+                case "device":
+                    return new JLabel("The atributes will be updated" + 
+                            getAttributesWithNames(root, root.getJsonObject("oldAttributes"), root.getJsonObject("attributes")));
+
+                case "error":
+                    className="";
+                    if(root.get("className") != null)
+                        className = root.getString("className");
+                    String attributeName = "";
+                    type = "";
+                    String instanceId = "";
+                    if(root.get("attributeName") != null)
+                        attributeName = root.getString("attributeName");
+                    if(root.get("InstanceId") != null)
+                        instanceId = root.getString("InstanceId");
+                    if(root.get("attributeType") != null)
+                        type = root.getString("attributeType");
+                    if(!instanceId.isEmpty())
+                        return new JLabel((String.format(I18N.gm("class_name_undertemined"), 
+                            instanceId, className)));
+                    else
+                        return new JLabel((String.format(I18N.gm("create_an_attribute_in_class"), 
+                            attributeName, type, className)));
+
+                case "object_port_no_match":
+                    className = root.getString("className");
+                    jsonPortAttributes = root.getJsonObject("attributes");
+                    String id;
+                    if(root.get("id") != null){
+                        id = root.getString("id");
+                        return new JLabel("The port with id: " + id+ " " + jsonPortAttributes.getString("name") + "["+className+"]");
+                    }
+                case "hierarchy":
+                    String msg = "";
+                    JsonObject jsonObject = root.getJsonObject("hierarchy");
+                    for (Map.Entry<String, JsonValue> entry : jsonObject.entrySet()) {
+                        String theClass = "";
+                        String theChildren = "";
+                        JsonReader childReader = Json.createReader(new StringReader(entry.getValue().toString()));
+                        children = childReader.readArray();
+                        theClass = entry.getKey();
+                        for (JsonValue child : children) {
+                            JsonReader classReader = Json.createReader(new StringReader(child.toString()));
+                            JsonObject childObj = classReader.readObject();
+                            theChildren += childObj.getString("child") + ", ";
+                        }
+                        msg += theClass + " => " + theChildren + " - ";
+                    }
+                    return new JLabel(msg);
+                case "ifmib":    
+                    return new JLabel("The synchronization process for the if mib data was done");
+                case "ciscomib":    
+                    return new JLabel("The synchronization process for the cisco mib data was done");
+                case "ciscoTemibsync":    
+                    return new JLabel("The synchronization process for the cisco Te mib data was done");    
+            }
         }
         
         return new JLabel("There is no extra information");
@@ -321,10 +335,10 @@ public class SyncActionsFrame extends JFrame {
         String newAttrs = "[";
         String oldAttrs = "[";
         for (String key : attributes.keySet()) {
-            if(LocalClassMetadata.getMappingFromType(key) == Constants.MAPPING_MANYTOONE &&
+            if(LocalClassMetadata.getMappingFromType(key, false) == Constants.MAPPING_MANYTOONE &&
                isNumeric(attributes.getString(key)))
             {
-                LocalClassMetadata objectMetadata = CommunicationsStub.getInstance().getObjectInfo(obj.getString("deviceClassName"), Long.valueOf(obj.getString("deviceId"))).getObjectMetadata();
+                LocalClassMetadata objectMetadata = CommunicationsStub.getInstance().getObjectInfo(obj.getString("deviceClassName"), obj.getString("deviceId")).getObjectMetadata();
                 String[] attributesNames = objectMetadata.getAttributesNames();
                 String listType = "";
                 for (int i=0; i<attributesNames.length; i++) {
@@ -334,12 +348,12 @@ public class SyncActionsFrame extends JFrame {
                     }
                 }
                 if(listType != null){
-                    LocalObjectListItem listTypeItem = CommunicationsStub.getInstance().getListTypeItem(listType, Long.valueOf(attributes.getString(key)));
+                    LocalObjectListItem listTypeItem = CommunicationsStub.getInstance().getListTypeItem(listType, attributes.getString(key));
                     if(listTypeItem != null)
                         newAttrs += key + ": " + listTypeItem.getName()+"; ";
                     if(oldAttributes != null && !oldAttributes.isEmpty()){
                         if(oldAttributes.get(key) != null){
-                            long listtypeId = Long.valueOf(oldAttributes.getString(key));
+                            String listtypeId = oldAttributes.getString(key);
                             listTypeItem = CommunicationsStub.getInstance().getListTypeItem(listType, listtypeId);
                             if(listTypeItem != null)
                                 oldAttrs += key + ": " + listTypeItem.getName()+"; ";

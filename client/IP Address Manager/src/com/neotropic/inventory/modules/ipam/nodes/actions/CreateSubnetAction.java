@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -26,11 +26,11 @@ import com.neotropic.inventory.modules.ipam.nodes.SubnetPoolNode;
 import com.neotropic.inventory.modules.ipam.windows.PTextField;
 import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.i18n.I18N;
@@ -40,7 +40,7 @@ import org.openide.util.Utilities;
 
 /**
  * Creates a subnet as a node
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class CreateSubnetAction extends GenericInventoryAction {
     /**
@@ -63,7 +63,7 @@ public class CreateSubnetAction extends GenericInventoryAction {
         Iterator<? extends AbstractNode> selectedNodes = Utilities.actionsGlobalContext().lookupResult(AbstractNode.class).allInstances().iterator();
         String className;
         String subnetParent;
-        long id;
+        String id;
         
         if (!selectedNodes.hasNext())
             return;
@@ -72,13 +72,13 @@ public class CreateSubnetAction extends GenericInventoryAction {
         if(selectedNode instanceof SubnetPoolNode) {
             SubnetPoolNode node = (SubnetPoolNode)selectedNode;
             className = node.getSubnetPool().getClassName();
-            id = node.getSubnetPool().getOid();
+            id = node.getSubnetPool().getId();
             subnetParent = null;
         }
         else { //It's a subnet node
             SubnetNode node = (SubnetNode)selectedNode;
             className = node.getObject().getClassName();
-            id = node.getObject().getOid();
+            id = node.getObject().getId();
             subnetParent =  node.getObject().getName();
         }
         CreateSubnetFrame subnetFrame = new CreateSubnetFrame(id, className, subnetParent, selectedNode);
@@ -103,13 +103,13 @@ public class CreateSubnetAction extends GenericInventoryAction {
         private javax.swing.JCheckBox cbxCreateAllIps;
         
         private final String className;
-        private final long parentId;
+        private final String parentId;
         private final String subnetParent;
         private LocalObjectLight newSubnet;
         
         private AbstractNode selectedNode;
 
-        public CreateSubnetFrame(long parentId, String className, String subnetParent, AbstractNode selectedNode) {
+        public CreateSubnetFrame(String parentId, String className, String subnetParent, AbstractNode selectedNode) {
             this.className = className;
             this.parentId = parentId;
             this.subnetParent = subnetParent;
@@ -226,15 +226,9 @@ public class CreateSubnetAction extends GenericInventoryAction {
             if(SubnetEngine.isCIDRFormat(ipCIDR)){
                 
                 lblError.setVisible(false);
-                String[] attributeNames = new String[5];
                 String[] attributeValues = new String[5];
 
-                attributeNames[0] = Constants.PROPERTY_NAME;
-                attributeNames[1] = Constants.PROPERTY_DESCRIPTION;
                 attributeValues[1] = txtDescription.getText();
-                attributeNames[2] = Constants.PROPERTY_BROADCASTIP;
-                attributeNames[3] = Constants.PROPERTY_NETWORKIP;
-                attributeNames[4] = Constants.PROPERTY_HOSTS;
 
                 if(className.equals(Constants.CLASS_SUBNET_IPV4)){
                     subnetEngine.calculateSubnets(ipCIDR);
@@ -273,8 +267,16 @@ public class CreateSubnetAction extends GenericInventoryAction {
                             createIps = true;
                 }
                 
+                HashMap<String, String> attributes = new HashMap<>();
+                
+                attributes.put(Constants.PROPERTY_NAME, attributeValues[0]);
+                attributes.put(Constants.PROPERTY_DESCRIPTION, attributeValues[1]);
+                attributes.put(Constants.PROPERTY_BROADCASTIP, attributeValues[2]);
+                attributes.put(Constants.PROPERTY_NETWORKIP, attributeValues[3]);
+                attributes.put(Constants.PROPERTY_HOSTS, attributeValues[4]);
+                
                 newSubnet = CommunicationsStub.getInstance().createSubnet(parentId, className,
-                    new LocalObject(className, 0, attributeNames, attributeValues));
+                    attributeValues[0], attributes);
                 
                 if(createIps)
                     createIps(ipCIDR, attributeValues, className, newSubnet);
@@ -298,12 +300,6 @@ public class CreateSubnetAction extends GenericInventoryAction {
     }
     
     private void createIps(String ipCIDR, String[] attributeValues, String className, LocalObjectLight newSubnet){
-        String[] ipAttributeNames = new String[2];
-        String[] ipAttributeValues = new String[2];
-
-        ipAttributeNames[0] = Constants.PROPERTY_NAME;
-        ipAttributeNames[1] = Constants.PROPERTY_DESCRIPTION;
-
         String[] split = ipCIDR.split("/");
         String ip = attributeValues[3];
         switch (className) {
@@ -312,21 +308,23 @@ public class CreateSubnetAction extends GenericInventoryAction {
                     ip =  SubnetEngine.nextIpv4(attributeValues[3], attributeValues[2], ip, Integer.parseInt(split[1]));
                     if(ip.trim().equals(attributeValues[2].trim()))
                         break;
-                    ipAttributeValues[0] = ip;
-                    ipAttributeValues[1] = "";
-                    CommunicationsStub.getInstance().addIP(newSubnet.getOid(), className,
-                            new LocalObject(className, 0, ipAttributeNames, ipAttributeValues));
+                    
+                    HashMap<String, String> attributes = new HashMap<>();
+                    attributes.put(Constants.PROPERTY_NAME, ip);
+                    attributes.put(Constants.PROPERTY_DESCRIPTION, "");
+                    
+                    CommunicationsStub.getInstance().addIPAddress(newSubnet.getId(), className, ip, attributes);
                 }   break;
             case Constants.CLASS_SUBNET_IPV6:
                 ip = SubnetEngine.nextIpv6(attributeValues[3], attributeValues[2], attributeValues[3], Integer.parseInt(split[1]));
-                while(SubnetEngine.belongsToIpv6(attributeValues[3], ip, Integer.parseInt(split[1]))){
+                while(SubnetEngine.belongsToIpv6(attributeValues[3], ip, Integer.parseInt(split[1]))) {
+                    HashMap<String, String> attributes = new HashMap<>();
+                    attributes.put(Constants.PROPERTY_NAME, ip);
+                    attributes.put(Constants.PROPERTY_DESCRIPTION, "");
                     ip =  SubnetEngine.nextIpv6(attributeValues[3], attributeValues[2], ip, Integer.parseInt(split[1]));
                     if(ip.trim().equals(attributeValues[2].trim()))
                         break;
-                    ipAttributeValues[0] = ip;
-                    ipAttributeValues[1] = "";
-                    CommunicationsStub.getInstance().addIP(newSubnet.getOid(), className,
-                            new LocalObject(className, 0, ipAttributeNames, ipAttributeValues));
+                    CommunicationsStub.getInstance().addIPAddress(newSubnet.getId(), className, ip, attributes);
             }   break;
         }
     }

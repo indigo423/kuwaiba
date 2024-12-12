@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action to add an Activity
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class AddActivityAction extends GenericInventoryAction implements Presenter.Popup {
     private final ResourceBundle bundle;
@@ -61,7 +61,7 @@ public class AddActivityAction extends GenericInventoryAction implements Present
         
         if (selectedNode != null) {
             LocalObjectLight activity = CommunicationsStub.getInstance().addActivity(
-                selectedNode.getObject().getOid(), 
+                selectedNode.getObject().getId(), 
                 selectedNode.getObject().getClassName(), 
                 ((JMenuItem)e.getSource()).getText());
             

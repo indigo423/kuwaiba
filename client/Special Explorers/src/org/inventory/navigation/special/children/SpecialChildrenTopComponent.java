@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,8 +36,8 @@ import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
 /**
- * Used to explore  a link or a container 
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * Used to explore the special children (for example links inside a container) of an inventory object
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ConvertAsProperties(
         dtd = "-//org.inventory.navigation.special.children//SpecialChildren//EN",
@@ -48,9 +48,9 @@ import org.openide.windows.WindowManager;
         iconBase="org/inventory/navigation/special/res/special_children_explorer.png", 
         persistenceType = TopComponent.PERSISTENCE_ALWAYS)
 @TopComponent.Registration(mode = "navigator", openAtStartup = false)
-@ActionID(category = "Tools", id = "org.inventory.navigation.special.relationships.SpecialChildrenTopComponent")
+@ActionID(category = "Tools", id = "org.inventory.navigation.special.children.SpecialChildrenTopComponent")
 @ActionReferences(value = { @ActionReference(path = "Menu/Tools/Navigation"),
-    @ActionReference(path = "Toolbars/01_Navigation", position = 5 )})
+    @ActionReference(path = "Toolbars/01_Navigation", position = 6 )})
 @TopComponent.OpenActionRegistration(
         displayName = "Special Children Explorer",
         preferredID = "SpecialChildrenTopComponent"

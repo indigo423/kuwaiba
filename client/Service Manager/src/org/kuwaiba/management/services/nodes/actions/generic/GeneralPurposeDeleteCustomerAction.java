@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -28,7 +29,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * General purpose version of the DeleteCustomerAction. It doesn't try to refresh the tree
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class GeneralPurposeDeleteCustomerAction extends GenericObjectNodeAction {
@@ -39,10 +40,10 @@ public class GeneralPurposeDeleteCustomerAction extends GenericObjectNodeAction 
     
     @Override
     public void actionPerformed(ActionEvent ev) {
-        if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this customer? All services associated will be deleted too",
+        if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this customer? All associated services and contacts will be deleted and their resources released",
                 "Delete Customer",JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
                         
-            if (CommunicationsStub.getInstance().deleteObject(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid())) 
+            if (CommunicationsStub.getInstance().deleteObject(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId(), false)) 
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), 
                         NotificationUtil.INFO_MESSAGE, "The customer was deleted successfully");
             else
@@ -51,7 +52,7 @@ public class GeneralPurposeDeleteCustomerAction extends GenericObjectNodeAction 
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Shows the associate layout to a given list type item
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class EditLayoutAction extends GenericInventoryAction {
     
@@ -76,7 +76,7 @@ public class EditLayoutAction extends GenericInventoryAction {
         TemplateElementNode selectedNode = Utilities.actionsGlobalContext().lookup(TemplateElementNode.class);
         LocalObjectLight selectedObject = selectedNode.getLookup().lookup(LocalObjectLight.class);
                 
-        LocalObject templateElement = CommunicationsStub.getInstance().getTemplateElement(selectedObject.getClassName(), selectedObject.getOid());
+        LocalObject templateElement = CommunicationsStub.getInstance().getTemplateElement(selectedObject.getClassName(), selectedObject.getId());
         if (templateElement == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                 NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -34,7 +35,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows to connect directly two ports
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.MIRROR_PORT)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -46,7 +47,7 @@ public class ConnectMirrorPortAction extends GenericObjectNodeAction {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        LocalObjectLight[] siblings = CommunicationsStub.getInstance().getSiblings(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid());
+        LocalObjectLight[] siblings = CommunicationsStub.getInstance().getSiblings(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId());
         if (siblings == null){
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             return;
@@ -60,14 +61,14 @@ public class ConnectMirrorPortAction extends GenericObjectNodeAction {
             if (selectedObject != null){
                 List<String> aObjectsClasses = new ArrayList<>();
                 List<String> bObjectsClasses = new ArrayList<>();
-                List<Long> aObjectsIds = new ArrayList<>();
-                List<Long> bObjectsIds = new ArrayList<>();
+                List<String> aObjectsIds = new ArrayList<>();
+                List<String> bObjectsIds = new ArrayList<>();
                 
                 aObjectsClasses.add(selectedObjects.get(0).getClassName());
-                aObjectsIds.add(selectedObjects.get(0).getOid());
+                aObjectsIds.add(selectedObjects.get(0).getId());
 
                 bObjectsClasses.add(selectedObject.getClassName());
-                bObjectsIds.add(selectedObject.getOid());
+                bObjectsIds.add(selectedObject.getId());
                 
                 if (CommunicationsStub.getInstance().connectMirrorPort(aObjectsClasses, aObjectsIds, bObjectsClasses, bObjectsIds))
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, "Port mirrored successfully");
@@ -78,7 +79,7 @@ public class ConnectMirrorPortAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }  
 

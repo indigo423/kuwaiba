@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a template element or a template itself
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class DeleteTemplateElementAction extends GenericInventoryAction implements Presenter.Popup{
     public static String ACTION_MAP_KEY = "DeleteTemplateElementAction"; //NOI18N
@@ -72,7 +72,7 @@ public class DeleteTemplateElementAction extends GenericInventoryAction implemen
                 
                 if (CommunicationsStub.getInstance().deleteTemplateElement(
                         selectedNode.getLookup().lookup(LocalObjectLight.class).getClassName(), 
-                        selectedNode.getLookup().lookup(LocalObjectLight.class).getOid())) {
+                        selectedNode.getLookup().lookup(LocalObjectLight.class).getId())) {
                     ((AbstractChildren)selectedNode.getParentNode().getChildren()).addNotify();                    
                 } else {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

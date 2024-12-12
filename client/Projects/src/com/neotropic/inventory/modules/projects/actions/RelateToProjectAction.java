@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.windows.SelectValueFrame;
 import org.inventory.core.services.i18n.I18N;
@@ -31,7 +32,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Action to relate an object to a Project
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -61,7 +62,7 @@ public class RelateToProjectAction extends GenericObjectNodeAction implements Co
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -80,10 +81,10 @@ public class RelateToProjectAction extends GenericObjectNodeAction implements Co
                 JOptionPane.showMessageDialog(null, "Select a project from the list");
             else {
                 for (LocalObjectLight selectedObject : selectedObjects) {
-                    long objId = selectedObject.getOid();
+                    String objId = selectedObject.getId();
                     String objClassName = selectedObject.getClassName();
                     
-                    long projectId = ((LocalObjectLight) selectedValue).getOid();
+                    String projectId = ((LocalObjectLight) selectedValue).getId();
                     String projectClass = ((LocalObjectLight) selectedValue).getClassName();
                     
                     if (CommunicationsStub.getInstance().associateObjectToProject(projectClass, projectId, objClassName, objId)) {

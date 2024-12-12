@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -38,7 +39,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action releases de relationship between the object and the service
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -52,7 +53,7 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
     public void actionPerformed(ActionEvent e) {
         LocalObjectLight selectedObj = selectedObjects.get(0); //Uses the last selected only
         List<LocalObjectLight> contracts = CommunicationsStub.getInstance()
-            .getSpecialAttribute(selectedObj.getClassName(), selectedObj.getOid(), "contractHas"); //NOI18N
+            .getSpecialAttribute(selectedObj.getClassName(), selectedObj.getId(), "contractHas"); //NOI18N
         
         if (contracts == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, 
@@ -65,7 +66,7 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
                 List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight contract : contracts) {
                     SubMenuItem subMenuItem = new SubMenuItem(contract.toString());
-                    subMenuItem.addProperty(Constants.PROPERTY_ID, contract.getOid());
+                    subMenuItem.addProperty(Constants.PROPERTY_ID, contract.getId());
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -74,7 +75,7 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
     
@@ -96,7 +97,7 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
                 while (selectedNodes.hasNext()) {
                     ObjectNode selectedNode = selectedNodes.next();
                     if (CommunicationsStub.getInstance().releaseObjectFromContract(selectedNode.getObject().getClassName(), 
-                        selectedNode.getObject().getOid(), (Long) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID))) {
+                        selectedNode.getObject().getId(), (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID))) {
                         if (selectedNode.getParentNode() instanceof ContractNode)
                             ((ContractNode.ContractChildren)selectedNode.getParentNode().getChildren()).addNotify();
                     } else {

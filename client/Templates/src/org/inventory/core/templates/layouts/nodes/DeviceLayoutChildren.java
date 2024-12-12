@@ -28,13 +28,12 @@ import org.openide.nodes.Node;
 
 /**
  * Set of nodes of device layout
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutChildren extends AbstractChildren {
     
-    public DeviceLayoutChildren(List<LocalObjectLight> devices) {
-        Collections.sort(devices);
-        setKeys(devices);
+    public DeviceLayoutChildren() {
+        setKeys(Collections.EMPTY_SET);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -39,7 +40,7 @@ import org.openide.util.actions.Presenter.Popup;
 
 /**
  * Creates an inventory object from a template
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class CreateBusinessObjectFromTemplateAction extends GenericObjectNodeAction implements Popup, ComposedAction {
     private static CreateBusinessObjectFromTemplateAction instance;
@@ -115,7 +116,7 @@ public final class CreateBusinessObjectFromTemplateAction extends GenericObjectN
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -139,7 +140,7 @@ public final class CreateBusinessObjectFromTemplateAction extends GenericObjectN
                 
                 LocalObjectLight newObject = CommunicationsStub.getInstance().createObject(
                     ((LocalObjectLight) selectedTemplate).getClassName(), selectedObject.getClassName(), 
-                    selectedObject.getOid(), attributes, ((LocalObjectLight) selectedTemplate).getOid());
+                    selectedObject.getId(), attributes, ((LocalObjectLight) selectedTemplate).getId());
                 
                 if (newObject == null)
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -149,7 +150,7 @@ public final class CreateBusinessObjectFromTemplateAction extends GenericObjectN
                         ((AbstractChildren) selectedNode.getChildren()).addNotify();
                     
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
-                        "Element created successfully");
+                        "Object created successfully");
                     frame.dispose();
                 }
             }

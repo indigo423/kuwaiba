@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ import org.openide.util.Exceptions;
 
 /**
  * Class used to render a model type portWidget in any scene
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutRenderer {
     /**
@@ -188,7 +188,7 @@ public class DeviceLayoutRenderer {
             errorMessage = ex.getMessage();
         }
         if (hasDeviceLayout) {
-            LocalObject localObj = CommunicationsStub.getInstance().getObjectInfo(deviceToRender.getClassName(), deviceToRender.getOid());
+            LocalObject localObj = CommunicationsStub.getInstance().getObjectInfo(deviceToRender.getClassName(), deviceToRender.getId());
             if (localObj == null) {
                 errorMessage = CommunicationsStub.getInstance().getError();
                 return null;
@@ -428,12 +428,12 @@ public class DeviceLayoutRenderer {
                         Shape shape = null;
                         
                         if (CustomShape.SHAPE_TYPE.equals(shapeType)) {
-                            long id = Long.valueOf(reader.getAttributeValue(null, Constants.PROPERTY_ID));
+                            String id = reader.getAttributeValue(null, Constants.PROPERTY_ID);
                             String className= reader.getAttributeValue(null, Constants.PROPERTY_CLASSNAME);
                             
                             if (structureRepository.containsKey(new LocalObjectListItem(id, className, null))) {
                                 for (LocalObjectListItem listItem : structureRepository.keySet()) {
-                                    if (listItem.getId() == id)
+                                    if (listItem.getId().equals(id))
                                         shape = ShapeFactory.getInstance().getCustomShape(listItem);                                        
                                 }
                             }
@@ -445,7 +445,7 @@ public class DeviceLayoutRenderer {
                                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                                         NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                                 else {
-                                    LocalObjectListItem listItem = new LocalObjectListItem(lol.getOid(), lol.getClassName(), lol.getName());
+                                    LocalObjectListItem listItem = new LocalObjectListItem(lol.getId(), lol.getClassName(), lol.getName());
                                     shape = ShapeFactory.getInstance().getCustomShape(listItem);
                                 }
                             }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * This Action is used to delete physical links shown in a rack view
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeletePhysicalLink extends GenericInventoryAction implements Presenter.Popup {
     private static DeletePhysicalLink instance;
@@ -87,7 +87,7 @@ public class DeletePhysicalLink extends GenericInventoryAction implements Presen
                     "Delete Link", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             
                 if (CommunicationsStub.getInstance().deletePhysicalConnection(selectedNode.getObject().getClassName(), 
-                        selectedNode.getObject().getOid())) {
+                        selectedNode.getObject().getId())) {
                     
                     //If the node is on a tree, update the list
                     if (selectedNode.getParentNode() != null && AbstractChildren.class.isInstance(selectedNode.getParentNode().getChildren()))
@@ -100,7 +100,7 @@ public class DeletePhysicalLink extends GenericInventoryAction implements Presen
                         
                         RackViewTopComponent rackView = ((RackViewTopComponent) WindowManager.
                             getDefault().findTopComponent("RackViewTopComponent_" + 
-                            ((RackViewScene) selectedWidget.getScene()).getRack().getOid()));
+                            ((RackViewScene) selectedWidget.getScene()).getRack().getId()));
 
                         if (rackView != null)
                             rackView.refreshScene();

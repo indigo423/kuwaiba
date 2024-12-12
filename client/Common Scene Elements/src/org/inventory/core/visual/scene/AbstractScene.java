@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import org.openide.util.lookup.ProxyLookup;
 
 /**
  * Root class to all scenes involving nodes and edges representing inventory objects
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  * @param <N> The class of the business object behind the nodes
  * @param <E> The class of the business object behind the edges
  */
@@ -73,7 +73,7 @@ public abstract class AbstractScene<N, E> extends GraphScene<N, E> {
     /**
      * Default font
      */
-    public static final Font defaultFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
+    public static final Font DEFAULT_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
     /**
      * Color to be assigned to the new lines 
      */
@@ -113,6 +113,7 @@ public abstract class AbstractScene<N, E> extends GraphScene<N, E> {
 
     public AbstractScene() {
         this.lookup = new SceneLookup();
+        this.setBackground(Color.WHITE);
         setActiveTool(ACTION_SELECT);
     }
     

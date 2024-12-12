@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,26 +15,27 @@
 package org.inventory.core.templates.layouts.actions;
 
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
-import org.inventory.communications.util.Utils;
-import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.templates.layouts.ShowDeviceLayoutTopComponent;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
+import org.openide.util.Lookup;
 import org.openide.util.Utilities;
 import org.openide.util.lookup.ServiceProvider;
 import org.openide.windows.WindowManager;
 
 /**
  * Action used to show how a given device looks like (in the real world)
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -43,9 +44,34 @@ public class ShowDeviceLayoutView extends GenericObjectNodeAction {
     public ShowDeviceLayoutView() {
         putValue(NAME, "Device Layout");
     }
+    
+    @Override
+    public boolean isEnabled() {
+        Lookup.Result<? extends ObjectNode> selectedObjectNode = Utilities.actionsGlobalContext().lookupResult(ObjectNode.class);
+        
+        if (selectedObjectNode == null)
+            return false;
+        
+        boolean hasModel = true;
+        selectedObjects = new ArrayList();
+                
+        for (ObjectNode selectedNode : selectedObjectNode.allInstances()) {
+            
+            LocalObjectLight lol = selectedNode.getLookup().lookup(LocalObjectLight.class);
+            
+            LocalClassMetadata lcm = CommunicationsStub.getInstance().getMetaForClass(lol.getClassName(), false);
+            
+            if (!lcm.hasAttribute("model")) //NOI18N
+                hasModel = false;
+            
+            selectedObjects.add(selectedNode.getObject());
+        }
+        
+        return !selectedObjects.isEmpty() && hasModel;
+    }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 
@@ -64,7 +90,7 @@ public class ShowDeviceLayoutView extends GenericObjectNodeAction {
         
         for (LocalObjectLight lol : selectedObjects) {
             ShowDeviceLayoutTopComponent devicelayoutView = ((ShowDeviceLayoutTopComponent) WindowManager.
-                getDefault().findTopComponent("ShowDeviceLayoutTopComponent_" + lol.getOid())); //NOI18N
+                getDefault().findTopComponent("ShowDeviceLayoutTopComponent_" + lol.getId())); //NOI18N
 
             if (devicelayoutView == null) {
                 devicelayoutView = new ShowDeviceLayoutTopComponent(lol);
@@ -82,7 +108,7 @@ public class ShowDeviceLayoutView extends GenericObjectNodeAction {
 
     @Override
     public String[] appliesTo() {
-        return null; //Enable this action for any object
+        return new String [] {"GenericCommunicationsElement", "GenericDistributionFrame", "GenericBoard"};
     }
     
     @Override

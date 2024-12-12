@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -28,7 +29,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows to remove the port mirroring relationship between two ports
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.MIRROR_PORT)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -44,7 +45,7 @@ public class ReleaseMirrorPortAction extends GenericObjectNodeAction {
                 "Are you sure you want to disconnect this mirror port?", I18N.gm("warning"), 
                 JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
         
-            if (CommunicationsStub.getInstance().releaseMirrorPort(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid()))
+            if (CommunicationsStub.getInstance().releaseMirrorPort(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId()))
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, "Miror port disconnected successfully");
             else
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());        
@@ -52,7 +53,7 @@ public class ReleaseMirrorPortAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

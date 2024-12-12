@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -25,6 +25,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -38,7 +39,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Creates a connection between two selected nodes anywhere within the application
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class CreatePhysicalConnectionAction extends GenericObjectNodeAction {
@@ -48,7 +49,7 @@ public class CreatePhysicalConnectionAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -69,8 +70,8 @@ public class CreatePhysicalConnectionAction extends GenericObjectNodeAction {
         LocalObjectLight endpointA = endpointNodes.get(0).getObject();
         LocalObjectLight endpointB = endpointNodes.get(1).getObject();
         LocalObjectLight commonParent = CommunicationsStub.getInstance()
-            .getCommonParent(endpointA.getClassName(), endpointA.getOid(), 
-                             endpointB.getClassName(), endpointB.getOid());
+            .getCommonParent(endpointA.getClassName(), endpointA.getId(), 
+                             endpointB.getClassName(), endpointB.getId());
         
         if (commonParent == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
@@ -78,14 +79,14 @@ public class CreatePhysicalConnectionAction extends GenericObjectNodeAction {
             return;
         }
             
-        if (commonParent.getOid() == -1L) {
+        if (commonParent.getId() != null && commonParent.getId().equals("-1L")) {
             JOptionPane.showMessageDialog(null, I18N.gm("can_not_create_connection_whose_common_parent_is_root_of_hierarchy"), 
                 I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         //if there are wirecontainers in both of the two selected nodes 
-        existingWireContainersList = CommunicationsStub.getInstance().getContainersBetweenObjects(endpointA.getClassName(), endpointA.getOid(), 
-                endpointB.getClassName(), endpointB.getOid(), Constants.CLASS_WIRECONTAINER);
+        existingWireContainersList = CommunicationsStub.getInstance().getContainersBetweenObjects(endpointA.getClassName(), endpointA.getId(), 
+                endpointB.getClassName(), endpointB.getId(), Constants.CLASS_WIRECONTAINER);
                             
         JComboBox<String> cmbConnectionType = new JComboBox(new String[] {"Container", "Link"});
             

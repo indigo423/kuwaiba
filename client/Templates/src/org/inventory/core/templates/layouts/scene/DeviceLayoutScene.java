@@ -79,7 +79,7 @@ import org.openide.util.Lookup;
 
 /**
  * Scene used to design an Equipment Layout 
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutScene extends AbstractScene<Shape, String> implements SharedContentLookup {
     private final List<CustomShape> customShapes;
@@ -271,7 +271,7 @@ public class DeviceLayoutScene extends AbstractScene<Shape, String> implements S
                         xmlew.add(xmlef.createEndElement(qnameChild, null));
                     }                    
                 } else if (CustomShape.SHAPE_TYPE.equals(shape.getShapeType())) {
-                    xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(((CustomShape) shape).getListItem().getId())));
+                    xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), ((CustomShape) shape).getListItem().getId()));
                     xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASSNAME), ((CustomShape) shape).getListItem().getClassName()));
                     
                 } else {                    
@@ -350,12 +350,12 @@ public class DeviceLayoutScene extends AbstractScene<Shape, String> implements S
     }
 
     @Override
-    public void render(byte[] structure) throws IllegalArgumentException {
+    public void render(byte[] structure) throws IllegalArgumentException { 
         clear();
         structureRepository.clear();
         render(structure, null, null);
     }
-
+    
     @Override
     public void render(Shape root) {
     }
@@ -427,12 +427,12 @@ public class DeviceLayoutScene extends AbstractScene<Shape, String> implements S
                             String id = reader.getAttributeValue(null, Constants.PROPERTY_ID);
                             String className= reader.getAttributeValue(null, Constants.PROPERTY_CLASSNAME);
                             
-                            LocalObjectLight lol = CommunicationsStub.getInstance().getObjectInfoLight(className, Long.valueOf(id));
+                            LocalObjectLight lol = CommunicationsStub.getInstance().getObjectInfoLight(className, id);
                             if (lol == null)
                                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                             else {
-                                LocalObjectListItem listItem = new LocalObjectListItem(lol.getOid(), lol.getClassName(), lol.getName());
+                                LocalObjectListItem listItem = new LocalObjectListItem(lol.getId(), lol.getClassName(), lol.getName());
                                 shape = ShapeFactory.getInstance().getCustomShape(listItem);
                             }
                             
@@ -578,11 +578,11 @@ public class DeviceLayoutScene extends AbstractScene<Shape, String> implements S
             this.validate();
             this.repaint();
             
-        } catch (XMLStreamException ex) {
+        } catch (XMLStreamException ex) {            
             NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.ERROR_MESSAGE, "The view seems corrupted and could not be loaded");
             clear();
             if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
-            Exceptions.printStackTrace(ex);
+                Exceptions.printStackTrace(ex);
         }
     }
     

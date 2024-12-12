@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ import org.openide.windows.WindowManager;
 
 /**
  * Shows a tree with the special relationships of an object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ConvertAsProperties(
         dtd = "-//org.inventory.navigation.special.relationships//SpecialRelationships//EN",
@@ -52,7 +52,7 @@ import org.openide.windows.WindowManager;
 @TopComponent.Registration(mode = "navigator", openAtStartup = false)
 @ActionID(category = "Tools", id = "org.inventory.navigation.special.relationships.SpecialRelationshipsTopComponent")
 @ActionReferences(value = { @ActionReference(path = "Menu/Tools/Navigation"),
-    @ActionReference(path = "Toolbars/01_Navigation", position = 4 )})
+    @ActionReference(path = "Toolbars/01_Navigation", position = 5 )})
 @TopComponent.OpenActionRegistration(
         displayName = "#CTL_SpecialRelationshipsAction",
         preferredID = "SpecialRelationshipsTopComponent"
@@ -127,7 +127,7 @@ public final class SpecialRelationshipsTopComponent extends TopComponent impleme
             LocalObjectLight rootObject = ((SpecialRelatedObjectNode) em.getRootContext()).getObject();
             
             SpecialRelationshipsGraphExplorerTopComponent tc = (SpecialRelationshipsGraphExplorerTopComponent) WindowManager
-                .getDefault().findTopComponent("SpecialRelationshipsGraphExplorerTopComponent_" + rootObject.getOid());
+                .getDefault().findTopComponent("SpecialRelationshipsGraphExplorerTopComponent_" + rootObject.getId());
             
             if (tc == null) {
                 tc = new SpecialRelationshipsGraphExplorerTopComponent(rootObject);

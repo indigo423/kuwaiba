@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.kuwaiba.management.services.nodes.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
@@ -30,7 +31,7 @@ import org.openide.windows.TopComponent;
 
 /**
  * Opens a view that shows the network equipment associated directly to the service and the physical connections between these nodes
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service = GenericObjectNodeAction.class)
@@ -52,7 +53,7 @@ public class ShowServiceTopologyViewAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

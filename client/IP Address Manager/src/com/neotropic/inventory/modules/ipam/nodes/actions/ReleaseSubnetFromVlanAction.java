@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -36,7 +36,7 @@ import org.openide.util.Utilities;
 
 /**
  * Releases a relation between a VRF and a VLAN
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class ReleaseSubnetFromVlanAction  extends GenericInventoryAction implements ComposedAction {
     
@@ -60,7 +60,7 @@ public class ReleaseSubnetFromVlanAction  extends GenericInventoryAction impleme
         ObjectNode selectedNode = (ObjectNode)selectedNodes.next();
         
         List<LocalObjectLight> vlans = CommunicationsStub.getInstance().getSpecialAttribute(selectedNode.getObject().getClassName(), 
-                selectedNode.getObject().getOid(), Constants.RELATIONSHIP_IPAMBELONGSTOVLAN);
+                selectedNode.getObject().getId(), Constants.RELATIONSHIP_IPAMBELONGSTOVLAN);
         
         if (vlans != null) {
             if (vlans.isEmpty())
@@ -70,8 +70,8 @@ public class ReleaseSubnetFromVlanAction  extends GenericInventoryAction impleme
                 List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight vlan : vlans){
                     SubMenuItem subMenuItem = new SubMenuItem(vlan.toString());
-                    subMenuItem.addProperty("subnetId", selectedNode.getObject().getOid()); //NOI18N
-                    subMenuItem.addProperty("vlanId", vlan.getOid()); //NOI18N
+                    subMenuItem.addProperty("subnetId", selectedNode.getObject().getId()); //NOI18N
+                    subMenuItem.addProperty("vlanId", vlan.getId()); //NOI18N
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -92,8 +92,8 @@ public class ReleaseSubnetFromVlanAction  extends GenericInventoryAction impleme
             SubMenuItem selectedItem = ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem();
                         
             if (CommunicationsStub.getInstance().releaseSubnetFromVLAN(
-                    (long) selectedItem.getProperty("subnetId"), //NOI18N
-                    (long) selectedItem.getProperty("vlanId")) //NOI18N
+                    (String) selectedItem.getProperty("subnetId"), //NOI18N
+                    (String) selectedItem.getProperty("vlanId")) //NOI18N
                 )
                 NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, 
                     java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_SUCCESS"));

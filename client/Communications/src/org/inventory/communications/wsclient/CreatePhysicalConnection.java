@@ -17,14 +17,12 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="aObjectClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="aObjectId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="aObjectId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="bObjectClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="bObjectId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="parentClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="parentId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="bObjectId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="name" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="connectionClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="templateId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="templateId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -40,8 +38,6 @@ import javax.xml.bind.annotation.XmlType;
     "aObjectId",
     "bObjectClass",
     "bObjectId",
-    "parentClass",
-    "parentId",
     "name",
     "connectionClass",
     "templateId",
@@ -50,14 +46,12 @@ import javax.xml.bind.annotation.XmlType;
 public class CreatePhysicalConnection {
 
     protected String aObjectClass;
-    protected long aObjectId;
+    protected String aObjectId;
     protected String bObjectClass;
-    protected long bObjectId;
-    protected String parentClass;
-    protected long parentId;
+    protected String bObjectId;
     protected String name;
     protected String connectionClass;
-    protected long templateId;
+    protected String templateId;
     protected String sessionId;
 
     /**
@@ -87,16 +81,24 @@ public class CreatePhysicalConnection {
     /**
      * Gets the value of the aObjectId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getAObjectId() {
+    public String getAObjectId() {
         return aObjectId;
     }
 
     /**
      * Sets the value of the aObjectId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setAObjectId(long value) {
+    public void setAObjectId(String value) {
         this.aObjectId = value;
     }
 
@@ -127,57 +129,25 @@ public class CreatePhysicalConnection {
     /**
      * Gets the value of the bObjectId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getBObjectId() {
+    public String getBObjectId() {
         return bObjectId;
     }
 
     /**
      * Sets the value of the bObjectId property.
      * 
-     */
-    public void setBObjectId(long value) {
-        this.bObjectId = value;
-    }
-
-    /**
-     * Gets the value of the parentClass property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getParentClass() {
-        return parentClass;
-    }
-
-    /**
-     * Sets the value of the parentClass property.
-     * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setParentClass(String value) {
-        this.parentClass = value;
-    }
-
-    /**
-     * Gets the value of the parentId property.
-     * 
-     */
-    public long getParentId() {
-        return parentId;
-    }
-
-    /**
-     * Sets the value of the parentId property.
-     * 
-     */
-    public void setParentId(long value) {
-        this.parentId = value;
+    public void setBObjectId(String value) {
+        this.bObjectId = value;
     }
 
     /**
@@ -231,16 +201,24 @@ public class CreatePhysicalConnection {
     /**
      * Gets the value of the templateId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getTemplateId() {
+    public String getTemplateId() {
         return templateId;
     }
 
     /**
      * Sets the value of the templateId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setTemplateId(long value) {
+    public void setTemplateId(String value) {
         this.templateId = value;
     }
 

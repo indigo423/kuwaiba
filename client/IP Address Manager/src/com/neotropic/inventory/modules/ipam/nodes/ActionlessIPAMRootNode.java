@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.nodes.Node;
  * The same IPAMRootNode, but without actions (useful in views inside wizards, 
  * where the selected nodes are not placed in the global lookup, so the 
  * context actions, that are dependant of the selected nodes won't crash)
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ActionlessIPAMRootNode extends AbstractNode {
 
@@ -39,7 +39,7 @@ public class ActionlessIPAMRootNode extends AbstractNode {
 
         @Override
         public void addNotify(){
-        List<LocalPool> pools = CommunicationsStub.getInstance().getSubnetPools(-1, null);
+        List<LocalPool> pools = CommunicationsStub.getInstance().getSubnetPools("-1", null);
         Collections.sort(pools);
         setKeys(pools);
     }

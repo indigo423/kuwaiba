@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -36,7 +36,7 @@ import org.inventory.customization.classhierarchy.nodes.ClassMetadataNode;
 
 /**
  *  Creates an attribute metadata
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class CreateAttributeAction extends GenericInventoryAction {
     
@@ -83,12 +83,12 @@ public class CreateAttributeAction extends GenericInventoryAction {
                 I18N.gm("new_attribute"),
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
-                    if (CommunicationsStub.getInstance().createAttribute(classNode.getClassMetadata().getOid(), 
-                            ((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
-                            ((JTextField)pnlMyDialog.getComponent("txtDisplayName")).getText(), 
-                            ((JTextField)pnlMyDialog.getComponent("txtDescription")).getText(), 
-                            (String)((JComboBox)pnlMyDialog.getComponent("lstType")).getSelectedItem(), 
-                            false, false, true, false, false, false)){
+                    if (CommunicationsStub.getInstance().createAttribute(classNode.getClassMetadata().getId(), 
+                            txtName.getText(), 
+                            txtDisplayName.getText(), 
+                            txtDescription.getText(), 
+                            (String)lstType.getSelectedItem(), 
+                            false, false, true, false, false, false, false, 1000)){
                         NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, I18N.gm("attributed_added_successfully"));
                         Cache.getInstace().resetAll();
                         classNode.refresh();

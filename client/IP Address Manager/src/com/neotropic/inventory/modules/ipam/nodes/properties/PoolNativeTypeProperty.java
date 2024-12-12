@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.nodes.PropertySupport.ReadWrite;
 /**
  * Provides a valid representation of LocalPools attributes as Properties,
  * as LocalPool is just a proxy and can't be a bean itself
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class PoolNativeTypeProperty extends ReadWrite {
 
@@ -52,9 +52,9 @@ public class PoolNativeTypeProperty extends ReadWrite {
     public void setValue(Object value)  {
         boolean flag = false;
         if (this.getName().equals(Constants.PROPERTY_NAME))
-            flag = CommunicationsStub.getInstance().setPoolProperties(subnetPoolNode.getSubnetPool().getOid(), (String)value, null);
+            flag = CommunicationsStub.getInstance().setPoolProperties(subnetPoolNode.getSubnetPool().getId(), (String)value, null);
         if (this.getName().equals(Constants.PROPERTY_DESCRIPTION))
-            flag = CommunicationsStub.getInstance().setPoolProperties(subnetPoolNode.getSubnetPool().getOid(), null, (String)value);
+            flag = CommunicationsStub.getInstance().setPoolProperties(subnetPoolNode.getSubnetPool().getId(), null, (String)value);
 
         if (flag) {
             this.value = value;

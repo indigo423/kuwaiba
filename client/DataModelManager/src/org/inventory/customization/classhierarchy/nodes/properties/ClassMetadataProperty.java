@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -31,7 +31,7 @@ import org.openide.nodes.PropertySupport.ReadWrite;
 
 /**
  * ClassMetadata properties
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ClassMetadataProperty extends ReadWrite {
 
@@ -55,7 +55,7 @@ public class ClassMetadataProperty extends ReadWrite {
         if (t == value)
             return;
         try{
-            if(!CommunicationsStub.getInstance().setClassMetadataProperties(node.getClassMetadata().getOid(), 
+            if(!CommunicationsStub.getInstance().setClassMetadataProperties(node.getClassMetadata().getId(), 
                     (getName().equals(Constants.PROPERTY_NAME)) ? (String)t :  null, 
                     (getName().equals(Constants.PROPERTY_DISPLAYNAME)) ? (String)t :  null,
                     (getName().equals(Constants.PROPERTY_DESCRIPTION)) ? (String)t :  null, 
@@ -85,9 +85,9 @@ public class ClassMetadataProperty extends ReadWrite {
     @Override
     public PropertyEditor getPropertyEditor(){
         if(getName().equals(Constants.PROPERTY_ICON))
-            return new IconPropertyEditor(node.getClassMetadata().getOid(), Constants.PROPERTY_ICON);
+            return new IconPropertyEditor(node.getClassMetadata().getId(), Constants.PROPERTY_ICON);
         if(getName().equals(Constants.PROPERTY_SMALLICON))
-            return new IconPropertyEditor(node.getClassMetadata().getOid(), Constants.PROPERTY_SMALLICON);
+            return new IconPropertyEditor(node.getClassMetadata().getId(), Constants.PROPERTY_SMALLICON);
         else
             return super.getPropertyEditor();
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -27,7 +27,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents an attribute as a node within the data model manager
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class AttributeMetadataNode extends AbstractNode  {
     
@@ -81,6 +81,13 @@ public class AttributeMetadataNode extends AbstractNode  {
                 I18N.gm("unique.description"), 
                 attribute.isUnique(),this));
         
+        generalPropertySet.put(new AttributeMetadataProperty(
+                classNode.getClassMetadata(), Constants.PROPERTY_MULTIPLE, 
+                Constants.PROPERTY_MULTIPLE, 
+                "Used to set an attribute as a multiple selection list type", 
+                attribute.isMultiple(), this));
+        
+        
         generalPropertySet.put(new AttributeMetadataProperty(classNode.getClassMetadata(), 
                 Constants.PROPERTY_VISIBLE,
                 Constants.PROPERTY_VISIBLE,
@@ -98,6 +105,11 @@ public class AttributeMetadataNode extends AbstractNode  {
                 Constants.PROPERTY_NOCOPY,
                 I18N.gm("no_copy.description"),  
                 attribute.isNoCopy(),this));
+        generalPropertySet.put(new AttributeMetadataProperty(classNode.getClassMetadata(), 
+                Constants.PROPERTY_ORDER,
+                I18N.gm("order.display_name"),
+                I18N.gm("order.description"),  
+                attribute.getOrder(),this));
                 
         generalPropertySet.setName("1");
 

@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@ import org.openide.nodes.Node;
 
 /**
  * Children of <code>ProjectPoolNode</code>
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ProjectPoolChildren extends Children.Keys<LocalObjectLight> {
     
     @Override
     public void addNotify() {
         ProjectPoolNode selectedNode = (ProjectPoolNode) getNode();
-        List<LocalObjectLight> projects = CommunicationsStub.getInstance().getProjectInProjectPool(selectedNode.getPool().getOid(), -1);
+        List<LocalObjectLight> projects = CommunicationsStub.getInstance().getProjectInProjectPool(selectedNode.getPool().getId(), -1);
         
         if (projects == null) {
             setKeys(Collections.EMPTY_LIST);

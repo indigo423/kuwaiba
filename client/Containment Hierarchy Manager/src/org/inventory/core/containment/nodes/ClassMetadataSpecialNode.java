@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.util.datatransfer.PasteType;
 
 /**
  * A node wrapping a ClassMetadataLight
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ClassMetadataSpecialNode extends ClassMetadataNode {
     private static final String PARENT_ICON_PATH = "org/inventory/core/containment/res/special-flag-blue.png";
@@ -71,9 +71,9 @@ public class ClassMetadataSpecialNode extends ClassMetadataNode {
                     LocalClassMetadataLight data = (LocalClassMetadataLight) 
                         obj.getTransferData(LocalClassMetadataLight.DATA_FLAVOR);
                     
-                    long [] tokens = new long[] {data.getOid()};
+                    long [] tokens = new long[] {data.getId()};
                     
-                    if (CommunicationsStub.getInstance().addPossibleSpecialChildren(getObject().getOid(), tokens)) {
+                    if (CommunicationsStub.getInstance().addPossibleSpecialChildren(getObject().getId(), tokens)) {
                         
                         ((ClassMetadataSpecialChildren) getChildren()).add(new ClassMetadataSpecialNode[]{new ClassMetadataSpecialNode(data)});
                         CommunicationsStub.getInstance().refreshCache(false, false, false, false, true);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@ package com.neotropic.inventory.modules.ipam.nodes.properties;
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
@@ -27,7 +27,7 @@ import org.openide.nodes.PropertySupport;
 
 /**
  * A dedicated property class for list type attributes
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ListTypeProperty extends PropertySupport.ReadWrite<LocalObjectListItem> {
     
@@ -50,10 +50,10 @@ public class ListTypeProperty extends PropertySupport.ReadWrite<LocalObjectListI
 
     @Override
     public void setValue(LocalObjectListItem t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        LocalObject update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
-                    new String[]{this.getName()}, new Object[]{ t.getOid() });
+        HashMap<String, Object> attributesToUpdate = new HashMap<>();
+        attributesToUpdate.put(getName(), t);
 
-        if(!CommunicationsStub.getInstance().saveObject(update))
+        if(!CommunicationsStub.getInstance().updateObject(node.getObject().getClassName(), node.getObject().getId(), attributesToUpdate))
             NotificationUtil.getInstance().showSimplePopup("Error", 
                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else

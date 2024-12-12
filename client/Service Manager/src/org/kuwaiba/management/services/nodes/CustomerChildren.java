@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.nodes.Node;
 
 /**
  * Node representing a customer
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class CustomerChildren extends Children.Keys<LocalPool> {
     
@@ -36,7 +36,7 @@ public class CustomerChildren extends Children.Keys<LocalPool> {
         LocalObjectLight customer = ((CustomerNode)this.getNode()).getObject();
         
         List<LocalPool> servicePools = CommunicationsStub.getInstance().
-                getPoolsInObject(customer.getClassName(), customer.getOid(), Constants.CLASS_GENERICSERVICE);
+                getPoolsInObject(customer.getClassName(), customer.getId(), Constants.CLASS_GENERICSERVICE);
 
         if (servicePools == null) {
             setKeys(Collections.EMPTY_LIST);
@@ -56,7 +56,7 @@ public class CustomerChildren extends Children.Keys<LocalPool> {
     
     @Override
     protected Node[] createNodes(LocalPool key) {
-        return new Node[] { new ServicePoolNode(new LocalPool(key.getOid(), key.getName(), key.getClassName(), null, -1))};
+        return new Node[] { new ServicePoolNode(new LocalPool(key.getId(), key.getName(), key.getClassName(), null, -1))};
   
     }
 }

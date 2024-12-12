@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,27 +15,27 @@
  */
 package com.neotropic.inventory.modules.sync.nodes.properties;
 
-import com.neotropic.inventory.modules.sync.nodes.SyncConfigurationNode;
+import com.neotropic.inventory.modules.sync.nodes.SyncDataSourceConfigurationNode;
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
-import org.inventory.communications.core.LocalSyncDataSourceConfiguration;
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.openide.nodes.PropertySupport;
 
 /**
  *
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceTypeProperty extends PropertySupport.ReadWrite<LocalObjectLight> {
-    private final SyncConfigurationNode syncConfigNode;
+    private final SyncDataSourceConfigurationNode syncConfigNode;
     private LocalObjectLight value;
     private final PropertySupport propertyDeviceId;
 
-    public DeviceTypeProperty(SyncConfigurationNode syncConfigNode, LocalObjectLight value, PropertySupport propertyDeviceId) {
+    public DeviceTypeProperty(SyncDataSourceConfigurationNode syncConfigNode, LocalObjectLight value, PropertySupport propertyDeviceId) {
         super("device", LocalObjectLight.class, "device", "device"); //NOI18N
         this.syncConfigNode = syncConfigNode;
         this.value = value;
@@ -50,15 +50,15 @@ public class DeviceTypeProperty extends PropertySupport.ReadWrite<LocalObjectLig
     @Override
     public void setValue(LocalObjectLight val) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         this.value = val;
-        propertyDeviceId.setValue(String.valueOf(val.getOid()));
+        propertyDeviceId.setValue(String.valueOf(val.getId()));
         
-        if (((LocalObjectLight) val).getOid() != -1) {
+        if (val.getId() != null && !val.getId().equals("-1")) {
             HashMap<String, String> parameters = new HashMap();
 
             LocalSyncDataSourceConfiguration localSyncDataSrcConfig = syncConfigNode.getLookup().lookup(LocalSyncDataSourceConfiguration.class);
 
-            parameters.put("deviceId", Long.toString(((LocalObjectLight) val).getOid()));
-            parameters.put("deviceClass", ((LocalObjectLight) val).getClassName());
+            parameters.put("deviceId", String.valueOf(val.getId()));
+            parameters.put("deviceClass", val.getClassName());
 
             if (!CommunicationsStub.getInstance().updateSyncDataSourceConfiguration(localSyncDataSrcConfig.getId(), parameters))
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

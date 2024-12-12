@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.openide.util.Utilities;
 
 /**
  * Implements the "remove a class from container hierarchy" action
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class RemovePossibleChildAction extends GenericInventoryAction {
     private static RemovePossibleChildAction instance;
@@ -45,8 +45,8 @@ public class RemovePossibleChildAction extends GenericInventoryAction {
     public void actionPerformed(ActionEvent e) {
         ClassMetadataNode selectedNode = Utilities.actionsGlobalContext().lookup(ClassMetadataNode.class);
         if (selectedNode != null) {
-            long childId = selectedNode.getObject().getOid();
-            long parentId = ((ClassMetadataNode) selectedNode.getParentNode()).getObject().getOid();
+            long childId = selectedNode.getObject().getId();
+            long parentId = ((ClassMetadataNode) selectedNode.getParentNode()).getObject().getId();
             
             if (CommunicationsStub.getInstance().removePossibleChildren(parentId, new long [] {childId})) {
                 ((ClassMetadataChildren) selectedNode.getParentNode().getChildren()).remove(new Node[] {selectedNode});

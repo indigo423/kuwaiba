@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.openide.nodes.AbstractNode;
 import org.openide.nodes.Children;
 import org.openide.nodes.Node;
@@ -29,7 +30,7 @@ import org.openide.util.ImageUtilities;
 
 /**
  * A simple node representing the root of the class level reports
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ClassLevelReportsRootNode extends AbstractNode {
 
@@ -58,7 +59,7 @@ public class ClassLevelReportsRootNode extends AbstractNode {
                     getLightSubclasses(Constants.CLASS_INVENTORYOBJECT, true, true);
             
             if (classMetadata == null) {
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, 
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                         CommunicationsStub.getInstance().getError());
                 setKeys(Collections.EMPTY_SET);
             } else {

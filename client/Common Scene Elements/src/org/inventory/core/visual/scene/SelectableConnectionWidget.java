@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.inventory.core.visual.scene;
 
-import java.awt.BasicStroke;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.netbeans.api.visual.action.ActionFactory;
@@ -30,11 +29,9 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * A connection widget that can be selected and its wrapped object exposed via the property sheet
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public abstract class SelectableConnectionWidget extends ConnectionWidget {
-    public static final int STROKE_WIDTH = 3;
-    public static final int SELECTED_STROKE_WIDTH = 4;
     
     private Lookup lookup;
     protected LabelWidget labelWidget;
@@ -56,7 +53,6 @@ public abstract class SelectableConnectionWidget extends ConnectionWidget {
         lookup = Lookups.fixed(new ObjectNode(businessObject), businessObject);
         
         setState(ObjectState.createNormal());
-        setStroke(new BasicStroke(STROKE_WIDTH));
     }
     
     public LabelWidget getLabelWidget() {

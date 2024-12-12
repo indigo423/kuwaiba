@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -45,7 +45,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represent a pool of subnets(IPv4, IPv6) or a pool of VLANs.
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SubnetPoolNode extends AbstractNode implements PropertyChangeListener{
     
@@ -96,7 +96,7 @@ public class SubnetPoolNode extends AbstractNode implements PropertyChangeListen
     
     @Override
     protected Sheet createSheet(){
-        LocalPool sp = com.getSubnetPool(getSubnetPool().getOid());
+        LocalPool sp = com.getSubnetPool(getSubnetPool().getId());
         sheet = Sheet.createDefault();
         Sheet.Set generalPropertySet = Sheet.createPropertiesSet(); //General attributes category
         
@@ -145,7 +145,7 @@ public class SubnetPoolNode extends AbstractNode implements PropertyChangeListen
                     if (action == DnDConstants.ACTION_MOVE) {
                         String className = getSubnetPool().getClassName();
                         int type = getSubnetPool().getType();
-                        long oid = getSubnetPool().getOid();
+                        String oid = getSubnetPool().getId();
                         
                         if(className.equals(obj.getClassName())){
                             if(com.moveObjectsToPool(className, oid, new LocalObjectLight[]{obj})){

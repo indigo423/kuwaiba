@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.netbeans.api.visual.widget.Widget;
 
 /**
  * This class controls the physical connections behavior
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class PhysicalConnectionProvider implements ConnectProvider {
     
@@ -88,8 +88,8 @@ public class PhysicalConnectionProvider implements ConnectProvider {
             
             List<LocalObjectLight> existintWireContainersList = CommunicationsStub.getInstance()
                 .getContainersBetweenObjects(
-                    sourceObject.getClassName(), sourceObject.getOid(), 
-                    targetObject.getClassName(), targetObject.getOid(), 
+                    sourceObject.getClassName(), sourceObject.getId(), 
+                    targetObject.getClassName(), targetObject.getId(), 
                     Constants.CLASS_WIRECONTAINER);
             
             if (existintWireContainersList == null) {
@@ -106,10 +106,10 @@ public class PhysicalConnectionProvider implements ConnectProvider {
         }
         
         if (newConnection != null) {
-            LocalObjectLight parent = CommunicationsStub.getInstance().getParent(newConnection.getClassName(), newConnection.getOid());
+            LocalObjectLight parent = CommunicationsStub.getInstance().getParent(newConnection.getClassName(), newConnection.getId());
             LocalObjectLight currentObject = (LocalObjectLight) configObject.getProperty("currentObject"); //NOI18N
             
-            if (parent.getOid() == currentObject.getOid()) {
+            if (parent.getId().equals(currentObject.getId())) {
                 ConnectionWidget line = (ConnectionWidget)scene.addEdge(newConnection);
 
                 line.setTargetAnchor(AnchorFactory.createCenterAnchor(targetWidget));

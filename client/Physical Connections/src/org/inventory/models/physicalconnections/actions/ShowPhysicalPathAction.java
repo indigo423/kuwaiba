@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -32,7 +33,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action shows the physical trace from a port
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ShowPhysicalPathAction extends GenericObjectNodeAction implements Presenter.Popup {
@@ -44,7 +45,7 @@ public class ShowPhysicalPathAction extends GenericObjectNodeAction implements P
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        LocalObjectLight[] trace = CommunicationsStub.getInstance().getPhysicalPath(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid());
+        LocalObjectLight[] trace = CommunicationsStub.getInstance().getPhysicalPath(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId());
         if (trace == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else{
@@ -55,7 +56,7 @@ public class ShowPhysicalPathAction extends GenericObjectNodeAction implements P
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

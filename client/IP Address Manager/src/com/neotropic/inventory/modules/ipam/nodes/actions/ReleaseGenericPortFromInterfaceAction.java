@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -36,7 +37,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Releases a relation between a service instance and an interface
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -50,7 +51,7 @@ public class ReleaseGenericPortFromInterfaceAction extends GenericObjectNodeActi
     public void actionPerformed(ActionEvent e) {
         LocalObjectLight selectedObject = selectedObjects.get(0);
         List<LocalObjectLight> interfaces = CommunicationsStub.getInstance().getSpecialAttribute(selectedObject.getClassName(), 
-            selectedObject.getOid(), Constants.RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
+            selectedObject.getId(), Constants.RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
         if (interfaces != null) {
             if (interfaces.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "There are no interfaces related to the selected port", 
@@ -59,9 +60,9 @@ public class ReleaseGenericPortFromInterfaceAction extends GenericObjectNodeActi
                 List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight _interface : interfaces) {
                     SubMenuItem subMenuItem = new SubMenuItem(_interface.toString());
-                    subMenuItem.addProperty("serviceInstanceId", _interface.getOid()); //NOI18N
+                    subMenuItem.addProperty("serviceInstanceId", _interface.getId()); //NOI18N
                     subMenuItem.addProperty("portClassName", selectedObject.getClassName()); //NOI18N
-                    subMenuItem.addProperty("portId", selectedObject.getOid()); //NOI18N
+                    subMenuItem.addProperty("portId", selectedObject.getId()); //NOI18N
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -72,7 +73,7 @@ public class ReleaseGenericPortFromInterfaceAction extends GenericObjectNodeActi
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
     
@@ -92,8 +93,8 @@ public class ReleaseGenericPortFromInterfaceAction extends GenericObjectNodeActi
                 
                 if (CommunicationsStub.getInstance().releasePortFromInterface(
                         (String) selectedInterface.getProperty("portClassName"), //NOI18N
-                        (long) selectedInterface.getProperty("portId"), //NOI18N
-                        (long) selectedInterface.getProperty("serviceInstanceId")) //NOI18N
+                        (String) selectedInterface.getProperty("portId"), //NOI18N
+                        (String) selectedInterface.getProperty("serviceInstanceId")) //NOI18N
                     )
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
                             java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_SUCCESS"));

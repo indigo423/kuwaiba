@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -49,7 +49,7 @@ import org.openide.util.datatransfer.PasteType;
 
 /**
  * Represents a subnet 
- * @author Adrian Martinez <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SubnetNode extends ObjectNode {
     
@@ -95,7 +95,7 @@ public class SubnetNode extends ObjectNode {
     
     @Override
     protected Sheet createSheet(){
-        LocalObject sp = com.getObjectInfo(getObject().getClassName(), getObject().getOid());
+        LocalObject sp = com.getObjectInfo(getObject().getClassName(), getObject().getId());
         Sheet sheet = Sheet.createDefault();
         Sheet.Set generalPropertySet = Sheet.createPropertiesSet(); //General attributes category
         
@@ -147,7 +147,7 @@ public class SubnetNode extends ObjectNode {
                     Node parentNode = null;
                     if (action == DnDConstants.ACTION_MOVE) {
                         String className = getObject().getClassName();
-                        long oid = getObject().getOid();
+                        String oid = getObject().getId();
                         boolean networkIpBelongsTo = false;
                         boolean broadcastIpBelongsTo = false;
                             
@@ -183,7 +183,7 @@ public class SubnetNode extends ObjectNode {
                         }
                         
                         else{ 
-                            childNode = com.getObjectInfo(className, obj.getOid());
+                            childNode = com.getObjectInfo(className, obj.getId());
                             String childNetworkIp = (String)childNode.getAttribute("networkIp"); //NOI18N
                             String childBroadcastIp = (String)childNode.getAttribute("broadcastIp"); //NOI18N
                         

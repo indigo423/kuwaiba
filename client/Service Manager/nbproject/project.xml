@@ -16,6 +16,14 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.inventory.core.contacts</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>2.0</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.inventory.core.services</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -61,6 +69,15 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.inventory.navigation.special</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <release-version>1</release-version>
+                        <specification-version>1.5</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.netbeans.api.visual</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -69,12 +86,20 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.netbeans.libs.osgi</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>1.21.1</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.netbeans.modules.settings</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
                         <release-version>1</release-version>
-                        <specification-version>1.42.1</specification-version>
+                        <specification-version>1.45.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -122,7 +147,7 @@
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>8.33.1</specification-version>
+                        <specification-version>8.39.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -134,11 +159,19 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.openide.util.ui</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>9.6.1</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.openide.windows</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>6.65.1</specification-version>
+                        <specification-version>6.71.1</specification-version>
                     </run-dependency>
                 </dependency>
             </module-dependencies>

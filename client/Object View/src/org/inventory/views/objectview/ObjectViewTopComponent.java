@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
+import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -46,10 +47,11 @@ import org.openide.explorer.ExplorerManager;
 import org.openide.windows.TopComponent;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
+import org.openide.windows.WindowManager;
 
 /**
  * This component renders the views associated to an currentObject
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 
 public final class ObjectViewTopComponent extends TopComponent
@@ -62,7 +64,7 @@ public final class ObjectViewTopComponent extends TopComponent
     
     private ChildrenViewScene scene;
     private ObjectViewConfigurationObject configObject;
-    private LocalObjectLight currentObject;
+    private final LocalObjectLight currentObject;
     
     KeyEventDispatcher keyEventDispatcher;
     
@@ -78,7 +80,7 @@ public final class ObjectViewTopComponent extends TopComponent
 
     @Override
     protected String preferredID() {
-        return "ObjectViewTopComponent_" + currentObject.getOid(); //NOI18N
+        return "ObjectViewTopComponent_" + currentObject.getId().split("-")[0] ; //NOI18N
     }
 
     @Override
@@ -87,6 +89,8 @@ public final class ObjectViewTopComponent extends TopComponent
     }
     
     public final void initCustomComponents(){
+        
+        
         configObject = new ObjectViewConfigurationObject();
         configObject.setProperty("saved", true);
         configObject.setProperty("currentObject", currentObject);
@@ -236,6 +240,7 @@ public final class ObjectViewTopComponent extends TopComponent
         barMain.add(btnHighContrast);
 
         btnSelect.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/views/objectview/res/select.png"))); // NOI18N
+        btnSelect.setSelected(true);
         org.openide.awt.Mnemonics.setLocalizedText(btnSelect, org.openide.util.NbBundle.getMessage(ObjectViewTopComponent.class, "ObjectViewTopComponent.btnSelect.text")); // NOI18N
         btnSelect.setToolTipText(org.openide.util.NbBundle.getMessage(ObjectViewTopComponent.class, "ObjectViewTopComponent.btnSelect.toolTipText")); // NOI18N
         btnSelect.setEnabled(false);
@@ -250,7 +255,6 @@ public final class ObjectViewTopComponent extends TopComponent
         barMain.add(btnSelect);
 
         btnContainer.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/views/objectview/res/container_connections.png"))); // NOI18N
-        btnContainer.setSelected(true);
         org.openide.awt.Mnemonics.setLocalizedText(btnContainer, org.openide.util.NbBundle.getMessage(ObjectViewTopComponent.class, "ObjectViewTopComponent.btnContainer.text")); // NOI18N
         btnContainer.setToolTipText(org.openide.util.NbBundle.getMessage(ObjectViewTopComponent.class, "ObjectViewTopComponent.btnContainer.toolTipText")); // NOI18N
         btnContainer.setEnabled(false);
@@ -319,7 +323,7 @@ public final class ObjectViewTopComponent extends TopComponent
     }//GEN-LAST:event_btnSelectActionPerformed
 
     private void btnAddBackgroundImageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddBackgroundImageActionPerformed
-        JFileChooser fChooser = new JFileChooser();
+        JFileChooser fChooser = Utils.getGlobalFileChooser();
         fChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         fChooser.setFileFilter(new FileNameExtensionFilter("Image files", "gif","jpg", "png"));
         if (fChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
@@ -404,7 +408,6 @@ public final class ObjectViewTopComponent extends TopComponent
         toggleButtons(true);
         configObject.setProperty("saved", true);
         setHtmlDisplayName(getDisplayName());
-        
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import org.openide.nodes.Sheet;
 /**
  * An node to wrapper an LocalObjectLight use to create a property sheet with 
  * properties set for read only
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ReadOnlyObjectNode extends AbstractNode {
     LocalObjectLight lol;
@@ -64,7 +64,7 @@ public class ReadOnlyObjectNode extends AbstractNode {
             return sheet;
         }
 
-        final LocalObject lo = com.getObjectInfo(lol.getClassName(), lol.getOid());
+        final LocalObject lo = com.getObjectInfo(lol.getClassName(), lol.getId());
 
         if (lo == null) {
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());

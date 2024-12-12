@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package com.neotropic.inventory.modules.sync.nodes.actions;
 
-import com.neotropic.inventory.modules.sync.nodes.SyncConfigurationNode;
+import com.neotropic.inventory.modules.sync.nodes.SyncDataSourceConfigurationNode;
 import com.neotropic.inventory.modules.sync.nodes.SyncGroupNode.SyncGroupNodeChildren;
 import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalSyncDataSourceConfiguration;
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.openide.util.Utilities;
@@ -30,7 +30,7 @@ import org.openide.util.Utilities;
  * Abstract action executed by DeleteSyncAction to delete a sync data source 
  * configuration.
  * Is not a GenericInventoryAction
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeleteSyncDataSourceConfigurationAction extends AbstractAction {
     private static DeleteSyncDataSourceConfigurationAction instance;
@@ -46,7 +46,7 @@ public class DeleteSyncDataSourceConfigurationAction extends AbstractAction {
         if (JOptionPane.showConfirmDialog(null, I18N.gm("want_to_delete_sync_data_src_config"), 
             I18N.gm("warning"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             
-            SyncConfigurationNode syncConfigNode = Utilities.actionsGlobalContext().lookup(SyncConfigurationNode.class);
+            SyncDataSourceConfigurationNode syncConfigNode = Utilities.actionsGlobalContext().lookup(SyncDataSourceConfigurationNode.class);
             LocalSyncDataSourceConfiguration localSyncDataSrcConfig = Utilities.actionsGlobalContext().lookup(LocalSyncDataSourceConfiguration.class);
             
             if (localSyncDataSrcConfig != null) {

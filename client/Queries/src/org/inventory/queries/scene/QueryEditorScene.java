@@ -41,7 +41,7 @@
  * Version 2 license, then the option applies only if the new code is
  * made subject to such option by the copyright holder.
  *
- * Modified By Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org> for project Kuwaiba
+ * Modified By Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>} for project Kuwaiba
  */
 
 package org.inventory.queries.scene;
@@ -94,7 +94,7 @@ import org.netbeans.api.visual.widget.Widget;
  * keys as Strings, it's not suitable for our purposes, so we rather inherit from GraphPinScene and use
  * the same base code
  * @author David Kaspar
- * @contributor Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @contributor Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class QueryEditorScene extends GraphPinScene<Object, String, Object>
         implements ItemListener{
@@ -173,7 +173,6 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
                 widget = new ClassNodeWidget(this, (LocalClassMetadata)node, false, false,
                         ColorSchemeFactory.getYellowScheme());
                 widget.getActions().addAction(ActionFactory.createPopupMenuAction(new PopupMenuProvider() {
-
                             @Override
                             public JPopupMenu getPopupMenu(Widget widget, Point localLocation) {
                                 JPopupMenu myMenu = new JPopupMenu();
@@ -187,7 +186,6 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
             if (node instanceof LocalClassMetadataLight){ //A simplified class filter node
                 widget = new ListTypeFilter(this, (LocalClassMetadataLight)node);
                 widget.getActions().addAction(ActionFactory.createPopupMenuAction(new PopupMenuProvider() {
-
                             @Override
                             public JPopupMenu getPopupMenu(Widget widget, Point localLocation) {
                                 JPopupMenu myMenu = new JPopupMenu();
@@ -215,8 +213,8 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
         }
 
 
-        mainLayer.addChild (widget);
-        widget.getActions ().addAction (moveAction);            
+        mainLayer.addChild(widget);
+        widget.getActions().addAction(moveAction);            
         return widget;
     }
 
@@ -339,7 +337,7 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
                                 }else{
                                     LocalTransientQuery simplifiedQuery = new LocalTransientQuery(((ListTypeFilter)nextHop).getNodeName(),logicalConnector,false,0,0);
                                     simplifiedQuery.getAttributeNames().add("id"); //NOI18N
-                                    simplifiedQuery.getAttributeValues().add(String.valueOf(((LocalObjectListItem)((ListTypeFilter)nextHop).getValue()).getOid()));
+                                    simplifiedQuery.getAttributeValues().add(String.valueOf(((LocalObjectListItem)((ListTypeFilter)nextHop).getValue()).getId()));
                                     simplifiedQuery.getJoins().add(null); //padding
                                     simplifiedQuery.getConditions().add(((ListTypeFilter)nextHop).getCondition().id());
                                     myQuery.getJoins().add(simplifiedQuery);
@@ -469,6 +467,6 @@ public class QueryEditorScene extends GraphPinScene<Object, String, Object>
     public void itemStateChanged(ItemEvent e) {
         fireChangeEvent(new ActionEvent(e.getSource(), 
                 ((JCheckBox)e.getSource()).isSelected() ?
-                    SCENE_FILTERENABLED : SCENE_FILTERDISABLED, "chechbox-enabled")); //NOI18N
+                    SCENE_FILTERENABLED : SCENE_FILTERDISABLED, "checkbox-enabled")); //NOI18N
     }
 }

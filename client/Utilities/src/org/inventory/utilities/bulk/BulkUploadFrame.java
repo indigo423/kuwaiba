@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * JFrame to select csv files for bulk load
- * @author adrian martinez molina <adrian.martinez@kuwaiba.org>
+ * @author adrian martinez molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class BulkUploadFrame extends javax.swing.JFrame {
 

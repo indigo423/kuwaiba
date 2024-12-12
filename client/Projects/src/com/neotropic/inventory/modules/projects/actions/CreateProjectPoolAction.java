@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -31,12 +31,13 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.openide.util.Utilities;
 
 /**
  * Action to create a Project Pool
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CreateProjectPoolAction extends GenericInventoryAction {
     private final ResourceBundle bundle;
@@ -64,10 +65,10 @@ public class CreateProjectPoolAction extends GenericInventoryAction {
         
         List<LocalClassMetadataLight> possibleProjectClasses = CommunicationsStub
             .getInstance().getLightSubclasses(Constants.CLASS_GENERICPROJECT, true, true);
-        if (possibleProjectClasses == null) {
-            NotificationUtil.getInstance().showSimplePopup(bundle.getString("LBL_ERROR"), 
+        if (possibleProjectClasses == null) 
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                 NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-        } else {
+        else {
             JTextField txtProjPoolName = new JTextField();
             txtProjPoolName.setName("txtProjPoolName");
             txtProjPoolName.setColumns(10);

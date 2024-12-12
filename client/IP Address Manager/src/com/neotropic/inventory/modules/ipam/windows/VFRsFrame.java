@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -40,7 +40,7 @@ import org.inventory.communications.core.LocalObjectLight;
 
 /**
  * Show the existing VFRs that can be associated to a subnet
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 
 public class VFRsFrame  extends JFrame{
@@ -118,7 +118,7 @@ public class VFRsFrame  extends JFrame{
                 JOptionPane.showMessageDialog(null, "Select a VFR from the list");
             else {
                 if (CommunicationsStub.getInstance().relateSubnetToVFR(
-                        selectedSubnet.get(0).getOid(), selectedSubnet.get(0).getClassName(), lstAvailableVFRs.getSelectedValue().getOid())){
+                        selectedSubnet.get(0).getId(), selectedSubnet.get(0).getClassName(), lstAvailableVFRs.getSelectedValue().getId())){
                     JOptionPane.showMessageDialog(null, String.format("The %s subnet was related to VFR %s", selectedSubnet.get(0).getName(), 
                             lstAvailableVFRs.getSelectedValue().getName()));
                         dispose();

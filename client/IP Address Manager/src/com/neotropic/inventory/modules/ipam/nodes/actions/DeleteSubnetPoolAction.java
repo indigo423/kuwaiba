@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a subnet pool
- * @author Adrian Fernando Molina Fernandez <adrian.martinez@kuwaiba.org>
+ * @author Adrian Fernando Molina Fernandez {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class DeleteSubnetPoolAction extends GenericInventoryAction implements Presenter.Popup {
     /**
@@ -75,7 +75,7 @@ public class DeleteSubnetPoolAction extends GenericInventoryAction implements Pr
         if(selectedNode != null){
             SubnetPoolNode parentNode = (SubnetPoolNode)selectedNode.getParentNode();
 
-            if (com.deleteSubnetPool(selectedNode.getSubnetPool().getOid())){
+            if (com.deleteSubnetPool(selectedNode.getSubnetPool().getId())){
 
                 ((SubnetPoolChildren)parentNode.getChildren()).addNotify();
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 

@@ -12,26 +12,19 @@
                     <compile-dependency/>
                     <run-dependency>
                         <release-version>1</release-version>
-                        <specification-version>1.38.1</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.openide.util.lookup</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>8.3.1</specification-version>
+                        <specification-version>1.47.1</specification-version>
                     </run-dependency>
                 </dependency>
             </module-dependencies>
             <public-packages>
                 <package>com.neotropic.inventory.modules.sdh</package>
+                <package>com.neotropic.inventory.modules.sync</package>
                 <package>org.inventory.communications</package>
                 <package>org.inventory.communications.core</package>
                 <package>org.inventory.communications.core.caching</package>
+                <package>org.inventory.communications.core.exceptions</package>
                 <package>org.inventory.communications.core.queries</package>
                 <package>org.inventory.communications.core.views</package>
-                <package>org.inventory.communications.runnable</package>
                 <package>org.inventory.communications.util</package>
             </public-packages>
         </data>

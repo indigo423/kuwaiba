@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,21 +22,23 @@ import javax.swing.JTextPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
+import org.inventory.communications.util.Constants;
 
 /**
  * Shows the database id of the selected object. Useful for troubleshooting purposes. It will also show the object's complete containment structure.
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class ShowMoreInformationAction extends GenericObjectNodeAction {
     private static ShowMoreInformationAction instance;
-    private long id;
+    private String id;
     private String className;
 
     private ShowMoreInformationAction() {
         putValue(NAME, "Show More Information");
     }
     
-    public static ShowMoreInformationAction getInstance(long id, String className) {
+    public static ShowMoreInformationAction getInstance(String id, String className) {
         if (instance == null)        
             instance = new ShowMoreInformationAction();
         instance.setId(id);
@@ -44,7 +46,7 @@ public final class ShowMoreInformationAction extends GenericObjectNodeAction {
         return instance;
     }
     
-    public void setId(long id) {
+    public void setId(String id) {
         this.id = id;
     }
     
@@ -56,9 +58,12 @@ public final class ShowMoreInformationAction extends GenericObjectNodeAction {
     public void actionPerformed(ActionEvent ev) {
         List<LocalObjectLight> parents = CommunicationsStub.getInstance().getParents(className, id);
         String msg = "";
-        if (parents != null){
+        if (parents != null) {
             for (LocalObjectLight parent : parents)
-                msg +=  ":" +parent;
+                if (!parent.getName().equals(Constants.DUMMYROOT))
+                    msg +=  ":" +parent;
+                else
+                    msg +=  ":Navigation Root";
         }
         JOptionPane.showMessageDialog(null, 
                 new SelectableLabel("<strong>id:</strong> " + id + "<br/><strong>Class: </strong>"+ className +"<br/><strong>Containment Path: </strong>" + msg), //NOI18N
@@ -67,7 +72,7 @@ public final class ShowMoreInformationAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

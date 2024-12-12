@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -33,7 +33,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a pool
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class DeletePoolAction extends GenericInventoryAction implements Presenter.Popup {
     /**
@@ -66,7 +66,7 @@ public class DeletePoolAction extends GenericInventoryAction implements Presente
         if (JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this pool? All contained elements will be deleted as well", 
                 I18N.gm("warning"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
         
-            if (com.deletePool(node.getPool().getOid())){
+            if (com.deletePool(node.getPool().getId())){
                 node.getParentNode().getChildren().remove(new Node[]{node});
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
                         "Pool deleted successfully");

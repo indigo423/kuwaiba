@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.nodes.Node;
 
 /**
  * All children under a Service node
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ServiceChildren extends AbstractChildren {
     
@@ -37,7 +37,7 @@ public class ServiceChildren extends AbstractChildren {
         LocalObjectLight service = ((ServiceNode)getNode()).getObject();
         
         List<LocalObjectLight> resources = CommunicationsStub.getInstance().
-                getServiceResources(service.getClassName(), service.getOid());
+                getServiceResources(service.getClassName(), service.getId());
         if (resources == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else {

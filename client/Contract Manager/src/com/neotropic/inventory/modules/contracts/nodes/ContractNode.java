@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import org.openide.util.datatransfer.PasteType;
 
 /**
  * Represents a contract
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ContractNode extends ObjectNode {
 
@@ -54,7 +54,7 @@ public class ContractNode extends ObjectNode {
             null, 
             ContractManagerActionFactory.getDeleteContractAction(), 
             null, 
-            ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName())
+            ShowMoreInformationAction.getInstance(getObject().getId(), getObject().getClassName())
         };
     }
     
@@ -87,8 +87,8 @@ public class ContractNode extends ObjectNode {
                                                         
                             if (CommunicationsStub.getInstance().associateObjectsToContract(
                                 new String [] {objNode.getObject().getClassName()}, 
-                                new Long [] {objNode.getObject().getOid()}, 
-                                getObject().getClassName(), getObject().getOid())) {
+                                new String [] {objNode.getObject().getId()}, 
+                                getObject().getClassName(), getObject().getId())) {
                                 
                                 ((ContractChildren) getChildren()).addNotify();
                             } else
@@ -106,15 +106,15 @@ public class ContractNode extends ObjectNode {
                             
                             if (CommunicationsStub.getInstance().associateObjectsToContract(
                                 new String [] {objNode.getObject().getClassName()}, 
-                                new Long [] {objNode.getObject().getOid()},
-                                getObject().getClassName(), getObject().getOid())) {
+                                new String [] {objNode.getObject().getId()},
+                                getObject().getClassName(), getObject().getId())) {
                                 
                                 ((ContractChildren) getChildren()).addNotify();
                                 
                                 if (CommunicationsStub.getInstance().releaseObjectFromContract(
                                     contractNode.getObject().getClassName(), 
-                                    contractNode.getObject().getOid(), 
-                                    objNode.getObject().getOid())) {
+                                    contractNode.getObject().getId(), 
+                                    objNode.getObject().getId())) {
 
                                     ((ContractChildren) contractNode.getChildren()).addNotify();
                                 } else
@@ -137,7 +137,7 @@ public class ContractNode extends ObjectNode {
         public void addNotify() {
             ContractNode selectedNode = (ContractNode)getNode();
             List<LocalObjectLight> equipment = CommunicationsStub.getInstance().getSpecialAttribute(selectedNode.getObject().getClassName(), 
-                    selectedNode.getObject().getOid(), "contractHas"); //I18N
+                    selectedNode.getObject().getId(), "contractHas"); //I18N
             
             if (equipment == null) {
                 setKeys(Collections.EMPTY_LIST);

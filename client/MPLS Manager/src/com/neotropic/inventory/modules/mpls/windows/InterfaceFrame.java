@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import org.inventory.communications.core.LocalObjectLight;
 /**
  * Show the existing bridge domains interfaces that can be associated to 
  * services instances
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class InterfaceFrame extends JFrame{
     private JTextField txtField;
@@ -117,10 +117,10 @@ public class InterfaceFrame extends JFrame{
             if (lstAvailableDevices.getSelectedValue() == null)
                 JOptionPane.showMessageDialog(null, java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/mpls/Bundle").getString("LBL_INSTRUCTIONS_SELECT"));
             else {                
-                if (CommunicationsStub.getInstance().relatePortToInterface(selectedObjects.get(0).getOid(), 
+                if (CommunicationsStub.getInstance().relatePortToInterface(selectedObjects.get(0).getId(), 
                         selectedObjects.get(0).getClassName(), 
                         lstAvailableDevices.getSelectedValue().getClassName(),
-                        lstAvailableDevices.getSelectedValue().getOid())){
+                        lstAvailableDevices.getSelectedValue().getId())){
                     JOptionPane.showMessageDialog(null, String.format("The %s  was related to %s", 
                             selectedObjects.get(0).toString(), lstAvailableDevices.getSelectedValue().getName()));
                         dispose();

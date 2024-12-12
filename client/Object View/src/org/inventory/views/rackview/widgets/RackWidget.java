@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectLight;
@@ -44,7 +43,7 @@ import org.netbeans.api.visual.widget.Widget;
 
 /**
  * Is the graphical representation in the scene of a rack object
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class RackWidget extends SelectableRackViewWidget {
     private int rackUnitWidth;
@@ -367,12 +366,14 @@ public class RackWidget extends SelectableRackViewWidget {
         int equipmentPosition = (int) equipment.getAttribute(Constants.PROPERTY_POSITION);
         int equipmentRackUnits = (int) equipment.getAttribute(Constants.PROPERTY_RACK_UNITS);
         
-        for (int i = 0; i < equipmentRackUnits; i += 1) {
-            int idx = equipmentPosition + i;
-            mapRackUnits.get(idx).setAvailable(false);
+        if (equipmentPosition > 0 && equipmentRackUnits > 0) {
+            for (int i = 0; i < equipmentRackUnits; i += 1) {
+                int idx = equipmentPosition + i;
+                mapRackUnits.get(idx).setAvailable(false);
+            }
+            paintEquipment(equipment);
+            localEquipments.add(equipment);
         }
-        paintEquipment(equipment);
-        localEquipments.add(equipment);
     }
     
     private void paintEquipment(LocalObject equipment) {

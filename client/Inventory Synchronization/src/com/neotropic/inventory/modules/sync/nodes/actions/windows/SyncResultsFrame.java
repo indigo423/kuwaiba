@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.neotropic.inventory.modules.sync.nodes.actions.windows;
 
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -29,8 +30,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.border.EmptyBorder;
-import org.inventory.communications.core.LocalSyncGroup;
-import org.inventory.communications.core.LocalSyncResult;
+import com.neotropic.inventory.modules.sync.LocalSyncGroup;
+import com.neotropic.inventory.modules.sync.LocalSyncProvider;
+import com.neotropic.inventory.modules.sync.LocalSyncResult;
+import java.util.HashMap;
+import javax.swing.JTabbedPane;
 import org.inventory.core.services.api.export.ExportTablePanel;
 import org.inventory.core.services.api.export.ExportableTable;
 import org.inventory.core.services.api.export.filters.CSVFilter;
@@ -42,23 +46,23 @@ import org.openide.util.ImageUtilities;
 
 /**
  * JFrame to show the list of results after executing a synchronization process
- * @author Adrian Martinez <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SyncResultsFrame extends JFrame {
     private static final ImageIcon ICON_ERROR = ImageUtilities.loadImageIcon("com/neotropic/inventory/modules/sync/res/error.png", false);
     private static final ImageIcon ICON_WARNING = ImageUtilities.loadImageIcon("com/neotropic/inventory/modules/sync/res/warning.png", false);
     private static final ImageIcon ICON_SUCCESS = ImageUtilities.loadImageIcon("com/neotropic/inventory/modules/sync/res/success.png", false);
+    private static final ImageIcon ICON_INFORMATION = ImageUtilities.loadImageIcon("com/neotropic/inventory/modules/sync/res/information.png", false);
     
-    private JScrollPane pnlScrollMain;
+    //private JScrollPane pnlScrollMain;
     private SyncResultsList<LocalSyncResult> lstSyncResults;
+    //private HashMap<Long, String> mapDataSourceConfigNames;
+    private JTabbedPane jTabbedPane;
 
-    public SyncResultsFrame(LocalSyncGroup syncGroup, List<LocalSyncResult> results) {
+    public SyncResultsFrame() {
         setLayout(new BorderLayout());
-        setTitle(String.format(I18N.gm("sync_list_of_results"), syncGroup.getName()));
-        pnlScrollMain = new JScrollPane();
         setSize(800, 650);
         setLocationRelativeTo(null);
-
         JPanel pnlListOfResults = new JPanel();
         pnlListOfResults.setLayout(new GridLayout(1, 1));
         JButton btnExport = new JButton();
@@ -78,32 +82,69 @@ public class SyncResultsFrame extends JFrame {
         });
         add(btnExport, BorderLayout.NORTH);
         
-        lstSyncResults = new SyncResultsList<>(results.toArray(new LocalSyncResult[0]));
-        lstSyncResults.setCellRenderer(new SyncResultsCellRenderer());
         
-        pnlScrollMain.setViewportView(lstSyncResults);
-        add(pnlScrollMain);
+        jTabbedPane = new JTabbedPane();
+                
+        jTabbedPane.setVisible(true);
+        add(jTabbedPane);
     }
    
+    public void addTab(LocalSyncGroup syncGroup, LocalSyncProvider LocalSyncProvider, List<LocalSyncResult> results){
+        HashMap<Long, String> mapDataSourceConfigNames = new HashMap<>();
+
+        JScrollPane pnlScrollMain = new JScrollPane();
+        
+        List<LocalSyncDataSourceConfiguration> dataSourceConfigurations = syncGroup.getDataSourceConfig();
+        for(LocalSyncResult result : results){
+            for (LocalSyncDataSourceConfiguration dataSourceConfiguration : dataSourceConfigurations) {
+                if(result.getDataSourceId() == dataSourceConfiguration.getId()){
+                    mapDataSourceConfigNames.put(result.getDataSourceId(), dataSourceConfiguration.getName());
+                    break;
+                }
+            }
+        }
+        
+        lstSyncResults = new SyncResultsList<>(results.toArray(new LocalSyncResult[0]));
+        lstSyncResults.setCellRenderer(new SyncResultsCellRenderer(mapDataSourceConfigNames));
+        
+        pnlScrollMain.setViewportView(lstSyncResults);
+        
+        jTabbedPane.addTab(syncGroup.getName() + " " +LocalSyncProvider.getDisplayName(), pnlScrollMain);
+       
+    }
+    
     private class SyncResultsCellRenderer implements ListCellRenderer<LocalSyncResult> {
         
+        private final HashMap<Long, String>  mapDataSourceConfigNames;
+
+        public SyncResultsCellRenderer(HashMap<Long, String> mapDataSourceConfigNames) {
+            this.mapDataSourceConfigNames = mapDataSourceConfigNames;
+        }
+                
         @Override
         public Component getListCellRendererComponent(JList<? extends LocalSyncResult> list, 
                 LocalSyncResult value, int index, boolean isSelected, boolean cellHasFocus) {
-            JLabel lblResultEntry = new JLabel("<html><b>Description: </b>" + value.getActionDescription() 
-                                            + "<br/><b>Result: </b>" +value.getResult()+ "<html>");
+            
+            JLabel lblResultEntry = new JLabel("<html>"
+                                            +   "<b>Data Source Configuration: </b>"+  mapDataSourceConfigNames.get(value.getDataSourceId())
+                                            +   "<br/><b>Action: </b>" + value.getActionDescription() 
+                                            +   "<br/><b>Result: </b>" +value.getResult()
+                                            + "<html>");
             lblResultEntry.setBorder(new EmptyBorder(5, 5, 5, 0));
             lblResultEntry.setOpaque(true);
             lblResultEntry.setBackground(Color.WHITE);
             switch (value.getType()) {
-                case LocalSyncResult.ERROR:
+                case LocalSyncResult.TYPE_ERROR:
                     lblResultEntry.setIcon(ICON_ERROR);
                     break;
-                case LocalSyncResult.WARNING:
+                case LocalSyncResult.TYPE_WARNING:
                     lblResultEntry.setIcon(ICON_WARNING);
                     break;
-                default:
+                case LocalSyncResult.TYPE_SUCCESS:
                     lblResultEntry.setIcon(ICON_SUCCESS);
+                    break;
+                case LocalSyncResult.TYPE_INFORMATION:
+                    lblResultEntry.setIcon(ICON_INFORMATION);
             }
             return lblResultEntry;
         }

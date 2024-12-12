@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalReportLight;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -43,7 +44,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Shows the class reports available for the selected node (if any) and run any of them
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ExecuteClassLevelReportAction extends GenericObjectNodeAction implements ComposedAction, Presenter.Popup {
     private static ExecuteClassLevelReportAction instance;
@@ -88,13 +89,13 @@ public class ExecuteClassLevelReportAction extends GenericObjectNodeAction imple
     public void actionPerformed(LocalObjectLight theObject, long reportId) {
         
         byte[] theReport = CommunicationsStub.getInstance().executeClassLevelReport(theObject.getClassName(),
-                theObject.getOid(), reportId);
+                theObject.getId(), reportId);
         
         if (theReport == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else {           
             try {
-                File tempFile = File.createTempFile("class_report_" + theObject.getClassName() + "_" + theObject.getOid(), ".html"); //NOI18N
+                File tempFile = File.createTempFile("class_report_" + theObject.getClassName() + "_" + theObject.getId(), ".html"); //NOI18N
                 
                 try (FileOutputStream faos = new FileOutputStream(tempFile)) {
                     faos.write(theReport);
@@ -144,7 +145,7 @@ public class ExecuteClassLevelReportAction extends GenericObjectNodeAction imple
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

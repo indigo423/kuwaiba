@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -31,7 +32,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows to move a physical link out of a container
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ServiceProvider(service = GenericObjectNodeAction.class)
 public class MoveLinksOutOfContainerAction extends GenericObjectNodeAction{
@@ -51,15 +52,10 @@ public class MoveLinksOutOfContainerAction extends GenericObjectNodeAction{
             }
         }
             
-        List<LocalObjectLight> objectSpecialChildren = com.getObjectSpecialChildren(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid());
+        List<LocalObjectLight> objectSpecialChildren = com.getObjectSpecialChildren(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId());
+        List<LocalObjectLight> physicalLinks = getPhysicalLinksInContainer(new ArrayList<>(), objectSpecialChildren);
         
-        List<LocalObjectLight> physicalLinks = new ArrayList<>();
-        for (LocalObjectLight specialChild : objectSpecialChildren) {
-            if(com.isSubclassOf(specialChild.getClassName(), Constants.CLASS_GENERICPHYSICALLINK))
-                physicalLinks.add(specialChild);
-        }
-         
-        HashMap<String, LocalObjectLight[]> specialAttributes = CommunicationsStub.getInstance().getSpecialAttributes(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid());
+        HashMap<String, LocalObjectLight[]> specialAttributes = CommunicationsStub.getInstance().getSpecialAttributes(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId());
         
         if (specialAttributes == null ) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -76,7 +72,7 @@ public class MoveLinksOutOfContainerAction extends GenericObjectNodeAction{
             endpointB = specialAttributes.get("endpointB")[0]; //NOI18N
         
         if(endpointA != null && endpointB != null){
-            LocalObjectLight parent = CommunicationsStub.getInstance().getCommonParent(endpointA.getClassName(), endpointA.getOid(), endpointB.getClassName(), endpointB.getOid());
+            LocalObjectLight parent = CommunicationsStub.getInstance().getCommonParent(endpointA.getClassName(), endpointA.getId(), endpointB.getClassName(), endpointB.getId());
         
             if (parent == null) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -89,7 +85,7 @@ public class MoveLinksOutOfContainerAction extends GenericObjectNodeAction{
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 
@@ -106,5 +102,21 @@ public class MoveLinksOutOfContainerAction extends GenericObjectNodeAction{
     @Override
     public int numberOfNodes() {
         return 1;
+    }
+    
+    /**
+     * Recursivly 
+     * @param physicalLinks
+     * @param objectSpecialChildren
+     * @return 
+     */
+    private List<LocalObjectLight> getPhysicalLinksInContainer(List<LocalObjectLight> physicalLinks, List<LocalObjectLight> objectSpecialChildren){
+        for (LocalObjectLight specialChild : objectSpecialChildren) {
+            if(com.isSubclassOf(specialChild.getClassName(), Constants.CLASS_GENERICPHYSICALLINK))
+                physicalLinks.add(specialChild);
+            else if(com.isSubclassOf(specialChild.getClassName(), Constants.CLASS_GENERICPHYSICALCONTAINER))
+                getPhysicalLinksInContainer(physicalLinks, com.getObjectSpecialChildren(specialChild.getClassName(), specialChild.getId()));
+        }
+        return physicalLinks;
     }
 }

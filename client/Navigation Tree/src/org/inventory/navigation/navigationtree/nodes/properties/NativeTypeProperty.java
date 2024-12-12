@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package org.inventory.navigation.navigationtree.nodes.properties;
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
@@ -27,7 +27,7 @@ import org.openide.nodes.PropertySupport;
 /**
  * Provides a valid representation of LocalObjects attributes as Properties,
  * as LocalObject is just a proxy and can't be a bean itself
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class NativeTypeProperty extends PropertySupport.ReadWrite {
     private ObjectNode node;
@@ -49,10 +49,14 @@ public class NativeTypeProperty extends PropertySupport.ReadWrite {
 
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        LocalObject update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
-                new String[]{this.getName()}, new Object[]{t});
+        if (t == null || t.equals(value) || t.equals("<null value>")) //Don't update if no changes were performed
+            return;
+        
+        HashMap<String, Object> attributesToUpdate = new HashMap<>();
+        attributesToUpdate.put(getName(), t);
 
-        if(!CommunicationsStub.getInstance().saveObject(update))
+        if(!CommunicationsStub.getInstance().updateObject(node.getObject().getClassName(), 
+                node.getObject().getId(), attributesToUpdate))
             NotificationUtil.getInstance().showSimplePopup("Error", 
                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else {

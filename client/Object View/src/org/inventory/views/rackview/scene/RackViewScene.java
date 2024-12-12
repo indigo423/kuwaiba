@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.inventory.views.rackview.scene;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Point;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import javax.swing.JPopupMenu;
 import org.inventory.communications.CommunicationsStub;
@@ -50,8 +51,8 @@ import org.netbeans.api.visual.widget.Widget;
 
 /**
  * Scene for Rack view, shows the front view of the rack
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class RackViewScene extends AbstractScene<LocalObjectLight, LocalObjectLight> {
     public static int STROKE_WIDTH = 3;
@@ -70,6 +71,8 @@ public class RackViewScene extends AbstractScene<LocalObjectLight, LocalObjectLi
         getActions().addAction(ActionFactory.createZoomAction());
         getInputBindings().setZoomActionModifiers(0); //No keystroke combinations
         getActions().addAction(ActionFactory.createPanAction());
+        getInputBindings ().setPanActionButton(MouseEvent.BUTTON1); //Pan using the left click
+        
         setActiveTool(ACTION_SELECT);
         initSelectionListener();
         
@@ -171,16 +174,16 @@ public class RackViewScene extends AbstractScene<LocalObjectLight, LocalObjectLi
                 LocalObjectLight targetPort = targetWidget.getLookup().lookup(LocalObjectLight.class);
                 
                 LocalObjectLight commonParent = CommunicationsStub.getInstance()
-                    .getCommonParent(sourcePort.getClassName(), sourcePort.getOid(), 
-                        targetPort.getClassName(), targetPort.getOid());
+                    .getCommonParent(sourcePort.getClassName(), sourcePort.getId(), 
+                        targetPort.getClassName(), targetPort.getId());
                 if (commonParent == null) {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                         NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                     return;
                 } 
                 List<LocalObjectLight> existintWireContainersList = CommunicationsStub.getInstance()
-                    .getContainersBetweenObjects(sourcePort.getClassName(), sourcePort.getOid(), 
-                        targetPort.getClassName(), targetPort.getOid(), Constants.CLASS_WIRECONTAINER);
+                    .getContainersBetweenObjects(sourcePort.getClassName(), sourcePort.getId(), 
+                        targetPort.getClassName(), targetPort.getId(), Constants.CLASS_WIRECONTAINER);
                 if (existintWireContainersList == null) {
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                         NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

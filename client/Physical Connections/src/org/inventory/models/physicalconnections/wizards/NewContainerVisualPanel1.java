@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
+import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 
 /**
  * The panel of the first step of the New Container wizard
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class NewContainerVisualPanel1 extends javax.swing.JPanel {
 
@@ -38,19 +40,23 @@ public class NewContainerVisualPanel1 extends javax.swing.JPanel {
         List<LocalClassMetadataLight> containerClasses = CommunicationsStub.getInstance().
                 getLightSubclasses(Constants.CLASS_GENERICPHYSICALCONTAINER, false, false);
         
-        cmbContainerClass.setModel(containerClasses == null ? new DefaultComboBoxModel() : new DefaultComboBoxModel(containerClasses.toArray()));
-        
-        if (!containerClasses.isEmpty()) {
-            List<LocalObjectLight> containerTemplates = CommunicationsStub.getInstance().getTemplatesForClass(((LocalClassMetadataLight)cmbContainerClass.getItemAt(0)).getClassName(), false);
-            cmbContainerTemplate.setModel(new DefaultComboBoxModel(containerTemplates.toArray(new LocalObjectLight[0])));
-            chkNoTemplate.setSelected(containerTemplates.isEmpty());
-            chkNoTemplate.setEnabled(!containerTemplates.isEmpty());
-            cmbContainerTemplate.setEnabled(!containerTemplates.isEmpty());
+        if (containerClasses == null) {
+            cmbContainerClass.setModel(new DefaultComboBoxModel());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         } else {
-            cmbContainerTemplate.setModel(new DefaultComboBoxModel());
-            chkNoTemplate.setSelected(true);
-            chkNoTemplate.setEnabled(false);
-            cmbContainerTemplate.setEnabled(false);
+            cmbContainerClass.setModel(new DefaultComboBoxModel(containerClasses.toArray()));
+            if (!containerClasses.isEmpty()) {
+                List<LocalObjectLight> containerTemplates = CommunicationsStub.getInstance().getTemplatesForClass(((LocalClassMetadataLight)cmbContainerClass.getItemAt(0)).getClassName(), false);
+                cmbContainerTemplate.setModel(new DefaultComboBoxModel(containerTemplates.toArray(new LocalObjectLight[0])));
+                chkNoTemplate.setSelected(containerTemplates.isEmpty());
+                chkNoTemplate.setEnabled(!containerTemplates.isEmpty());
+                cmbContainerTemplate.setEnabled(!containerTemplates.isEmpty());
+            } else {
+                cmbContainerTemplate.setModel(new DefaultComboBoxModel());
+                chkNoTemplate.setSelected(true);
+                chkNoTemplate.setEnabled(false);
+                cmbContainerTemplate.setEnabled(false);
+            }
         }
         
         cmbContainerClass.addItemListener(new ItemListener() {

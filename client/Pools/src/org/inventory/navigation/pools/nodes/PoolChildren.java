@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -27,7 +27,7 @@ import org.openide.nodes.Node;
 
 /**
  * Children for pool nodes
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class PoolChildren extends AbstractChildren {
 
@@ -39,7 +39,7 @@ public class PoolChildren extends AbstractChildren {
     
     @Override
     public void addNotify(){
-        List<LocalObjectLight> items = CommunicationsStub.getInstance().getPoolItems(pool.getOid());
+        List<LocalObjectLight> items = CommunicationsStub.getInstance().getPoolItems(pool.getId());
         if (items == null) {
             setKeys(Collections.EMPTY_SET);
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

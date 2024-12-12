@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@ package org.inventory.communications.core;
 
 import java.awt.Color;
 import java.awt.Image;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
 
 /**
  * It's a proxy class, whose instances represent the metadata information associated to a class
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class LocalClassMetadata extends LocalClassMetadataLight {
 
@@ -36,49 +36,57 @@ public class LocalClassMetadata extends LocalClassMetadataLight {
     private String [] attributesTypes;
     private String [] attributesDisplayNames;
     private boolean [] attributesMandatories;
+    private boolean [] attributesMultiples;
     private boolean [] attributesUniques;
     private boolean [] attributesVisibles;
     private int [] attributesMappings;
     private String [] attributesDescriptions;
+    private int [] attributesOrders;
     /**
      * Creation Date
      */
     private long creationDate;
      
-    public LocalClassMetadata(){
+    public LocalClassMetadata() {
         super();
     }
     
     public LocalClassMetadata (long id, String className, String displayName, 
             String parentName, boolean _abstract, boolean viewable, boolean listType, 
-            boolean custom, boolean inDesign, byte[] smallIcon, int color, HashMap<String, Integer> validators,
+            boolean custom, boolean inDesign, byte[] smallIcon, int color,
             byte[] icon, 
             String description, 
             List<Long> attributesIds, 
             String[] attributesNames, 
             String[] attributesTypes, 
             String[] attributesDisplayNames,
+            String[] attributesDescriptions, 
             List<Boolean> attributesMandatories, 
+            List<Boolean> attributesMultiples, 
             List<Boolean> attributesUniques,
             List<Boolean> attributesVisibles, 
-            String[] attributesDescriptions) {
+            List<Integer> attributesOrders) {
         
         super(id, className, displayName, parentName, _abstract, viewable, listType, 
-            custom, inDesign, smallIcon, color, validators);
+            custom, inDesign, smallIcon, color);
         this.icon = Utils.getIconFromByteArray(icon, new Color(color), 24, 24);
         this.description = description;
         this.attributesIds = new long[attributesIds.size()];
         this.attributesMappings = new int[attributesIds.size()];
         this.attributesMandatories = new boolean[attributesMandatories.size()];
+        this.attributesMultiples = new boolean[attributesMultiples.size()];
         this.attributesUniques = new boolean[attributesUniques.size()];
         this.attributesVisibles = new boolean[attributesVisibles.size()];
+        this.attributesOrders = new int[attributesOrders.size()];
         
-        for (int i = 0; i < attributesIds.size(); i++){
+        for (int i = 0; i < attributesIds.size(); i++) {
             this.attributesIds[i] = attributesIds.get(i);
-            this.attributesMappings[i] = getMappingFromType(attributesTypes[i]);
+            this.attributesMappings[i] = getMappingFromType(attributesTypes[i], attributesMultiples.get(i));
             this.attributesVisibles[i] = attributesVisibles.get(i);
             this.attributesMandatories[i] = attributesMandatories.get(i);
+            this.attributesMultiples[i] = attributesMultiples.get(i);
             this.attributesUniques[i] = attributesUniques.get(i);
+            this.attributesOrders[i] = attributesOrders.get(i);
         }
 
         this.attributesNames = attributesNames;
@@ -114,9 +122,17 @@ public class LocalClassMetadata extends LocalClassMetadataLight {
     public boolean[] getAttributesMandatories() {
         return attributesMandatories;
     }
+    
+    public boolean[] getAttributesMultiples() {
+        return attributesMultiples;
+    }
 
     public boolean[] getAttributesUniques() {
         return attributesUniques;
+    }
+
+    public int[] getAttributesOrders() {
+        return attributesOrders;
     }
 
     public String getDisplayNameForAttribute(String att){
@@ -164,19 +180,20 @@ public class LocalClassMetadata extends LocalClassMetadataLight {
     }
 
 
-    public LocalAttributeMetadata[] getAttributes(){
-        LocalAttributeMetadata[] res =
-                new LocalAttributeMetadata[attributesNames.length];
-        for (int i = 0; i < res.length;i++){
-            res[i] = new LocalAttributeMetadata(
+    public List<LocalAttributeMetadata> getAttributes() {
+        List<LocalAttributeMetadata> res = new ArrayList<>();
+        
+        for (int i = 0; i < attributesNames.length; i++) {
+            res.add(new LocalAttributeMetadata(
                                     attributesIds[i],
                                     attributesNames[i],
                                     attributesTypes[i],
                                     attributesDisplayNames[i],
+                                    attributesDescriptions[i],
                                     attributesVisibles[i],
                                     attributesMandatories[i],
-                                    attributesUniques[i],
-                                    attributesDescriptions[i]);
+                                    attributesMultiples[i],
+                                    attributesUniques[i], attributesOrders[i]));
         }
         return res;
     }
@@ -187,10 +204,6 @@ public class LocalClassMetadata extends LocalClassMetadataLight {
     
     public long[] getAttributeIds() {
         return attributesIds;
-    }
-
-    public long getId() {
-        return id;
     }
 
     public String getDescription() {
@@ -213,15 +226,13 @@ public class LocalClassMetadata extends LocalClassMetadataLight {
         return false;
     }
 
-    public static final int getMappingFromType(String type){
+    public static final int getMappingFromType(String type, boolean multiple) {
         if (type.equals("String") || type.equals("Integer") || type.equals("Float") || type.equals("Long") || type.equals("Boolean"))
             return Constants.MAPPING_PRIMITIVE;
         if (type.equals("Timestamp"))
             return Constants.MAPPING_TIMESTAMP;
         if (type.equals("Date"))
             return Constants.MAPPING_DATE;
-        if (type.equals("Binary"))
-            return Constants.MAPPING_BINARY;
-        return Constants.MAPPING_MANYTOONE;
+        return multiple ? Constants.MAPPING_MANYTOMANY : Constants.MAPPING_MANYTOONE;
     }
 }

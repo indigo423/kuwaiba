@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import java.awt.event.KeyEvent;
 import java.util.List;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
-import static javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW;
 import javax.swing.KeyStroke;
 import javax.swing.text.DefaultEditorKit;
 import org.inventory.communications.core.LocalPool;
@@ -41,7 +40,7 @@ import org.openide.windows.TopComponent;
 
 /**
  * Main top component for the Pools module
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ConvertAsProperties(
     dtd = "-//org.inventory.navigation.pools//Pools//EN",
@@ -53,7 +52,7 @@ persistenceType = TopComponent.PERSISTENCE_NEVER)
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Window", id = "org.inventory.navigation.pools.PoolsTopComponent")
 @ActionReferences(value = { @ActionReference(path = "Menu/Tools/Navigation"),
-    @ActionReference(path = "Toolbars/01_Navigation", position = 3)})
+    @ActionReference(path = "Toolbars/01_Navigation", position = 4)})
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_PoolsAction",
 preferredID = "PoolsTopComponent")

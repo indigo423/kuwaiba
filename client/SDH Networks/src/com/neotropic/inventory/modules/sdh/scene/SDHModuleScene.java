@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ import org.openide.util.Exceptions;
 
 /**
  * This is the scene used in the SDH Module
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 
 public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectLight> {
@@ -97,22 +98,30 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
 
     public SDHModuleScene() {
         getActions().addAction(ActionFactory.createAcceptAction(new CustomAcceptActionProvider(this, Constants.CLASS_GENERICCOMMUNICATIONSELEMENT)));
-
+        
         nodeLayer = new LayerWidget(this);
         edgeLayer = new LayerWidget(this);
         interactionLayer = new LayerWidget(this);
+        backgroundLayer = new LayerWidget(this);
         
         moduleActions = new SDHModuleActionsFactory(this);
         
+        addChild(backgroundLayer);
         addChild(interactionLayer);
         addChild(edgeLayer);
         addChild(nodeLayer);
+        
         moveProvider = new CustomMoveProvider(this);
         selectAction = ActionFactory.createSelectAction(new CustomSelectProvider(this), true);
         addRemoveControlPointAction = new CustomAddRemoveControlPointAction(this);
         moveControlPointAction = new CustomMoveControlPointAction(this);
         
         connectProvider = new SDHModuleConnectProvider();
+        
+        getActions().addAction(ActionFactory.createZoomAction());
+        getActions().addAction(ActionFactory.createPanAction());
+        getInputBindings ().setZoomActionModifiers(0); //No keystroke combinations
+        getInputBindings ().setPanActionButton(MouseEvent.BUTTON1); //Pan using the left click
         
         setState (ObjectState.createNormal ());
     }
@@ -130,19 +139,24 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
         newNode.getActions(ACTION_SELECT).addAction(selectAction);
         newNode.getActions(ACTION_SELECT).addAction(ActionFactory.createMoveAction(moveProvider, moveProvider));
         newNode.getActions(ACTION_SELECT).addAction(ActionFactory.createPopupMenuAction(moduleActions.createMenuForNode()));
+        
         newNode.getActions(ACTION_CONNECT).addAction(selectAction);
         newNode.getActions(ACTION_CONNECT).addAction(ActionFactory.createConnectAction(interactionLayer, connectProvider));
         newNode.getActions(ACTION_CONNECT).addAction(ActionFactory.createPopupMenuAction(moduleActions.createMenuForNode()));
+        
+        newNode.setHighContrast(true);
+        
         return newNode;
     }
 
     @Override
     protected Widget attachEdgeWidget(LocalObjectLight edge) {
-        ObjectConnectionWidget newEdge = new ObjectConnectionWidget(this, edge);
+        ObjectConnectionWidget newEdge = new ObjectConnectionWidget(this, edge, ObjectConnectionWidget.LINE);
         newEdge.getActions().addAction(selectAction);
         newEdge.getActions().addAction(addRemoveControlPointAction);
         newEdge.getActions().addAction(moveControlPointAction);
         newEdge.getActions().addAction(ActionFactory.createPopupMenuAction(moduleActions.createMenuForConnection()));
+        newEdge.setStroke(new BasicStroke(3));
         newEdge.setControlPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setEndPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setRouter(RouterFactory.createFreeRouter());
@@ -197,11 +211,8 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
                 xmlew.add(xmlef.createAttribute(new QName("y"), Integer.toString(nodeWidget.getPreferredLocation().y)));
                 
                 LocalObjectLight nodeObject = (LocalObjectLight) findObject(nodeWidget);
-                
                 xmlew.add(xmlef.createAttribute(new QName("class"), nodeObject.getClassName()));
-                
-                xmlew.add(xmlef.createCharacters(Long.toString(nodeObject.getOid())));
-                
+                xmlew.add(xmlef.createCharacters(nodeObject.getId()));
                 xmlew.add(xmlef.createEndElement(qnameNode, null));
             }
             xmlew.add(xmlef.createEndElement(qnameNodes, null));
@@ -213,11 +224,13 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
                 
                 QName qnameEdge = new QName("edge");
                 xmlew.add(xmlef.createStartElement(qnameEdge, null, null));
-                xmlew.add(xmlef.createAttribute(new QName("id"), Long.toString(edgeObject.getOid())));
+                xmlew.add(xmlef.createAttribute(new QName("id"), edgeObject.getId()));
                 xmlew.add(xmlef.createAttribute(new QName("class"), edgeObject.getClassName()));
                 
-                xmlew.add(xmlef.createAttribute(new QName("aside"), Long.toString(getEdgeSource(edgeObject).getOid())));
-                xmlew.add(xmlef.createAttribute(new QName("bside"), Long.toString(getEdgeTarget(edgeObject).getOid())));
+                xmlew.add(xmlef.createAttribute(new QName("asideid"), getEdgeSource(edgeObject).getId()));
+                xmlew.add(xmlef.createAttribute(new QName("asideclass"), getEdgeSource(edgeObject).getClassName()));
+                xmlew.add(xmlef.createAttribute(new QName("bsideid"), getEdgeTarget(edgeObject).getId()));
+                xmlew.add(xmlef.createAttribute(new QName("bsideclass"), getEdgeTarget(edgeObject).getClassName()));
                 
                 for (Point point : ((ObjectConnectionWidget)edgeWidget).getControlPoints()) {
                     QName qnameControlpoint = new QName("controlpoint");
@@ -242,7 +255,11 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
     @Override
     public void render(byte[] structure) throws IllegalArgumentException {
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-
+        //<editor-fold defaultstate="collapsed" desc="Uncomment this for debugging purposes. This outputs the XML view as a file">
+//        try (FileOutputStream fos = new FileOutputStream(System.getProperty("user.home") + "/sdhview.xml")) {
+//            fos.write(structure);
+//        } catch(Exception e) { }
+        //</editor-fold>
         QName qNode = new QName("node"); //NOI18N
         QName qEdge = new QName("edge"); //NOI18N
         QName qControlPoint = new QName("controlpoint"); //NOI18N
@@ -258,7 +275,7 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
 
                         int xCoordinate = Double.valueOf(reader.getAttributeValue(null,"x")).intValue();
                         int yCoordinate = Double.valueOf(reader.getAttributeValue(null,"y")).intValue();
-                        long objectId = Long.valueOf(reader.getElementText());
+                        String objectId = reader.getElementText();
 
                         LocalObjectLight lol = CommunicationsStub.getInstance().getObjectInfoLight(objectClass, objectId);
                         if (lol != null){
@@ -273,17 +290,19 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
                         }
                     }else {
                         if (reader.getName().equals(qEdge)){
-                            long objectId = Long.valueOf(reader.getAttributeValue(null, "id"));
-                            long aSide = Long.valueOf(reader.getAttributeValue(null, "aside"));
-                            long bSide = Long.valueOf(reader.getAttributeValue(null, "bside"));
+                            String objectId = reader.getAttributeValue(null, "id");
+                            String aSideId = reader.getAttributeValue(null, "asideid");
+                            String aSideClass = reader.getAttributeValue(null, "asideclass");
+                            String bSideId = reader.getAttributeValue(null, "bsideid");
+                            String bSideClass = reader.getAttributeValue(null, "bsideclass");
 
                             String className = reader.getAttributeValue(null,"class");
                             LocalObjectLight container = CommunicationsStub.getInstance().getObjectInfoLight(className, objectId);
                             if (container != null) {
-                                LocalObjectLight aSideObject = new LocalObjectLight(aSide, null, null);
+                                LocalObjectLight aSideObject = new LocalObjectLight(aSideId, "" /*Not relevant for comparison purposes*/, aSideClass);
                                 Widget aSideWidget = findWidget(aSideObject);
 
-                                LocalObjectLight bSideObject = new LocalObjectLight(bSide, null, null);
+                                LocalObjectLight bSideObject = new LocalObjectLight(bSideId, "" /*Not relevant for comparison purposes*/, bSideClass);
                                 Widget bSideWidget = findWidget(bSideObject);
 
                                 if (aSideWidget == null || bSideWidget == null) {
@@ -320,6 +339,13 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
             reader.close();
             validate();
             repaint();
+//            for (LocalObjectLight edge : getEdges()) {
+//                ObjectConnectionWidget conn = (ObjectConnectionWidget)findWidget(edge);
+//                System.out.println(String.format("%s, %s, %s", edge.getId(), 
+//                        conn.getSourceAnchor().getRelatedWidget().getLookup().lookup(LocalObjectLight.class).getId(), 
+//                        conn.getTargetAnchor().getRelatedWidget().getLookup().lookup(LocalObjectLight.class).getId()));
+//            }
+            
         } catch (NumberFormatException | XMLStreamException ex) {
             NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.ERROR_MESSAGE, "The view seems corrupted and could not be loaded");
             clear();
@@ -332,6 +358,12 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
     public ConnectProvider getConnectProvider() {
         return connectProvider;
     }
+    
+    @Override
+    public void clear(){
+        backgroundLayer.removeChildren();
+        super.clear();
+    }
 
     @Override
     public boolean supportsConnections() {
@@ -340,7 +372,7 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
 
     @Override
     public boolean supportsBackgrounds() {
-        return false;
+        return true;
     }
 
     @Override

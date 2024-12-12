@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ResourceBundle;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -40,7 +40,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action releases de relationship between the object and the service
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -55,14 +55,14 @@ public class ReleaseFromServiceAction extends GenericObjectNodeAction implements
         LocalObjectLight selectedObject = selectedObjects.get(0); //Uses the last selected only
         
         List<LocalObjectLight> services = CommunicationsStub.getInstance().
-            getSpecialAttribute(selectedObject.getClassName(), selectedObject.getOid(), "uses"); //NOI18N
+            getSpecialAttribute(selectedObject.getClassName(), selectedObject.getId(), "uses"); //NOI18N
         
         if (services != null) {
             if (!services.isEmpty()) {
                 List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight service : services) {
                     SubMenuItem subMenuItem = new SubMenuItem(service.toString());                    
-                    subMenuItem.addProperty(Constants.PROPERTY_ID, service.getOid());
+                    subMenuItem.addProperty(Constants.PROPERTY_ID, service.getId());
                     subMenuItem.addProperty(Constants.PROPERTY_CLASSNAME, service.getClassName());
                     subMenuItems.add(subMenuItem);
                 }
@@ -91,8 +91,8 @@ public class ReleaseFromServiceAction extends GenericObjectNodeAction implements
                     ObjectNode selectedNode = selectedNodes.next();
                     if (CommunicationsStub.getInstance().releaseObjectFromService(
                         (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_CLASSNAME), 
-                        (long) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID), 
-                        selectedNode.getObject().getOid())) {
+                        (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID), 
+                        selectedNode.getObject().getId())) {
                         
                         if (selectedNode.getParentNode() instanceof ServiceNode)
                             ((ServiceChildren)selectedNode.getParentNode().getChildren()).addNotify();
@@ -109,7 +109,7 @@ public class ReleaseFromServiceAction extends GenericObjectNodeAction implements
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
     

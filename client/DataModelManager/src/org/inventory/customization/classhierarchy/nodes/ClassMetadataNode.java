@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.awt.Color;
 import java.awt.Image;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.List;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalAttributeMetadata;
@@ -41,7 +42,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents a ClassMetadata entity as a node within the data model manager
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ClassMetadataNode extends AbstractNode implements PropertyChangeListener{
        
@@ -104,7 +105,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
 
     @Override
     public void setName(String newName) {
-        if(com.setClassMetadataProperties(classMetadata.getOid(), newName,  null, 
+        if(com.setClassMetadataProperties(classMetadata.getId(), newName,  null, 
                 null, null, null, -1, null, null, null, null )){
             classMetadata.setClassName(newName);
             refresh();
@@ -115,7 +116,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
     public void refresh(){
         LocalClassMetadataLight classMetadataRefresh;
         
-        classMetadataRefresh = com.getMetaForClass(classMetadata.getOid());
+        classMetadataRefresh = com.getMetaForClass(classMetadata.getId());
         
         if(classMetadataRefresh == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
@@ -171,7 +172,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
         attributePropertySet.setName("2");
         attributePropertySet.setDisplayName(I18N.gm("class_attributes"));
         attributePropertySet.setExpert(true);
-        LocalAttributeMetadata[] attributes = lcm.getAttributes();
+        List<LocalAttributeMetadata> attributes = lcm.getAttributes();
         
         if(attributes != null){
             for (LocalAttributeMetadata localAttributeMetadata : attributes){
@@ -201,7 +202,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
         if (getClass() != obj.getClass()) {
             return false;
         }
-        return getClassMetadata().getOid() == ((ClassMetadataNode) obj).getClassMetadata().getOid();
+        return getClassMetadata().getId() == ((ClassMetadataNode) obj).getClassMetadata().getId();
     }
     
     @Override

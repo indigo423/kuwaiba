@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.inventory.views.objectview.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
@@ -28,7 +29,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * This action opens an Object View for the selected node
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -44,7 +45,7 @@ public class ShowObjectViewAction extends GenericObjectNodeAction {
             JOptionPane.showMessageDialog(null, "Select only one object.", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
         else {
             ObjectViewTopComponent objectViewTC = ((ObjectViewTopComponent)WindowManager.getDefault().
-                findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getOid()));
+                findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getId()));
             
             if (objectViewTC == null) {
                 objectViewTC = new ObjectViewTopComponent(selectedObjects.get(0));
@@ -61,7 +62,7 @@ public class ShowObjectViewAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Available for any object
     }
 

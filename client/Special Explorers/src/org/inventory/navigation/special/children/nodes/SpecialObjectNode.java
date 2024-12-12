@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.openide.util.Lookup;
  * It's like an ObjectNode, but you can filter what actions would be shown. Its children
  * are "special children", that is, they're not children as in the standard containment hierarchy but 
  * children as defined by a particular model.
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class SpecialObjectNode extends ObjectNode {
     
@@ -64,25 +64,16 @@ public class SpecialObjectNode extends ObjectNode {
                         break;
                     }
                 }
-            } else {
-                if (action.getValidators() != null) {
-                    for (String validator : action.getValidators()) {
-                        if (com.getMetaForClass(getObject().getClassName(), false).getValidator(validator) == 1) {
-                            actions.add(action);
-                            break;
-                        }
-                    }                                                
-                } else {
-                    actions.add(action);
-                }                
-            }
+            } else 
+                actions.add(action);                
+            
         }
         actions.add(ActionGroupActionsFactory.getInstanceOfOpenViewGroupActions());
         actions.add(ActionGroupActionsFactory.getInstanceOfRelateToGroupActions());
         actions.add(ActionGroupActionsFactory.getInstanceOfReleaseFromGroupActions());
         
         actions.add(null); //Separator
-        actions.add(ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName()));
+        actions.add(ShowMoreInformationAction.getInstance(getObject().getId(), getObject().getClassName()));
         
         return actions.toArray(new Action[]{});
     }

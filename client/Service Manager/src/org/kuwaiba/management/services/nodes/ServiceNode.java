@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,8 +29,9 @@ import org.inventory.navigation.favorites.actions.AddObjectToFavoritesFolderActi
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.navigationtree.nodes.actions.ExecuteClassLevelReportAction;
 import org.inventory.navigation.navigationtree.nodes.actions.ShowMoreInformationAction;
+import org.inventory.navigation.special.attachments.nodes.actions.AttachFileAction;
 import org.kuwaiba.management.services.nodes.actions.ServiceManagerActionFactory;
-import org.kuwaiba.management.services.nodes.actions.ShowEndToEndSimpleViewAction;
+import org.kuwaiba.management.services.nodes.actions.ShowEndToEndViewAction;
 import org.kuwaiba.management.services.nodes.actions.ShowServiceTopologyViewAction;
 import org.openide.actions.PasteAction;
 import org.openide.nodes.Node;
@@ -41,7 +42,7 @@ import org.openide.util.datatransfer.PasteType;
 
 /**
  * Node representing a service
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ServiceNode extends ObjectNode {
     
@@ -61,13 +62,12 @@ public class ServiceNode extends ObjectNode {
             ExecuteClassLevelReportAction.getInstance(),
             ServiceManagerActionFactory.getDeleteServiceAction(),
             null,
-            Lookup.getDefault().lookup(ShowEndToEndSimpleViewAction.class),
+            Lookup.getDefault().lookup(ShowEndToEndViewAction.class),
             Lookup.getDefault().lookup(ShowServiceTopologyViewAction.class),
-            //Lookup.getDefault().lookup(ShowEndToEndViewAction.class),
-            //Lookup.getDefault().lookup(ShowEndToEndDetailedViewAction.class),
+            Lookup.getDefault().lookup(AttachFileAction.class),
             Lookup.getDefault().lookup(AddObjectToFavoritesFolderAction.class),
             null,
-            ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName())
+            ShowMoreInformationAction.getInstance(getObject().getId(), getObject().getClassName())
         };        
     }
     
@@ -97,13 +97,13 @@ public class ServiceNode extends ObjectNode {
                         
                         if (objNode.getParentNode() instanceof ServiceNode) {
                             List<String> classNames = new ArrayList<>();
-                            List<Long> objectIds = new ArrayList<>();
+                            List<String> objectIds = new ArrayList<>();
                             
                             classNames.add(objNode.getObject().getClassName());
-                            objectIds.add(objNode.getObject().getOid());
+                            objectIds.add(objNode.getObject().getId());
                             
                             if (CommunicationsStub.getInstance().associateObjectsToService(classNames, objectIds, 
-                                getObject().getClassName(), getObject().getOid())) {
+                                getObject().getClassName(), getObject().getId())) {
                                 
                                 ((ServiceChildren) getChildren()).addNotify();
                             } else
@@ -116,21 +116,21 @@ public class ServiceNode extends ObjectNode {
                     if (dropNode instanceof ObjectNode) {
                         ObjectNode objectNode = (ObjectNode) dropNode;
                         List<String> classNames = new ArrayList<>();
-                        List<Long> objectIds = new ArrayList<>();
+                        List<String> objectIds = new ArrayList<>();
                         
                         classNames.add(objectNode.getObject().getClassName());
-                        objectIds.add(objectNode.getObject().getOid());
+                        objectIds.add(objectNode.getObject().getId());
                         
                         if (objectNode.getParentNode() instanceof ServiceNode) {
                             ServiceNode serviceNode = (ServiceNode) objectNode.getParentNode();
                             
                             if (CommunicationsStub.getInstance().associateObjectsToService(classNames, objectIds, 
-                                getObject().getClassName(), getObject().getOid())) {
+                                getObject().getClassName(), getObject().getId())) {
                                 
                                 ((ServiceChildren) getChildren()).addNotify();
                                 
                                 if (CommunicationsStub.getInstance().releaseObjectFromService(
-                                    serviceNode.getObject().getClassName(), serviceNode.getObject().getOid(), objectNode.getObject().getOid())) {
+                                    serviceNode.getObject().getClassName(), serviceNode.getObject().getId(), objectNode.getObject().getId())) {
 
                                     ((ServiceChildren) serviceNode.getChildren()).addNotify();
                                 } else

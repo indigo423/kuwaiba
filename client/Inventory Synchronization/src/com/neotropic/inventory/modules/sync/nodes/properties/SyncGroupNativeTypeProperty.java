@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.beans.PropertyChangeEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalSyncGroup;
+import com.neotropic.inventory.modules.sync.LocalSyncGroup;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -28,7 +28,7 @@ import org.openide.nodes.PropertySupport;
 
 /**
  *
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class SyncGroupNativeTypeProperty extends PropertySupport.ReadWrite {
     private final SyncGroupNode syncGroupNode;
@@ -47,7 +47,7 @@ public class SyncGroupNativeTypeProperty extends PropertySupport.ReadWrite {
 
     @Override
     public void setValue(Object val) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        HashMap<String, String> properties = new HashMap();
+        HashMap<String, String> properties = new HashMap<>();
         properties.put(getName(), (String) val);
         
         LocalSyncGroup localSyncGroup = syncGroupNode.getLookup().lookup(LocalSyncGroup.class);

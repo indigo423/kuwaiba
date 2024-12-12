@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.openide.util.Utilities;
 
 /**
  * This action allows to create a pool of subnets
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class CreateSubnetPoolAction extends GenericInventoryAction {
     
@@ -73,7 +73,7 @@ public class CreateSubnetPoolAction extends GenericInventoryAction {
                 I18N.gm("create_folder"),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
             
-            LocalObjectLight newPool = com.createSubnetPool(selectedNode.getSubnetPool().getOid(), 
+            LocalObjectLight newPool = com.createSubnetPool(selectedNode.getSubnetPool().getId(), 
                     selectedNode.getSubnetPool().getClassName(),
                     ((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
                     ((JTextField)pnlMyDialog.getComponent("txtDescription")).getText(), 3); //Type of pool module component. These pools are used in models and are in the lower levels of the pool containment hierarchy

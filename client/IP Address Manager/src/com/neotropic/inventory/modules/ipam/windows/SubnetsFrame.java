@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -38,7 +38,7 @@ import org.openide.explorer.view.BeanTreeView;
 
 /**
  * Show the existing generic subnets that can be associated to communications elements
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SubnetsFrame extends JFrame {
     private List<LocalObjectLight> selectedPorts;
@@ -93,10 +93,10 @@ public class SubnetsFrame extends JFrame {
             else { 
                 
                 List<LocalObjectLight> relatedPortsToIPAddresses = CommunicationsStub.getInstance().getSpecialAttribute(Constants.CLASS_IP_ADDRESS, 
-                selectedIPAddress.getOid(), Constants.RELATIONSHIP_IPAMHASADDRESS);
+                selectedIPAddress.getId(), Constants.RELATIONSHIP_IPAMHASADDRESS);
                 
                 if(!relatedPortsToIPAddresses.isEmpty()){
-                    List<LocalObjectLight> parents = CommunicationsStub.getInstance().getParents(selectedPorts.get(0).getClassName(), selectedPorts.get(0).getOid());
+                    List<LocalObjectLight> parents = CommunicationsStub.getInstance().getParents(selectedPorts.get(0).getClassName(), selectedPorts.get(0).getId());
                     String location = "";
                     
                     for (int i = 0; i < parents.size() - 1; i ++)
@@ -106,9 +106,9 @@ public class SubnetsFrame extends JFrame {
                         I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
                 }
                 
-                else if (CommunicationsStub.getInstance().relateIPtoPort(selectedIPAddress.getOid(), 
+                else if (CommunicationsStub.getInstance().relateIPtoPort(selectedIPAddress.getId(), 
                         selectedPorts.get(0).getClassName(),
-                        selectedPorts.get(0).getOid())){
+                        selectedPorts.get(0).getId())){
                     JOptionPane.showMessageDialog(null, String.format("The IP %s  was related to port %s", 
                             selectedIPAddress.getName(), selectedPorts.get(0).toString()));
                         dispose();

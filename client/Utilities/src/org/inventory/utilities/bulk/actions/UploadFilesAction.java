@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.openide.util.NbBundle;
 
 /**
  * Allow the load a csv file to bulk upload of objects and list types
- * @author adrian martinez molina <adrian.martinez@kuwaiba.org>
+ * @author adrian martinez molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 
 @ActionID(category = "Tools", id = "org.inventory.utilities.actions.UploadFilesAction")

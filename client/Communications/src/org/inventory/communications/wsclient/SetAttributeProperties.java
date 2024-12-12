@@ -24,10 +24,12 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="type" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="administrative" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
  *         &lt;element name="mandatory" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
+ *         &lt;element name="multiple" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
  *         &lt;element name="noCopy" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
  *         &lt;element name="readOnly" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
  *         &lt;element name="unique" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
  *         &lt;element name="visible" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
+ *         &lt;element name="order" type="{http://www.w3.org/2001/XMLSchema}int" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -47,10 +49,12 @@ import javax.xml.bind.annotation.XmlType;
     "type",
     "administrative",
     "mandatory",
+    "multiple",
     "noCopy",
     "readOnly",
     "unique",
     "visible",
+    "order",
     "sessionId"
 })
 public class SetAttributeProperties {
@@ -63,10 +67,12 @@ public class SetAttributeProperties {
     protected String type;
     protected Boolean administrative;
     protected Boolean mandatory;
+    protected Boolean multiple;
     protected Boolean noCopy;
     protected Boolean readOnly;
     protected Boolean unique;
     protected Boolean visible;
+    protected Integer order;
     protected String sessionId;
 
     /**
@@ -254,6 +260,30 @@ public class SetAttributeProperties {
     }
 
     /**
+     * Gets the value of the multiple property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link Boolean }
+     *     
+     */
+    public Boolean isMultiple() {
+        return multiple;
+    }
+
+    /**
+     * Sets the value of the multiple property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link Boolean }
+     *     
+     */
+    public void setMultiple(Boolean value) {
+        this.multiple = value;
+    }
+
+    /**
      * Gets the value of the noCopy property.
      * 
      * @return
@@ -347,6 +377,30 @@ public class SetAttributeProperties {
      */
     public void setVisible(Boolean value) {
         this.visible = value;
+    }
+
+    /**
+     * Gets the value of the order property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link Integer }
+     *     
+     */
+    public Integer getOrder() {
+        return order;
+    }
+
+    /**
+     * Sets the value of the order property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link Integer }
+     *     
+     */
+    public void setOrder(Integer value) {
+        this.order = value;
     }
 
     /**

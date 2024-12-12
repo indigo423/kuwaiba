@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Objects;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalSyncDataSourceConfiguration;
-import org.inventory.communications.core.LocalSyncGroup;
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
+import com.neotropic.inventory.modules.sync.LocalSyncGroup;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -52,10 +52,10 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Node representing a sync group
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SyncGroupNode extends AbstractNode implements PropertyChangeListener {
-    private static final Image icon = ImageUtilities.loadImage("com/neotropic/inventory/modules/sync/res/sync_group.png");
+    private static final Image NODE_ICON = ImageUtilities.loadImage("com/neotropic/inventory/modules/sync/res/sync_group.png");
         
     public SyncGroupNode(LocalSyncGroup localSyncGroup) {
         super(new SyncGroupNodeChildren(), Lookups.singleton(localSyncGroup));
@@ -100,11 +100,8 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
         pasteAction.putValue(Action.NAME, I18N.gm("lbl_paste_action"));
             
         return new Action[] {
-            SyncManagerActionFactory.getNewSyncDataSourceConfigurationAction(),
             SyncManagerActionFactory.getNewRunSynchronizationProcessAction(),
             null, 
-            copyAction, 
-            cutAction, 
             pasteAction, 
             null, 
             DeleteSyncAction.getInstance()
@@ -139,7 +136,7 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
             return null;
         
         //The clipboard does not contain a SyncConfigurationNode
-        if (!(dropNode instanceof SyncConfigurationNode))
+        if (!(dropNode instanceof SyncDataSourceConfigurationNode))
             return null;
                         
         //Can't move to the same parent, only copy
@@ -151,12 +148,12 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
             @Override
             public Transferable paste() throws IOException {
                 LocalSyncDataSourceConfiguration dataSrcConfig = dropNode.getLookup().lookup(LocalSyncDataSourceConfiguration.class);
-                LocalSyncGroup syncGroup = getLookup().lookup(LocalSyncGroup.class);
+                LocalSyncGroup oldSyncGroup = dropNode.getParentNode().getLookup().lookup(LocalSyncGroup.class);
+                LocalSyncGroup newSyncGroup = getLookup().lookup(LocalSyncGroup.class);
                 
                 switch(action) {
                     case DnDConstants.ACTION_COPY:
-                        List<LocalSyncDataSourceConfiguration> dataSrcConfigurations = CommunicationsStub.getInstance().copySyncDataSourceConfiguration(syncGroup.getId(), new LocalSyncDataSourceConfiguration[] {dataSrcConfig});
-                        if (dataSrcConfigurations != null) {
+                        if (CommunicationsStub.getInstance().copySyncDataSourceConfiguration(newSyncGroup.getId(), new LocalSyncDataSourceConfiguration[] {dataSrcConfig})) {
                             if (getChildren() instanceof SyncGroupNodeChildren)
                                 ((SyncGroupNodeChildren) getChildren()).addNotify();
                         } else
@@ -164,7 +161,8 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
                                 NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                         break;
                     case DnDConstants.ACTION_MOVE:
-                        if (CommunicationsStub.getInstance().moveSyncDataSourceConfiguration(syncGroup.getId(), new LocalSyncDataSourceConfiguration[] {dataSrcConfig})) {
+                        if (CommunicationsStub.getInstance().moveSyncDataSourceConfiguration(oldSyncGroup.getId(), 
+                                newSyncGroup.getId(), new LocalSyncDataSourceConfiguration[] {dataSrcConfig})) {
                             //Refreshes the old parent node
                             if (dropNode.getParentNode().getChildren() instanceof SyncGroupNodeChildren)
                                 ((SyncGroupNodeChildren) dropNode.getParentNode().getChildren()).addNotify();
@@ -182,12 +180,12 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
     
     @Override
     public Image getIcon(int i) {
-        return icon;
+        return NODE_ICON;
     }
     
     @Override
     public Image getOpenedIcon(int i) {
-        return getIcon(i);
+        return NODE_ICON;
     }
     
     @Override
@@ -198,13 +196,13 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
         LocalSyncGroup localSyncGroup = getLookup().lookup(LocalSyncGroup.class);                
         
         PropertySupport.ReadWrite propertyName = new SyncGroupNativeTypeProperty(Constants.PROPERTY_NAME, String.class, Constants.PROPERTY_NAME, Constants.PROPERTY_NAME, this, localSyncGroup.getName());
-        PropertySupport.ReadWrite propertySyncProvider = new SyncGroupNativeTypeProperty("syncProvider", String.class, I18N.gm("sync_provider"), "", this, localSyncGroup.getProvider());
+        //PropertySupport.ReadWrite propertySyncProvider = new SyncGroupNativeTypeProperty("syncProvider", String.class, I18N.gm("sync_provider"), "", this, localSyncGroup.getProvider());
                 
         generalPropertySet.put(propertyName);
-        generalPropertySet.put(propertySyncProvider);
+        //generalPropertySet.put(propertySyncProvider);
         
-        generalPropertySet.setName(I18N.gm("general_information"));
-        generalPropertySet.setDisplayName(I18N.gm("general_attributes"));
+        generalPropertySet.setName(I18N.gm("general_properties"));
+        generalPropertySet.setDisplayName(I18N.gm("general_properties"));
         
         sheet.put(generalPropertySet);
         return sheet;    
@@ -273,7 +271,7 @@ public class SyncGroupNode extends AbstractNode implements PropertyChangeListene
         
         @Override
         protected Node[] createNodes(LocalSyncDataSourceConfiguration key) {
-            return new Node [] { new SyncConfigurationNode(key) };
+            return new Node [] { new SyncDataSourceConfigurationNode(key) };
         }
     }
 }

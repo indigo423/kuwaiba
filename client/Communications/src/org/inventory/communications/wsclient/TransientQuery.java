@@ -19,17 +19,17 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="attributeNames" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="attributeValues" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="conditions" type="{http://www.w3.org/2001/XMLSchema}int" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="join" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
- *         &lt;element name="joins" type="{http://ws.kuwaiba.org/}transientQuery" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="limit" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="logicalConnector" type="{http://www.w3.org/2001/XMLSchema}int"/>
- *         &lt;element name="page" type="{http://www.w3.org/2001/XMLSchema}int"/>
- *         &lt;element name="parent" type="{http://ws.kuwaiba.org/}transientQuery" minOccurs="0"/>
+ *         &lt;element name="attributeNames" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="visibleAttributeNames" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="attributeValues" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="conditions" type="{http://www.w3.org/2001/XMLSchema}int" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="joins" type="{http://ws.interfaces.kuwaiba.org/}transientQuery" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="parent" type="{http://ws.interfaces.kuwaiba.org/}transientQuery" minOccurs="0"/>
+ *         &lt;element name="join" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
+ *         &lt;element name="limit" type="{http://www.w3.org/2001/XMLSchema}int"/>
+ *         &lt;element name="page" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -40,36 +40,76 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "transientQuery", propOrder = {
-    "attributeNames",
-    "attributeValues",
     "className",
-    "conditions",
-    "join",
-    "joins",
-    "limit",
     "logicalConnector",
-    "page",
+    "attributeNames",
+    "visibleAttributeNames",
+    "attributeValues",
+    "conditions",
+    "joins",
     "parent",
-    "visibleAttributeNames"
+    "join",
+    "limit",
+    "page"
 })
 public class TransientQuery {
 
+    protected String className;
+    protected int logicalConnector;
     @XmlElement(nillable = true)
     protected List<String> attributeNames;
     @XmlElement(nillable = true)
+    protected List<String> visibleAttributeNames;
+    @XmlElement(nillable = true)
     protected List<String> attributeValues;
-    protected String className;
     @XmlElement(nillable = true)
     protected List<Integer> conditions;
-    protected boolean join;
     @XmlElement(nillable = true)
     protected List<TransientQuery> joins;
-    protected int limit;
-    protected int logicalConnector;
-    protected int page;
     protected TransientQuery parent;
-    @XmlElement(nillable = true)
-    protected List<String> visibleAttributeNames;
+    protected boolean join;
+    protected int limit;
+    protected int page;
+
+    /**
+     * Gets the value of the className property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getClassName() {
+        return className;
+    }
+
+    /**
+     * Sets the value of the className property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setClassName(String value) {
+        this.className = value;
+    }
+
+    /**
+     * Gets the value of the logicalConnector property.
+     * 
+     */
+    public int getLogicalConnector() {
+        return logicalConnector;
+    }
+
+    /**
+     * Sets the value of the logicalConnector property.
+     * 
+     */
+    public void setLogicalConnector(int value) {
+        this.logicalConnector = value;
+    }
 
     /**
      * Gets the value of the attributeNames property.
@@ -98,6 +138,35 @@ public class TransientQuery {
             attributeNames = new ArrayList<String>();
         }
         return this.attributeNames;
+    }
+
+    /**
+     * Gets the value of the visibleAttributeNames property.
+     * 
+     * <p>
+     * This accessor method returns a reference to the live list,
+     * not a snapshot. Therefore any modification you make to the
+     * returned list will be present inside the JAXB object.
+     * This is why there is not a <CODE>set</CODE> method for the visibleAttributeNames property.
+     * 
+     * <p>
+     * For example, to add a new item, do as follows:
+     * <pre>
+     *    getVisibleAttributeNames().add(newItem);
+     * </pre>
+     * 
+     * 
+     * <p>
+     * Objects of the following type(s) are allowed in the list
+     * {@link String }
+     * 
+     * 
+     */
+    public List<String> getVisibleAttributeNames() {
+        if (visibleAttributeNames == null) {
+            visibleAttributeNames = new ArrayList<String>();
+        }
+        return this.visibleAttributeNames;
     }
 
     /**
@@ -130,30 +199,6 @@ public class TransientQuery {
     }
 
     /**
-     * Gets the value of the className property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getClassName() {
-        return className;
-    }
-
-    /**
-     * Sets the value of the className property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setClassName(String value) {
-        this.className = value;
-    }
-
-    /**
      * Gets the value of the conditions property.
      * 
      * <p>
@@ -180,22 +225,6 @@ public class TransientQuery {
             conditions = new ArrayList<Integer>();
         }
         return this.conditions;
-    }
-
-    /**
-     * Gets the value of the join property.
-     * 
-     */
-    public boolean isJoin() {
-        return join;
-    }
-
-    /**
-     * Sets the value of the join property.
-     * 
-     */
-    public void setJoin(boolean value) {
-        this.join = value;
     }
 
     /**
@@ -228,54 +257,6 @@ public class TransientQuery {
     }
 
     /**
-     * Gets the value of the limit property.
-     * 
-     */
-    public int getLimit() {
-        return limit;
-    }
-
-    /**
-     * Sets the value of the limit property.
-     * 
-     */
-    public void setLimit(int value) {
-        this.limit = value;
-    }
-
-    /**
-     * Gets the value of the logicalConnector property.
-     * 
-     */
-    public int getLogicalConnector() {
-        return logicalConnector;
-    }
-
-    /**
-     * Sets the value of the logicalConnector property.
-     * 
-     */
-    public void setLogicalConnector(int value) {
-        this.logicalConnector = value;
-    }
-
-    /**
-     * Gets the value of the page property.
-     * 
-     */
-    public int getPage() {
-        return page;
-    }
-
-    /**
-     * Sets the value of the page property.
-     * 
-     */
-    public void setPage(int value) {
-        this.page = value;
-    }
-
-    /**
      * Gets the value of the parent property.
      * 
      * @return
@@ -300,32 +281,51 @@ public class TransientQuery {
     }
 
     /**
-     * Gets the value of the visibleAttributeNames property.
-     * 
-     * <p>
-     * This accessor method returns a reference to the live list,
-     * not a snapshot. Therefore any modification you make to the
-     * returned list will be present inside the JAXB object.
-     * This is why there is not a <CODE>set</CODE> method for the visibleAttributeNames property.
-     * 
-     * <p>
-     * For example, to add a new item, do as follows:
-     * <pre>
-     *    getVisibleAttributeNames().add(newItem);
-     * </pre>
-     * 
-     * 
-     * <p>
-     * Objects of the following type(s) are allowed in the list
-     * {@link String }
-     * 
+     * Gets the value of the join property.
      * 
      */
-    public List<String> getVisibleAttributeNames() {
-        if (visibleAttributeNames == null) {
-            visibleAttributeNames = new ArrayList<String>();
-        }
-        return this.visibleAttributeNames;
+    public boolean isJoin() {
+        return join;
+    }
+
+    /**
+     * Sets the value of the join property.
+     * 
+     */
+    public void setJoin(boolean value) {
+        this.join = value;
+    }
+
+    /**
+     * Gets the value of the limit property.
+     * 
+     */
+    public int getLimit() {
+        return limit;
+    }
+
+    /**
+     * Sets the value of the limit property.
+     * 
+     */
+    public void setLimit(int value) {
+        this.limit = value;
+    }
+
+    /**
+     * Gets the value of the page property.
+     * 
+     */
+    public int getPage() {
+        return page;
+    }
+
+    /**
+     * Sets the value of the page property.
+     * 
+     */
+    public void setPage(int value) {
+        this.page = value;
     }
 public void setAttributeNames(List<String> attributeNames) {
         this.attributeNames = attributeNames;

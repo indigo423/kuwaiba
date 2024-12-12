@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.inventory.communications.core.views.LocalObjectView;
 /**
  * This class implements the local caching functionality
  *
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class Cache{
     private static Cache instance;
@@ -62,7 +62,7 @@ public class Cache{
         this.listIndex = new HashMap<>();
         this.reportIndex = new HashMap<>();
         this.templateIndex = new HashMap<>();
-        this.customShapeIndex = new HashMap();
+        this.customShapeIndex = new HashMap<>();
     }
 
     /**
@@ -124,7 +124,7 @@ public class Cache{
         List<LocalClassMetadataLight> toBeAdded = new ArrayList<>();
         for (LocalClassMetadataLight lcml : children){
             LocalClassMetadataLight myLocal = lightMetadataIndex.get(lcml.getClassName());
-            if (myLocal==null){
+            if (myLocal == null){
                 lightMetadataIndex.put(lcml.getClassName(), lcml);
                 toBeAdded.add(lcml);
             }

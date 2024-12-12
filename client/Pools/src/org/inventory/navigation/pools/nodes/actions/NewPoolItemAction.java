@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -25,6 +25,7 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.inventory.navigation.pools.nodes.PoolNode;
@@ -32,7 +33,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Creates a new element in a pool
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class NewPoolItemAction extends GenericInventoryAction implements Presenter.Popup {
     private PoolNode poolNode;
@@ -46,7 +47,7 @@ public class NewPoolItemAction extends GenericInventoryAction implements Present
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        LocalObjectLight newObject = com.createPoolItem(poolNode.getPool().getOid(), ((JMenuItem)e.getSource()).getName());
+        LocalObjectLight newObject = com.createPoolItem(poolNode.getPool().getId(), ((JMenuItem)e.getSource()).getName());
         if (newObject == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
         else {
@@ -61,17 +62,22 @@ public class NewPoolItemAction extends GenericInventoryAction implements Present
 
         List<LocalClassMetadataLight> items = com.getLightSubclasses(poolNode.getPool().getClassName(), false, true);
 
+        if (items == null) {
+            mnuPossibleChildren.setEnabled(false);
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
+        } else {
             if (items.isEmpty())
                 mnuPossibleChildren.setEnabled(false);
-            else
+            else {
                 for(LocalClassMetadataLight item: items){
                         JMenuItem smiChildren = new JMenuItem(item.getClassName());
                         smiChildren.setName(item.getClassName());
                         smiChildren.addActionListener(this);
                         mnuPossibleChildren.add(smiChildren);
                 }
-
-        MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
+            }
+            MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
+        }
 		
         return mnuPossibleChildren;
     }

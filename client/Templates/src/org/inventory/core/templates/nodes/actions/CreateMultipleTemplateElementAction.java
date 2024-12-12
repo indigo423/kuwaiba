@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action to create multiple template elements
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public final class CreateMultipleTemplateElementAction extends CreateTemplateElementAction implements Presenter.Popup {
     
@@ -78,7 +78,8 @@ public final class CreateMultipleTemplateElementAction extends CreateTemplateEle
             TemplateElementNode selectedNode = Utilities.actionsGlobalContext().lookup(TemplateElementNode.class);
             LocalObjectLight selectedObject = selectedNode.getLookup().lookup(LocalObjectLight.class);
             
-            List<LocalObjectLight> templateElements = CommunicationsStub.getInstance().createBulkTemplateElement(((JMenuItem)e.getSource()).getName(), selectedObject.getClassName(), selectedObject.getOid(), numberOfObjects, namePattern);
+            List<LocalObjectLight> templateElements = CommunicationsStub.getInstance().
+                    createBulkTemplateElement(((JMenuItem)e.getSource()).getName(), selectedObject.getClassName(), selectedObject.getId(), numberOfObjects, namePattern);
                         
             if (templateElements == null) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

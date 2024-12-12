@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,14 +21,25 @@ import org.inventory.communications.util.Utils;
 
 /**
  * A node representing a template special element.
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class TemplateSpecialElementNode extends TemplateElementNode {
-    private static final Image defaultSpecialIcon = Utils.createRectangleIcon(new Color(11, 91, 111), 
+    private static final Image DEFAULT_ICON = Utils.createRectangleIcon(new Color(11, 91, 111), 
             Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT);
 
     public TemplateSpecialElementNode(LocalObjectLight object) {
         super(object);
-        icon =  defaultSpecialIcon;
     }
+
+    @Override
+    public Image getIcon(int type) {
+        return DEFAULT_ICON;
+    }
+
+    @Override
+    public Image getOpenedIcon(int type) {
+        return DEFAULT_ICON;
+    }
+    
+    
 }

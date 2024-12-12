@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.openide.util.NbBundle.Messages;
 
 /**
  * Top component which displays a graphical representation of special relationships.
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @Messages({
     "CTL_GraphicalRepSpecialRelationshipsTopComponent=Graphical Representation",
@@ -57,7 +57,7 @@ public final class SpecialRelationshipsGraphExplorerTopComponent extends TopComp
     @Override
     protected String preferredID() {
         return "SpecialRelationshipsGraphExplorerTopComponent_" + service.getRoot().
-            getLocalObjectLightWrapped().getOid(); //NOI18N
+            getLocalObjectLightWrapped().getId(); //NOI18N
     }
 
     @Override
@@ -99,7 +99,7 @@ public final class SpecialRelationshipsGraphExplorerTopComponent extends TopComp
         toolBarMain.setMinimumSize(new java.awt.Dimension(392, 38));
         toolBarMain.setPreferredSize(new java.awt.Dimension(326, 33));
 
-        btnCollapse.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/relationships/res/collapse.png"))); // NOI18N
+        btnCollapse.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/res/collapse.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnCollapse, org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnCollapse.text")); // NOI18N
         btnCollapse.setToolTipText(org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnCollapse.toolTipText")); // NOI18N
         btnCollapse.setFocusable(false);
@@ -112,7 +112,7 @@ public final class SpecialRelationshipsGraphExplorerTopComponent extends TopComp
         });
         toolBarMain.add(btnCollapse);
 
-        btnExportAsImg.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/relationships/res/exportAsImg.png"))); // NOI18N
+        btnExportAsImg.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/res/exportAsImg.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnExportAsImg, org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnExportAsImg.text")); // NOI18N
         btnExportAsImg.setToolTipText(org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnExportAsImg.toolTipText")); // NOI18N
         btnExportAsImg.setFocusable(false);
@@ -125,7 +125,7 @@ public final class SpecialRelationshipsGraphExplorerTopComponent extends TopComp
         });
         toolBarMain.add(btnExportAsImg);
 
-        btnOrganize.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/relationships/res/organize.png"))); // NOI18N
+        btnOrganize.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/res/organize.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnOrganize, org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnOrganize.text")); // NOI18N
         btnOrganize.setToolTipText(org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnOrganize.toolTipText")); // NOI18N
         btnOrganize.setFocusable(false);
@@ -138,7 +138,7 @@ public final class SpecialRelationshipsGraphExplorerTopComponent extends TopComp
         });
         toolBarMain.add(btnOrganize);
 
-        btnRefresh.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/relationships/res/refresh.png"))); // NOI18N
+        btnRefresh.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/navigation/special/res/refresh.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnRefresh, org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnRefresh.text")); // NOI18N
         btnRefresh.setToolTipText(org.openide.util.NbBundle.getMessage(SpecialRelationshipsGraphExplorerTopComponent.class, "SpecialRelationshipsGraphExplorerTopComponent.btnRefresh.toolTipText")); // NOI18N
         btnRefresh.setFocusable(false);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -28,7 +28,7 @@ import org.openide.nodes.PropertySupport;
 
 /**
  * Provides a property editor
- * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <charles.bedon@kuwaiba.org>}
  */
 public class AttributeMetadataProperty extends PropertySupport.ReadWrite {
 
@@ -57,7 +57,7 @@ public class AttributeMetadataProperty extends PropertySupport.ReadWrite {
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         CommunicationsStub com = CommunicationsStub.getInstance();
 
-        if(com.setAttributeProperties(_class.getOid(), _class.getClassName(),
+        if(com.setAttributeProperties(_class.getId(), _class.getClassName(),
                 node.getAttributeMetadata().getId(), 
                 getName().equals(Constants.PROPERTY_NAME) ? (String)t : null, 
                 getName().equals(Constants.PROPERTY_DISPLAYNAME) ? (String)t : null, 
@@ -65,10 +65,12 @@ public class AttributeMetadataProperty extends PropertySupport.ReadWrite {
                 getName().equals(Constants.PROPERTY_DESCRIPTION) ? (String)t : null, 
                 getName().equals(Constants.PROPERTY_ADMINISTRATIVE) ? (Boolean)t : null,
                 getName().equals(Constants.PROPERTY_MANDATORY) ? (Boolean)t : null,
+                getName().equals(Constants.PROPERTY_MULTIPLE) ? (Boolean)t : null,
                 getName().equals(Constants.PROPERTY_NOCOPY) ? (Boolean)t : null,
                 getName().equals(Constants.PROPERTY_READONLY) ? (Boolean)t : null,
                 getName().equals(Constants.PROPERTY_UNIQUE) ? (Boolean)t : null,
-                getName().equals(Constants.PROPERTY_VISIBLE) ? (Boolean)t : null))
+                getName().equals(Constants.PROPERTY_VISIBLE) ? (Boolean)t : null,
+                getName().equals(Constants.PROPERTY_ORDER) ? (Integer)t : null))
         {
             this.value = t;
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
@@ -29,8 +30,10 @@ import org.inventory.core.services.i18n.I18N;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
- * This action allows to connect directly two ports
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * This action allows to connect directly all the possible mirror ports by its 
+ * names in order to connect 
+ * in a GenericDistribution Frame (an ODF or DDF)
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
@@ -42,7 +45,7 @@ public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
     @Override
     public void actionPerformed(ActionEvent e) {
 
-        List<LocalObjectLight> children = CommunicationsStub.getInstance().getObjectChildren(selectedObjects.get(0).getOid(), selectedObjects.get(0).getClassName());
+        List<LocalObjectLight> children = CommunicationsStub.getInstance().getObjectChildren(selectedObjects.get(0).getId(), selectedObjects.get(0).getClassName());
         List<LocalObjectLight> endPoints =  new ArrayList<>();
         
         List<LocalObjectLight> endPointsA = new ArrayList<>();
@@ -50,8 +53,8 @@ public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
         
         List<String> aObjectsClasses = new ArrayList<>();
         List<String> bObjectsClasses = new ArrayList<>();
-        List<Long> aObjectsIds = new ArrayList<>();
-        List<Long> bObjectsIds = new ArrayList<>();
+        List<String> aObjectsIds = new ArrayList<>();
+        List<String> bObjectsIds = new ArrayList<>();
         
         for (LocalObjectLight child : children) {
             if(child.getClassName().equals("OpticalPort") || child.getClassName().equals("ElectricalPort")) 
@@ -64,7 +67,7 @@ public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
                 if(endPointA != null){
                     for (int j=i+1; j < endPoints.size(); j++) {
                         LocalObjectLight endPointB = endPoints.get(j);
-                        if(endPointB != null && endPointB.getOid() != endPointA.getOid()){
+                        if(endPointB != null && !endPointB.getId().equals(endPointA.getId())){
                             if(endPointA.getClassName().equals(endPointB.getClassName()) && matchMirrorPortsNames(endPointA.getName(), endPointB.getName())){
                                 endPointsA.add(endPointA);
                                 endPointsB.add(endPoints.get(j));
@@ -81,16 +84,16 @@ public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
             else{
                 for (int i = 0; i < endPointsA.size(); i++) {
                     aObjectsClasses.add(endPointsA.get(i).getClassName());
-                    aObjectsIds.add(endPointsA.get(i).getOid());
+                    aObjectsIds.add(endPointsA.get(i).getId());
 
                     bObjectsClasses.add(endPointsB.get(i).getClassName());
-                    bObjectsIds.add(endPointsB.get(i).getOid());
+                    bObjectsIds.add(endPointsB.get(i).getId());
                 }
 
                 if (CommunicationsStub.getInstance().connectMirrorPort(aObjectsClasses, aObjectsIds, bObjectsClasses, bObjectsIds))
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, aObjectsIds.size() + I18N.gm("port_mirrored_successfully"));
                 else
-                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE,CommunicationsStub.getInstance().getError());
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             }
         }
         else
@@ -98,7 +101,7 @@ public class ConnectMultipleMirrorPortAction extends GenericObjectNodeAction {
     }
    
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }  
 

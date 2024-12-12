@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,13 +17,17 @@ package org.kuwaiba.management.services.nodes;
 
 import javax.swing.Action;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.core.contacts.actions.AddContactAction;
+import org.inventory.core.contacts.actions.ShowContactsAction;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.navigationtree.nodes.actions.ShowMoreInformationAction;
+import org.inventory.navigation.special.attachments.nodes.actions.AttachFileAction;
 import org.kuwaiba.management.services.nodes.actions.ServiceManagerActionFactory;
+import org.openide.util.Lookup;
 
 /**
  * Node representing a customer
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class CustomerNode extends ObjectNode {
     
@@ -36,7 +40,12 @@ public class CustomerNode extends ObjectNode {
     public Action[] getActions(boolean context) {
         return new Action [] { ServiceManagerActionFactory.getCreateServicePoolAction(),
             ServiceManagerActionFactory.getDeleteCustomerAction(),
-            ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName())
+            null,
+            Lookup.getDefault().lookup(AttachFileAction.class),
+            Lookup.getDefault().lookup(AddContactAction.class),
+            Lookup.getDefault().lookup(ShowContactsAction.class),
+            null,
+            ShowMoreInformationAction.getInstance(getObject().getId(), getObject().getClassName())
         };        
     }
 }

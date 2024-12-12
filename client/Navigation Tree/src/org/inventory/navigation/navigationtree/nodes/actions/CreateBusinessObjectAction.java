@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017, Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.inventory.communications.core.LocalAttributeMetadata;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -39,7 +40,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action that requests a business object creation
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class CreateBusinessObjectAction extends GenericObjectNodeAction implements Presenter.Popup {
     private static CreateBusinessObjectAction instance;
@@ -65,9 +66,9 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
     public void actionPerformed(ActionEvent ev) {
         String objectClass = ((JMenuItem) ev.getSource()).getName();
             
-        final LocalAttributeMetadata[] mandatoryObjectAttributes = com.getMandatoryAttributesInClass(objectClass);
+        final List<LocalAttributeMetadata> mandatoryObjectAttributes = com.getMandatoryAttributesInClass(objectClass);
         HashMap<String, Object> attributes = new HashMap<>();
-        if(mandatoryObjectAttributes.length > 0){
+        if(!mandatoryObjectAttributes.isEmpty()){
             AttributesForm mandatoryAttributeForm = new AttributesForm(mandatoryObjectAttributes);
             attributes = mandatoryAttributeForm.createNewObjectForm();
             if(!attributes.isEmpty()) //the createNewObject form is closed, but the ok button is never clicked 
@@ -125,7 +126,7 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
         LocalObjectLight myLol = com.createObject(
                         objectClass,
                         node instanceof RootObjectNode ? null : ((ObjectNode)node).getObject().getClassName(),
-                        node instanceof RootObjectNode? -1 : ((ObjectNode)node).getObject().getOid(), attributes, -1);
+                        node instanceof RootObjectNode? "-1" : ((ObjectNode)node).getObject().getId(), attributes, null);
 
         if (myLol == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
@@ -138,7 +139,7 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -30,7 +31,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows to modify the connections inside a container
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service = GenericObjectNodeAction.class)
 public class EditConnectionsAction extends GenericObjectNodeAction {
@@ -43,8 +44,8 @@ public class EditConnectionsAction extends GenericObjectNodeAction {
     public void actionPerformed(ActionEvent e) {
         LocalObjectLight selectedObject = selectedObjects.get(0);
         
-        HashMap<String, LocalObjectLight[]> specialAttributes = CommunicationsStub.getInstance().getSpecialAttributes(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getOid());
-        List<LocalObjectLight> parents = CommunicationsStub.getInstance().getParentsUntilFirstOfClass(selectedObject.getClassName(), selectedObject.getOid(), "GenericLocation"); //NOI18N
+        HashMap<String, LocalObjectLight[]> specialAttributes = CommunicationsStub.getInstance().getSpecialAttributes(selectedObjects.get(0).getClassName(), selectedObjects.get(0).getId());
+        List<LocalObjectLight> parents = CommunicationsStub.getInstance().getParentsUntilFirstOfClass(selectedObject.getClassName(), selectedObject.getId(), "GenericLocation"); //NOI18N
         LocalObjectLight parent = parents.get(parents.size() - 1);
         
         if (specialAttributes == null || parent == null) {
@@ -68,7 +69,7 @@ public class EditConnectionsAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action to delete a Project
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeleteProjectAction extends GenericInventoryAction implements Presenter.Popup {
     private final ResourceBundle bundle;
@@ -76,7 +76,7 @@ public class DeleteProjectAction extends GenericInventoryAction implements Prese
             while (selectedNodes.hasNext()) {
                 ProjectNode selectedNode = selectedNodes.next();
                 
-                if (CommunicationsStub.getInstance().deleteProject(selectedNode.getObject().getClassName(), selectedNode.getObject().getOid())) {
+                if (CommunicationsStub.getInstance().deleteProject(selectedNode.getObject().getClassName(), selectedNode.getObject().getId())) {
                     
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), 
                         NotificationUtil.INFO_MESSAGE, bundle.getString("LBL_PROJECT_DELETE_SUCCESSFULLY"));

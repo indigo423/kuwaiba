@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -34,7 +34,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a subnet
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class DeleteSubnetAction extends GenericInventoryAction implements Presenter.Popup {
     /**
@@ -71,7 +71,7 @@ public class DeleteSubnetAction extends GenericInventoryAction implements Presen
         while (selectedNodes.hasNext()) {
             SubnetNode selectedNode = (SubnetNode)selectedNodes.next();
             
-            if (com.deleteSubnet(selectedNode.getObject().getClassName(), selectedNode.getObject().getOid())){
+            if (com.deleteSubnet(selectedNode.getObject().getClassName(), selectedNode.getObject().getId())){
                 ((AbstractChildren)selectedNode.getParentNode().getChildren()).addNotify();
                 
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 

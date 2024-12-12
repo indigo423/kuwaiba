@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package com.neotropic.inventory.modules.ipam.nodes.properties;
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -27,7 +27,7 @@ import org.openide.nodes.PropertySupport;
 
 /**
  * Property sheet for Subnet Pool nodes
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class GeneralProperty extends PropertySupport.ReadWrite {
     
@@ -48,10 +48,11 @@ public class GeneralProperty extends PropertySupport.ReadWrite {
 
     @Override
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        LocalObject update = new LocalObject(node.getObject().getClassName(), node.getObject().getOid(), 
-                new String[]{this.getName()}, new Object[]{t});
+        HashMap<String, Object> attributesToUpdate = new HashMap<>();
+        attributesToUpdate.put(getName(), t);
 
-        if(!CommunicationsStub.getInstance().saveObject(update))
+        if(!CommunicationsStub.getInstance().updateObject(node.getObject().getClassName(), 
+                node.getObject().getId(), attributesToUpdate))
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else {

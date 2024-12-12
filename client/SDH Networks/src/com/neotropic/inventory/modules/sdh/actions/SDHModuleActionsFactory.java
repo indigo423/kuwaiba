@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import org.openide.windows.TopComponent;
 
 /**
  * All the actions used by the nodes of an SDHModuleScene
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class SDHModuleActionsFactory {
     private PopupMenuProvider nodeMenu;
@@ -145,7 +145,7 @@ public class SDHModuleActionsFactory {
                 Set<?> selectedObjects = scene.getSelectedObjects();
                 for (Object selectedObject : selectedObjects) {
                     LocalObjectLight castedObject = (LocalObjectLight)selectedObject;
-                    if (CommunicationsStub.getInstance().deleteSDHTransportLink(castedObject.getClassName(), castedObject.getOid())) {
+                    if (CommunicationsStub.getInstance().deleteSDHTransportLink(castedObject.getClassName(), castedObject.getId())) {
                         NotificationUtil.getInstance().showSimplePopup("Delete Operation", NotificationUtil.INFO_MESSAGE, "Transport link deleted successfully");
                         scene.removeEdge(castedObject);
                         scene.fireChangeEvent(new ActionEvent(selectedObject, AbstractScene.SCENE_CHANGE, "manualDelete"));
@@ -174,7 +174,7 @@ public class SDHModuleActionsFactory {
                 JOptionPane.showMessageDialog(null, "Select only one node", "Error", JOptionPane.WARNING_MESSAGE);
             else {
                 LocalObjectLight castedObject = (LocalObjectLight)selectedObjects.iterator().next();
-                List<LocalSDHContainerLinkDefinition> structure = CommunicationsStub.getInstance().getSDHTransportLinkStructure(castedObject.getClassName(), castedObject.getOid());
+                List<LocalSDHContainerLinkDefinition> structure = CommunicationsStub.getInstance().getSDHTransportLinkStructure(castedObject.getClassName(), castedObject.getId());
                 TopComponent sdhLinkStructure = new SDHLinkStructureTopComponent(castedObject, structure, 
                         SDHModuleService.calculateCapacity(castedObject.getClassName(), SDHModuleService.LinkType.TYPE_TRANSPORTLINK), 1);
                 sdhLinkStructure.open();

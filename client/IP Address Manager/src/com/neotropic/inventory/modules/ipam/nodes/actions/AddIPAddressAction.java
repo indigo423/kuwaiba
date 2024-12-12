@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -21,6 +21,7 @@ import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import javax.swing.JFrame;
@@ -37,7 +38,7 @@ import org.openide.util.Utilities;
 
 /**
  * Allows to add an IP address that belongs to a subnet
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class AddIPAddressAction extends GenericInventoryAction {
 
@@ -65,14 +66,14 @@ public class AddIPAddressAction extends GenericInventoryAction {
     public void actionPerformed(ActionEvent e) {
         Iterator<? extends SubnetNode> selectedNodes = Utilities.actionsGlobalContext().lookupResult(SubnetNode.class).allInstances().iterator();
         String className = "";
-        long id = 0;
+        String id = "0";
         if (!selectedNodes.hasNext())
             return;
         
         while (selectedNodes.hasNext()) {
             subnetNode = (SubnetNode)selectedNodes.next();
             className = subnetNode.getObject().getClassName();
-            id = subnetNode.getObject().getOid();
+            id = subnetNode.getObject().getId();
         }
         LocalObject subnet = com.getSubnet(id, className);
         String networkIp = (String)subnet.getAttribute(Constants.PROPERTY_NETWORKIP);
@@ -127,9 +128,9 @@ public class AddIPAddressAction extends GenericInventoryAction {
         private String broadcastIp;
         private String nextIp;
         private String className;
-        private long parentId;
+        private String parentId;
 
-        public AddIPAddressFrame(long parentId, String networkIp, String broadcastIp, String className, String nextIp) {
+        public AddIPAddressFrame(String parentId, String networkIp, String broadcastIp, String className, String nextIp) {
             this.networkIp = networkIp;
             this.broadcastIp = broadcastIp;
             this.className = className;
@@ -278,16 +279,12 @@ public class AddIPAddressAction extends GenericInventoryAction {
             }//end else one IP
             if(!ips.isEmpty()){
                 for (String ip : ips) {
-                    String[] attributeNames = new String[2];
-                    String[] attributeValues = new String[2];
-
-                    attributeNames[0] = Constants.PROPERTY_NAME;
-                    attributeNames[1] = Constants.PROPERTY_DESCRIPTION;
-                    attributeValues[0] = ip;
-                    attributeValues[1] = txtDescription.getText();
-
-                    LocalObjectLight addedIP = CommunicationsStub.getInstance().addIP(parentId, className,
-                            new LocalObject(className, 0, attributeNames, attributeValues));
+                    HashMap<String, String> attributes = new HashMap<>();
+                    attributes.put(Constants.PROPERTY_NAME, ip);
+                    attributes.put(Constants.PROPERTY_DESCRIPTION, txtDescription.getText());
+                    
+                    LocalObjectLight addedIP = CommunicationsStub.getInstance().
+                            addIPAddress(parentId, className, ip, attributes);
 
                     if (addedIP == null)
                         NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());

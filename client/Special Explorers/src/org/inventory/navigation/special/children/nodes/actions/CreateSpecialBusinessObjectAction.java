@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.inventory.communications.core.LocalAttributeMetadata;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.AttributesForm;
@@ -37,7 +38,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Creates a new special object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class CreateSpecialBusinessObjectAction extends GenericObjectNodeAction 
             implements Presenter.Popup {
@@ -57,10 +58,10 @@ public final class CreateSpecialBusinessObjectAction extends GenericObjectNodeAc
     public void actionPerformed(ActionEvent ev) {
         ObjectNode node = Utilities.actionsGlobalContext().lookup(ObjectNode.class);
         String className = ((JMenuItem)ev.getSource()).getName();
-        final LocalAttributeMetadata[] mandatoryObjectAttributes = com.getMandatoryAttributesInClass(className);
+        final List<LocalAttributeMetadata> mandatoryObjectAttributes = com.getMandatoryAttributesInClass(className);
         AttributesForm mandatoryAttributesForm = new AttributesForm(mandatoryObjectAttributes);
         HashMap<String, Object> attributes = new HashMap<>();
-        if(mandatoryObjectAttributes.length > 0){
+        if(!mandatoryObjectAttributes.isEmpty()){
             attributes = mandatoryAttributesForm.createNewObjectForm();
             if(!attributes.isEmpty()) //the createNewObject form is closed, and the ok button is never clicked 
                 createSpecialObject(className, node, attributes);
@@ -102,7 +103,7 @@ public final class CreateSpecialBusinessObjectAction extends GenericObjectNodeAc
     private void createSpecialObject(String objectClass, ObjectNode node, HashMap<String, Object> attributes) {
         LocalObjectLight myLol = com.createSpecialObject(
                 objectClass, node.getObject().getClassName(), 
-                node.getObject().getOid(), attributes, -1);
+                node.getObject().getId(), attributes, null);
         if (myLol == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
         else {
@@ -113,7 +114,7 @@ public final class CreateSpecialBusinessObjectAction extends GenericObjectNodeAc
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

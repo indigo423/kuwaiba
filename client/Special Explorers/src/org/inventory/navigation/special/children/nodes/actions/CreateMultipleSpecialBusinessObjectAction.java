@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.JComplexDialogPanel;
@@ -40,7 +41,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action that requests multiple business special objects creation
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class CreateMultipleSpecialBusinessObjectAction extends GenericObjectNodeAction 
     implements Presenter.Popup {
@@ -51,7 +52,7 @@ public class CreateMultipleSpecialBusinessObjectAction extends GenericObjectNode
         putValue(NAME, "New Special Multiple");
         com = CommunicationsStub.getInstance();
     }
-        
+    
     public static CreateMultipleSpecialBusinessObjectAction getInstance() {
         return instance == null ? instance = new CreateMultipleSpecialBusinessObjectAction() : instance;
     }
@@ -88,7 +89,7 @@ public class CreateMultipleSpecialBusinessObjectAction extends GenericObjectNode
                 }
             }
             
-            List<LocalObjectLight> newSpecialObjects = com.createBulkSpecialObjects(((JMenuItem)e.getSource()).getName(), node.getObject().getClassName(), node.getObject().getOid(), numberOfSpecialObjects, namePattern);
+            List<LocalObjectLight> newSpecialObjects = com.createBulkSpecialObjects(((JMenuItem)e.getSource()).getName(), node.getObject().getClassName(), node.getObject().getId(), numberOfSpecialObjects, namePattern);
                 
             if (newSpecialObjects == null)
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
@@ -127,7 +128,7 @@ public class CreateMultipleSpecialBusinessObjectAction extends GenericObjectNode
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

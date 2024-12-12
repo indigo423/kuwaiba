@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import org.openide.WizardDescriptor;
 
 /**
  * The actual New Link wizard
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class NewLinkWizard {
     
@@ -72,6 +72,7 @@ public final class NewLinkWizard {
                 jc.putClientProperty(WizardDescriptor.PROP_CONTENT_NUMBERED, true);
             }
         }
+        
         WizardDescriptor wiz = new WizardDescriptor(new WizardDescriptor.ArrayIterator<>(panels));
         // {0} will be replaced by WizardDesriptor.Panel.getComponent().getName()
         wiz.setTitleFormat(new MessageFormat("{0}"));
@@ -79,18 +80,12 @@ public final class NewLinkWizard {
         if (DialogDisplayer.getDefault().notify(wiz) == WizardDescriptor.FINISH_OPTION) {
             LocalObjectLight selectedAEndpoint = panel2.getComponent().getSelectedAEndpoint();
             LocalObjectLight selectedBEndpoint = panel2.getComponent().getSelectedBEndpoint();
-            LocalObjectLight selectedContainer = null;
-            if(panel0 != null){
-                if(!panel0.getComponent().noContainer()){
-                    selectedContainer = panel0.getComponent().getSelectedContainer();
-                }
-            }
-            newConnection = CommunicationsStub.getInstance().createPhysicalConnection(selectedAEndpoint.getClassName(), selectedAEndpoint.getOid(),
-                    selectedBEndpoint.getClassName(), selectedBEndpoint.getOid(), 
-                    selectedContainer != null ? selectedContainer.getClassName() : parent.getClassName(), 
-                    selectedContainer != null ? selectedContainer.getOid() : parent.getOid(),
+            
+            newConnection = CommunicationsStub.getInstance().createPhysicalConnection(selectedAEndpoint.getClassName(), selectedAEndpoint.getId(),
+                    selectedBEndpoint.getClassName(), selectedBEndpoint.getId(), 
                     panel1.getComponent().getLinkName(), panel1.getComponent().getLinkClass().getClassName(),
-                    panel1.getComponent().dontUseTemplate() || panel1.getComponent().getLinkTemplate() == null ? - 1 : panel1.getComponent().getLinkTemplate().getOid());
+                    panel1.getComponent().dontUseTemplate() || panel1.getComponent().getLinkTemplate() == null 
+                            ? null : panel1.getComponent().getLinkTemplate().getId());
             
             if (newConnection == null)
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

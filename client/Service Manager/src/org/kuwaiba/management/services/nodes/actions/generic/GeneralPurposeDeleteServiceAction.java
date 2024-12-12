@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.util.Utilities;
 
 /**
  * General purpose version of the DeleteServiceAction, to be used outside the Service Manager module
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class GeneralPurposeDeleteServiceAction extends GenericInventoryAction {
 
@@ -47,7 +47,7 @@ public class GeneralPurposeDeleteServiceAction extends GenericInventoryAction {
         if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this service? All resources associated will be freed",
                 "Delete Service",JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
                         
-            if (CommunicationsStub.getInstance().deleteObject(selectedObject.getClassName(), selectedObject.getOid()))              
+            if (CommunicationsStub.getInstance().deleteObject(selectedObject.getClassName(), selectedObject.getId(), false))              
                 NotificationUtil.getInstance().showSimplePopup("Success", 
                         NotificationUtil.INFO_MESSAGE, "The service was deleted successfully");
             else

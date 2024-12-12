@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalApplicationLogEntry;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.history.windows.ObjectAuditTrailTopComponent;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -29,7 +30,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Retrieves the activity log related to an object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public final class ShowObjectAuditTrailAction extends GenericObjectNodeAction {
@@ -43,12 +44,12 @@ public final class ShowObjectAuditTrailAction extends GenericObjectNodeAction {
     @Override
     public void actionPerformed(ActionEvent ev) {
         LocalObjectLight selectedObject = selectedObjects.get(0);
-        LocalApplicationLogEntry[] entries = com.getBusinessObjectAuditTrail(selectedObject.getClassName(), selectedObject.getOid());
+        LocalApplicationLogEntry[] entries = com.getBusinessObjectAuditTrail(selectedObject.getClassName(), selectedObject.getId());
         if (entries == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
         else{
             ObjectAuditTrailTopComponent tc = (ObjectAuditTrailTopComponent) WindowManager.getDefault()
-                .findTopComponent("ObjectAuditTrailTopComponent_" + selectedObject.getOid());
+                .findTopComponent("ObjectAuditTrailTopComponent_" + selectedObject.getId());
             
             if (tc == null) {
                 tc = new ObjectAuditTrailTopComponent(selectedObject);
@@ -67,7 +68,7 @@ public final class ShowObjectAuditTrailAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 

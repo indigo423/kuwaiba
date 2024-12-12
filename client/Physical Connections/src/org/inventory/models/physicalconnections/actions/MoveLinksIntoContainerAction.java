@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -31,7 +32,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows to move a physical link into an existing container
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ServiceProvider(service = GenericObjectNodeAction.class)
 public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
@@ -58,7 +59,7 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
         List<LocalObjectLight> endpointsB = new ArrayList<>();
 
         for (LocalObjectLight selectedObject : selectedObjects) {
-            specialAttributes = com.getSpecialAttributes(selectedObject.getClassName(), selectedObject.getOid());
+            specialAttributes = com.getSpecialAttributes(selectedObject.getClassName(), selectedObject.getId());
             
             if (specialAttributes == null ) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -77,12 +78,12 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
         
         if(!endpointsA.isEmpty() && !endpointsB.isEmpty()){
             for(int i=0; i<endpointsA.size(); i++)
-                parents.add(com.getCommonParent(endpointsA.get(i).getClassName(), endpointsA.get(i).getOid(), endpointsB.get(i).getClassName(), endpointsB.get(i).getOid()));
+                parents.add(com.getCommonParent(endpointsA.get(i).getClassName(), endpointsA.get(i).getId(), endpointsB.get(i).getClassName(), endpointsB.get(i).getId()));
             
             parent = parents.get(0);
             for (int i=1; i<parents.size(); i++) {
                 if (!parent.equals(parents.get(i))) {
-                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, "no same parent");
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, "There is no common parent between the selected objects");
                     return;
                 }
             }
@@ -91,8 +92,8 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
             List<List<LocalObjectLight>> allParentsB = new ArrayList<>();
             List<Boolean> sameParents = new ArrayList<>();
             for(int i=0; i<endpointsA.size(); i++){
-                List<LocalObjectLight> parentsA = com.getParentsUntilFirstOfClass(endpointsA.get(i).getClassName(), endpointsA.get(i).getOid(), parent.getClassName());
-                List<LocalObjectLight> parentsB = com.getParentsUntilFirstOfClass(endpointsB.get(i).getClassName(), endpointsB.get(i).getOid(), parent.getClassName());
+                List<LocalObjectLight> parentsA = com.getParentsUntilFirstOfClass(endpointsA.get(i).getClassName(), endpointsA.get(i).getId(), parent.getClassName());
+                List<LocalObjectLight> parentsB = com.getParentsUntilFirstOfClass(endpointsB.get(i).getClassName(), endpointsB.get(i).getId(), parent.getClassName());
                 allParentsA.add(parentsA);
                 allParentsB.add(parentsB);
                 sameParents.add(false);
@@ -132,8 +133,8 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
             }
             
             for(int i=0; i<endpointsA.size(); i++){
-                List<LocalObjectLight> parentsA = com.getParents(endpointsA.get(i).getClassName(), endpointsA.get(i).getOid());
-                List<LocalObjectLight> parentsB = com.getParents(endpointsB.get(i).getClassName(), endpointsB.get(i).getOid());    
+                List<LocalObjectLight> parentsA = com.getParents(endpointsA.get(i).getClassName(), endpointsA.get(i).getId());
+                List<LocalObjectLight> parentsB = com.getParents(endpointsB.get(i).getClassName(), endpointsB.get(i).getId());    
                 List<LocalObjectLight> existingContainers = new ArrayList<>();
                 boolean childrenToEvaluatedA = true;
                 int indexA = parentsA.indexOf(parent);
@@ -155,7 +156,7 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
                         LocalObjectLight parentB = parentsB.get(indexB);
 
                         existingContainers.addAll(com.getContainersBetweenObjects(
-                                parentA.getClassName(), parentA.getOid(), parentB.getClassName(), parentB.getOid(), Constants.CLASS_WIRECONTAINER));
+                                parentA.getClassName(), parentA.getId(), parentB.getClassName(), parentB.getId(), Constants.CLASS_WIRECONTAINER));
                     }
                 }
 
@@ -167,7 +168,7 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 
@@ -178,7 +179,7 @@ public class MoveLinksIntoContainerAction  extends GenericObjectNodeAction{
 
     @Override
     public String[] appliesTo() {
-        return new String[] {Constants.CLASS_GENERICPHYSICALLINK};
+        return new String[] { Constants.CLASS_GENERICPHYSICALLINK };
     }    
     
     @Override

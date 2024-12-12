@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@ import org.netbeans.api.visual.widget.ComponentWidget;
 
 /**
  * Represents a filter for numeric values (integers, floats and longs)
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
-public class NumericFilterNodeWidget extends SimpleCriteriaNodeWidget{
+public class NumericFilterNodeWidget extends SimpleCriteriaNodeWidget {
 
     protected JTextField insideText;
 
@@ -40,9 +40,9 @@ public class NumericFilterNodeWidget extends SimpleCriteriaNodeWidget{
     @Override
     public void build(String id) {
         insideText = new JTextField("0", 10);
-        defaultPinId = "DefaultPin_"+new Random().nextInt(1000);
+        defaultPinId = "DefaultPin_" + new Random().nextInt(1000);
         VMDPinWidget dummyPin = (VMDPinWidget)((QueryEditorScene)getScene()).addPin(id, defaultPinId);
-        condition = new JComboBox(new Object[]{
+        condition = new JComboBox(new Object[] {
                                                 LocalTransientQuery.Criteria.EQUAL,
                                                 LocalTransientQuery.Criteria.EQUAL_OR_GREATER_THAN,
                                                 LocalTransientQuery.Criteria.GREATER_THAN,

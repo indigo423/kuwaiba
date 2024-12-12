@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -29,7 +30,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * General purpose version of DeleteSDHTransportLink. Use it to delete transport links outside the SDH module scene.
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class GeneralPurposeDeleteSDHTransportLink extends GenericObjectNodeAction {
@@ -49,7 +50,7 @@ public class GeneralPurposeDeleteSDHTransportLink extends GenericObjectNodeActio
                     "This will delete all the containers and tributary links \n Are you sure you want to do this?", 
                     "Delete Transport Link", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION) {
 
-                if (CommunicationsStub.getInstance().deleteSDHTransportLink(selectedNode.getObject().getClassName(), selectedNode.getObject().getOid()))
+                if (CommunicationsStub.getInstance().deleteSDHTransportLink(selectedNode.getObject().getClassName(), selectedNode.getObject().getId()))
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, "Transport link deleted successfully");
                 else 
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -59,7 +60,7 @@ public class GeneralPurposeDeleteSDHTransportLink extends GenericObjectNodeActio
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

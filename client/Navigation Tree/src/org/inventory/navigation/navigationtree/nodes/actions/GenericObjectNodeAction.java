@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.inventory.navigation.navigationtree.nodes.actions;
 import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.openide.util.Lookup;
@@ -26,7 +27,7 @@ import org.openide.util.Utilities;
 
 /**
  * Superclass to all actions related to a node
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public abstract class GenericObjectNodeAction extends GenericInventoryAction {
     
@@ -56,7 +57,7 @@ public abstract class GenericObjectNodeAction extends GenericInventoryAction {
      * @return A validator. A string that declares a particular condition in an object (for example, saying that a port is already connected). Use null if this action can be applied to any object
      * You can add your own if the server supports them
      */
-    public abstract String[] getValidators();
+    public abstract LocalValidator[] getValidators();
     /**
      * Instances of these classes are eligible to perform this action. Abstract and super classes are allowed
      * @return An array with the class names

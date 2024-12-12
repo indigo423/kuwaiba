@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import javax.swing.ImageIcon;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
@@ -36,7 +35,7 @@ import org.openide.util.actions.CallbackSystemAction;
 
 /**
  * Action to delete a business object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class DeleteBusinessObjectAction extends CallbackSystemAction {
    
@@ -67,13 +66,13 @@ public final class DeleteBusinessObjectAction extends CallbackSystemAction {
                 return;
             
             ArrayList<String> classNames = new ArrayList<>();
-            ArrayList<Long> oids = new ArrayList<>();
+            ArrayList<String> oids = new ArrayList<>();
             HashSet<Node> parents = new HashSet<>();
             
             while (selectedNodes.hasNext()) {
                 ObjectNode selectedNode = (ObjectNode)selectedNodes.next();
                 classNames.add(selectedNode.getObject().getClassName());
-                oids.add(selectedNode.getObject().getOid());
+                oids.add(selectedNode.getObject().getId());
                 if (selectedNode.getParentNode() != null)
                     parents.add(selectedNode.getParentNode());
             }

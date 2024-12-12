@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -41,20 +41,20 @@ import org.openide.util.Exceptions;
 
 /**
  * Service used to load data to render a rack view
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class RackViewService {
     //this need to be replace, the VirtualPort should be moved under GenericLogicalPort, 
     //find a better place for the other classes under GenericBoard, should be GenericCommunitacionsBoard 
     //to make a diference between the PowerBoards and the Communitacions Boards
-    private final LocalObject rack;
     private final RackViewScene scene;
     private static ProgressHandle progressHandle;
-    
-    public RackViewService(RackViewScene scene, LocalObject rack) {
-        this.rack = rack;
+    private final String rackId;
+        
+    public RackViewService(RackViewScene scene, String rackId) {
         this.scene = scene;
+        this.rackId = rackId;
     }
     
     public static ProgressHandle getProgressHandle() {
@@ -85,12 +85,8 @@ public class RackViewService {
             progressHandle.switchToDeterminate(workunits);
     }
     
-//    public static void switchToIndeterminate(int workunits) {
-//        if (progressHandle != null)
-//            progressHandle.switchToIndeterminate();
-//    }
-    
     public void shownRack() {
+        LocalObject rack = CommunicationsStub.getInstance().getObjectInfo("Rack", rackId);
         
         if (rack == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), //NOI18N
@@ -112,7 +108,7 @@ public class RackViewService {
                         if(equipmentWidget instanceof EquipmentWidget && ((EquipmentWidget) equipmentWidget).hasLayout())
                             setEquipmentParent(equipmentWidget, equipmentWidget);
                     }
-                    List<LocalObjectLight> specialChildren = CommunicationsStub.getInstance().getObjectSpecialChildren(rack.getClassName(), rack.getOid());
+                    List<LocalObjectLight> specialChildren = CommunicationsStub.getInstance().getObjectSpecialChildren(rack.getClassName(), rack.getId());
                     
                     if (specialChildren == null) {
                         NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), //NOI18N
@@ -155,7 +151,7 @@ public class RackViewService {
 
         HashMap<LocalObjectLight, Future<HashMap<String, LocalObjectLight[]>>> futures = new HashMap();
         for (LocalObjectLight connection : connections)
-            futures.put(connection, fixedThreadPool.submit(CommunicationsStubTask.getInstance().getSpecialAttributesCallable(connection.getClassName(), connection.getOid())));
+            futures.put(connection, fixedThreadPool.submit(CommunicationsStubTask.getInstance().getSpecialAttributesCallable(connection.getClassName(), connection.getId())));
 
         HashMap<LocalObjectLight, HashMap<String, LocalObjectLight[]>> connectionsMap = new HashMap();
         for (LocalObjectLight connection : connections) {

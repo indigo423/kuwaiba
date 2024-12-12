@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -32,7 +32,7 @@ import org.openide.nodes.Sheet;
 
 /**
  * Represents an IPv4 or an IPv6 inside of a subnet
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class IPAddressNode extends ObjectNode {
     
@@ -42,7 +42,7 @@ public class IPAddressNode extends ObjectNode {
     
     @Override
     protected Sheet createSheet() {
-        LocalObject sp = com.getObjectInfo(getObject().getClassName(), getObject().getOid());
+        LocalObject sp = com.getObjectInfo(getObject().getClassName(), getObject().getId());
         
         Sheet sheet = Sheet.createDefault();
         Sheet.Set generalPropertySet = Sheet.createPropertiesSet(); //General attributes category
@@ -57,6 +57,8 @@ public class IPAddressNode extends ObjectNode {
                 I18N.gm("creation_date"),
                 "",sp.getAttribute(Constants.PROPERTY_CREATIONDATE)));
         
+        generalPropertySet.put(new NotEditableProperty(Constants.PROPERTY_IP_MASK, String.class, 
+                I18N.gm("mask"), "", sp.getAttribute(Constants.PROPERTY_IP_MASK)));
         //List Type State
         List<LocalObjectListItem> list = com.getList(Constants.LIST_TYPE_OPERATIONAL_STATE, true, false);
         if (list == null) {
@@ -68,7 +70,7 @@ public class IPAddressNode extends ObjectNode {
             val = list.get(0); //None
         } else {
             for (LocalObjectListItem loli : list) {
-                if (sp.getAttribute(Constants.PROPERTY_STATE).equals(loli.getOid())) {
+                if (sp.getAttribute(Constants.PROPERTY_STATE).equals(loli.getId())) {
                     val = loli;
                     break;
                 }

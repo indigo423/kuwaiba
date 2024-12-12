@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.openide.nodes.Node;
 
 /**
  * Children to SpecialNodes
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class SpecialChildren extends AbstractChildren {  
 
@@ -36,7 +36,7 @@ public class SpecialChildren extends AbstractChildren {
         LocalObjectLight parentObject = ((ObjectNode)getNode()).getObject();
 
         List<LocalObjectLight> specialChildren = CommunicationsStub.getInstance().
-                getObjectSpecialChildren(parentObject.getClassName(), parentObject.getOid());
+                getObjectSpecialChildren(parentObject.getClassName(), parentObject.getId());
        
         if (specialChildren == null){
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 

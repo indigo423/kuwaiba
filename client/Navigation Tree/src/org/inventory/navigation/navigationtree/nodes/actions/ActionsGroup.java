@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.openide.util.ImageUtilities;
@@ -31,7 +32,7 @@ import org.openide.util.Utilities;
 import org.openide.util.actions.Presenter;
 /**
  * This class represent an action that has a sub menu of actions grouped
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class ActionsGroup extends GenericObjectNodeAction implements Presenter.Popup {
     private final ActionsGroupType.Group actionGroupType;
@@ -48,7 +49,7 @@ public class ActionsGroup extends GenericObjectNodeAction implements Presenter.P
     }
     
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -95,18 +96,8 @@ public class ActionsGroup extends GenericObjectNodeAction implements Presenter.P
                             break;
                         }
                     }
-                } else {
-                    if (action.getValidators() != null) {
-                        for (String validator : action.getValidators()) {
-                            if (CommunicationsStub.getInstance().getMetaForClass(objectNode.getObject().getClassName(), false).getValidator(validator) == 1) {
-                                actions.add(action);
-                                break;
-                            }
-                        }                                                
-                    } else {
-                        actions.add(action);
-                    }                
-                }
+                } else 
+                    actions.add(action);                
             }
         }
         if (actions.isEmpty())

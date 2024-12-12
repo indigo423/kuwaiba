@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Shows an editor for a given object embedding a PropertySheetView
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class PhysicalPathTopComponent extends TopComponent implements ExplorerManager.Provider{
 
@@ -138,7 +138,7 @@ public class PhysicalPathTopComponent extends TopComponent implements ExplorerMa
         @Override
         public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             JLabel cell = (JLabel)super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            if (((LocalObjectLight)value).getOid() == port.getOid())
+            if (((LocalObjectLight)value).getId().equals(port.getId()))
                 cell.setForeground(Color.RED);
             return cell;
         }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -33,7 +34,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * This action allows the user relate the current object to a service as a resource
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -65,7 +66,7 @@ public class RelateToServiceAction extends GenericObjectNodeAction implements Co
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -84,16 +85,16 @@ public class RelateToServiceAction extends GenericObjectNodeAction implements Co
                 JOptionPane.showMessageDialog(null, "Select a service from the list");
             else{
                 List<String> classNames = new ArrayList<>();
-                List<Long> objectIds = new ArrayList<>();
+                List<String> objectIds = new ArrayList<>();
                 for(LocalObjectLight selectedObject : selectedObjects){
                     classNames.add(selectedObject.getClassName());
-                    objectIds.add(selectedObject.getOid());
+                    objectIds.add(selectedObject.getId());
                 }
                 
                 if (CommunicationsStub.getInstance().associateObjectsToService(
                     classNames, objectIds, 
                     ((LocalObjectLight) selectedValue).getClassName(),
-                    ((LocalObjectLight) selectedValue).getOid())){
+                    ((LocalObjectLight) selectedValue).getId())){
                         JOptionPane.showMessageDialog(null, String.format(selectedObjects.size() > 1 ? 
                                 "%s obejcts were related to service %s" : "%s object was related to service %s", selectedObjects.size(), selectedValue));
                         frame.dispose();

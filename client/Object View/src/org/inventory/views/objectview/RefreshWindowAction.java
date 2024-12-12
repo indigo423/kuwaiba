@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@ package org.inventory.views.objectview;
 
 import java.awt.event.ActionEvent;
 import org.inventory.core.services.i18n.I18N;
-import static org.inventory.navigation.navigationtree.nodes.actions.DeleteBusinessObjectAction.ACTION_MAP_KEY;
 import org.openide.util.HelpCtx;
 import org.openide.util.actions.CallbackSystemAction;
 
 /**
  *
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class RefreshWindowAction extends CallbackSystemAction {
     public static String ACTION_MAP_KEY = "RefreshWindowAction"; //NOI18N

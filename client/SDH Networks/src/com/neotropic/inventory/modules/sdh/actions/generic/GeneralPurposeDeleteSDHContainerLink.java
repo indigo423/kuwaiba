@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -30,7 +31,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Deletes a ContainerLink and all its contents
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class GeneralPurposeDeleteSDHContainerLink extends GenericObjectNodeAction {
@@ -47,7 +48,7 @@ public class GeneralPurposeDeleteSDHContainerLink extends GenericObjectNodeActio
                 "This will delete all the containers and tributary links \n Are you sure you want to do this?", 
                 "Delete Container Link", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION) {
 
-            if (CommunicationsStub.getInstance().deleteSDHContainerLink(selectedNode.getObject().getClassName(), selectedNode.getObject().getOid())) {
+            if (CommunicationsStub.getInstance().deleteSDHContainerLink(selectedNode.getObject().getClassName(), selectedNode.getObject().getId())) {
                 //If the node is on a tree, update the list
                 if (selectedNode.getParentNode() != null && AbstractChildren.class.isInstance(selectedNode.getParentNode().getChildren()))
                     ((AbstractChildren)selectedNode.getParentNode().getChildren()).addNotify();
@@ -59,7 +60,7 @@ public class GeneralPurposeDeleteSDHContainerLink extends GenericObjectNodeActio
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 
@@ -70,7 +71,7 @@ public class GeneralPurposeDeleteSDHContainerLink extends GenericObjectNodeActio
 
     @Override
     public String[] appliesTo() {
-        return new String[] {Constants.CLASS_GENERICSDHCONTAINERLINK};        
+        return new String[] { Constants.CLASS_GENERICSDHCONTAINERLINK };        
     }
     
     @Override

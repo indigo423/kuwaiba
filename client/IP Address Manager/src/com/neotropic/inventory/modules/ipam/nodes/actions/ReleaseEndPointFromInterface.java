@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -23,6 +23,7 @@ import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -35,7 +36,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Release a relation between service instance and an interface
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 @ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
@@ -49,7 +50,7 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
     public void actionPerformed(ActionEvent e) {
         LocalObjectLight selectedObject = selectedObjects.get(0);
         List<LocalObjectLight> serviceInstances = CommunicationsStub.getInstance().getSpecialAttribute(
-            selectedObject.getClassName(), selectedObject.getOid(), Constants.RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
+            selectedObject.getClassName(), selectedObject.getId(), Constants.RELATIONSHIP_IPAMPORTRELATEDTOINTERFACE);
         
         if (serviceInstances != null) {
             if (serviceInstances.isEmpty()) {
@@ -59,9 +60,9 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
                 List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight serviceInstance : serviceInstances) {
                     SubMenuItem subMenuItem = new SubMenuItem(serviceInstance.toString());
-                    subMenuItem.addProperty("serviceInstanceId", serviceInstance.getOid()); //NOI18N
+                    subMenuItem.addProperty("serviceInstanceId", serviceInstance.getId()); //NOI18N
                     subMenuItem.addProperty("portClassName", selectedObject.getClassName()); //NOI18N
-                    subMenuItem.addProperty("portId", selectedObject.getOid()); //NOI18N
+                    subMenuItem.addProperty("portId", selectedObject.getId()); //NOI18N
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -82,8 +83,8 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
                 
                 if (CommunicationsStub.getInstance().releasePortFromInterface(
                     (String) selectedItem.getProperty("portClassName"), //NOI18N
-                    (long) selectedItem.getProperty("portId"), //NOI18N
-                    (long) selectedItem.getProperty("serviceInstanceId"))) //NOI18N
+                    (String) selectedItem.getProperty("portId"), //NOI18N
+                    (String) selectedItem.getProperty("serviceInstanceId"))) //NOI18N
                     NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
                             java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_SUCCESS"));
                 else
@@ -93,7 +94,7 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

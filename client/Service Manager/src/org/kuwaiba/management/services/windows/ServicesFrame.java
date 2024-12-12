@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ import org.inventory.communications.core.LocalObjectLight;
 
 /**
  * Shows the available services to associate to a resource
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ServicesFrame extends JFrame {
     
@@ -121,16 +121,16 @@ public class ServicesFrame extends JFrame {
                 JOptionPane.showMessageDialog(null, "Select a service from the list");
             else{
                 List<String> classNames = new ArrayList<>();
-                List<Long> objectIds = new ArrayList<>();
+                List<String> objectIds = new ArrayList<>();
                 for(LocalObjectLight selectedObject : selectedObjects){
                     classNames.add(selectedObject.getClassName());
-                    objectIds.add(selectedObject.getOid());
+                    objectIds.add(selectedObject.getId());
                 }
                 
                 if (CommunicationsStub.getInstance().associateObjectsToService(
                     classNames, objectIds, 
                     (lstAvailableServices.getSelectedValue()).getClassName(),
-                    (lstAvailableServices.getSelectedValue()).getOid())){
+                    (lstAvailableServices.getSelectedValue()).getId())){
                         JOptionPane.showMessageDialog(null, String.format(selectedObjects.size() > 1 ? 
                                 "%s obejcts were related to service %s" : "%s object was related to service %s", selectedObjects.size(), lstAvailableServices.getSelectedValue()));
                         dispose();

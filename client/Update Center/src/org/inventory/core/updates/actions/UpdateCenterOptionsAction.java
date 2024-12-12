@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,16 +25,16 @@ import org.openide.util.NbBundle.Messages;
 
 /**
  * Action to define the Update Center Options
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ActionID(
         category = "Tools/Administrative",
         id = "org.inventory.core.updates.actions.UpdateCenterOptionsAction"
 )
 @ActionRegistration(
-        displayName = "#CTL_UpdateCenterOptionsAction"
+        displayName = "#CTL_UpdateCenterOptionsAction", iconBase = "org/inventory/core/updates/res/icon.png"
 )
-@ActionReference(separatorBefore = 1, path = "Menu/Tools" , position = 3333)
+@ActionReference(path = "Menu/Tools/Configuration", position = 3)
 @Messages("CTL_UpdateCenterOptionsAction=Update Center")
 public final class UpdateCenterOptionsAction implements ActionListener {
     @Override

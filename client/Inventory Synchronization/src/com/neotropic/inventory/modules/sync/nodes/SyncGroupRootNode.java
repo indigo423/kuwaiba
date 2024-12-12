@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.neotropic.inventory.modules.sync.nodes;
 
+import com.neotropic.inventory.modules.sync.LocalSyncDataSourceConfiguration;
 import com.neotropic.inventory.modules.sync.nodes.actions.SyncManagerActionFactory;
 import java.awt.Image;
 import java.awt.datatransfer.Transferable;
@@ -24,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalSyncGroup;
+import com.neotropic.inventory.modules.sync.LocalSyncGroup;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.openide.actions.PasteAction;
@@ -38,7 +39,7 @@ import org.openide.util.datatransfer.PasteType;
 
 /**
  * The root node of the sync groups tree.
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class SyncGroupRootNode extends AbstractNode {
     public static final String ICON_PATH = "com/neotropic/inventory/modules/sync/res/root.png";
@@ -117,7 +118,7 @@ public class SyncGroupRootNode extends AbstractNode {
         return getIcon(i);
     }
     
-    public static class SyncGroupRootChildren extends Children.Keys<LocalSyncGroup> {
+    public static class SyncGroupRootChildren extends Children.Keys<Object> {
         
         @Override
         public void addNotify() {
@@ -138,8 +139,12 @@ public class SyncGroupRootNode extends AbstractNode {
         }
 
         @Override
-        protected Node[] createNodes(LocalSyncGroup key) {
-            return new Node [] { new SyncGroupNode(key) };
+        protected Node[] createNodes(Object key) {
+            if(key instanceof LocalSyncGroup)
+                return new Node[] { new SyncGroupNode((LocalSyncGroup)key) };
+            if(key instanceof LocalSyncDataSourceConfiguration)
+                return new Node[] { new SyncDataSourceConfigurationNode((LocalSyncDataSourceConfiguration)key) };
+            return null;
         }
     }
 }

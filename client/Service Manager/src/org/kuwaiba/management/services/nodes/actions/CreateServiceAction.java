@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,13 +27,14 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.kuwaiba.management.services.nodes.ServicePoolNode;
 import org.openide.util.Utilities;
 import org.openide.util.actions.Presenter;
 
 /**
  * This action allows to create a service
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 class CreateServiceAction extends GenericInventoryAction implements Presenter.Popup {
 
@@ -52,7 +53,7 @@ class CreateServiceAction extends GenericInventoryAction implements Presenter.Po
         ServicePoolNode selectedNode = selectedNodes.next();
         
         LocalObjectLight newService = CommunicationsStub.getInstance().
-                createPoolItem(selectedNode.getPool().getOid(), ((JMenuItem)e.getSource()).getName());     
+                createPoolItem(selectedNode.getPool().getId(), ((JMenuItem)e.getSource()).getName());     
                 
         if (newService == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -68,11 +69,16 @@ class CreateServiceAction extends GenericInventoryAction implements Presenter.Po
                 getLightSubclasses(Constants.CLASS_GENERICSERVICE, false, false);
         JMenuItem menu = new JMenu(java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_SERVICE"));
         
-        for (LocalClassMetadataLight serviceClass : serviceClasses){
-            JMenuItem customerEntry = new JMenuItem(serviceClass.getClassName());
-            customerEntry.setName(serviceClass.getClassName());
-            customerEntry.addActionListener(this);
-            menu.add(customerEntry);
+        if (serviceClasses == null) {
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            menu.setEnabled(false);
+        } else {
+            for (LocalClassMetadataLight serviceClass : serviceClasses){
+                JMenuItem customerEntry = new JMenuItem(serviceClass.getClassName());
+                customerEntry.setName(serviceClass.getClassName());
+                customerEntry.addActionListener(this);
+                menu.add(customerEntry);
+            }
         }
         return menu;
     }

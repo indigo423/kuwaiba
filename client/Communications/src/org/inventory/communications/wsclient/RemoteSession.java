@@ -19,8 +19,10 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="username" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="userId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="sessionType" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="firstName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="lastName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="ipAddress" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -34,16 +36,20 @@ import javax.xml.bind.annotation.XmlType;
     "sessionId",
     "username",
     "userId",
+    "sessionType",
     "firstName",
-    "lastName"
+    "lastName",
+    "ipAddress"
 })
 public class RemoteSession {
 
     protected String sessionId;
     protected String username;
     protected long userId;
+    protected int sessionType;
     protected String firstName;
     protected String lastName;
+    protected String ipAddress;
 
     /**
      * Gets the value of the sessionId property.
@@ -110,6 +116,22 @@ public class RemoteSession {
     }
 
     /**
+     * Gets the value of the sessionType property.
+     * 
+     */
+    public int getSessionType() {
+        return sessionType;
+    }
+
+    /**
+     * Sets the value of the sessionType property.
+     * 
+     */
+    public void setSessionType(int value) {
+        this.sessionType = value;
+    }
+
+    /**
      * Gets the value of the firstName property.
      * 
      * @return
@@ -155,6 +177,30 @@ public class RemoteSession {
      */
     public void setLastName(String value) {
         this.lastName = value;
+    }
+
+    /**
+     * Gets the value of the ipAddress property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    /**
+     * Sets the value of the ipAddress property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setIpAddress(String value) {
+        this.ipAddress = value;
     }
 
 }

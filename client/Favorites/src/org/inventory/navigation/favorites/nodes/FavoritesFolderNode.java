@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -51,11 +51,11 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * Represents a Favorites folder
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class FavoritesFolderNode extends AbstractNode implements PropertyChangeListener {
     public static final String ICON_PATH = "org/inventory/navigation/favorites/res/icon.png";
-    private static final Image icon = ImageUtilities.loadImage(ICON_PATH);
+    private static final Image NODE_ICON = ImageUtilities.loadImage(ICON_PATH);
     
     private LocalFavoritesFolder localFavoritesFolder;
     protected Sheet sheet;
@@ -102,7 +102,7 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
         
     @Override
     public Image getIcon(int i) {
-        return icon;
+        return NODE_ICON;
     }
     
     @Override
@@ -151,8 +151,8 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                             List<String> objClass = new ArrayList<>();
                             objClass.add(favoritesItem.getObject().getClassName());
                             
-                            List<Long> objId = new ArrayList<>();
-                            objId.add(favoritesItem.getObject().getOid());
+                            List<String> objId = new ArrayList<>();
+                            objId.add(favoritesItem.getObject().getId());
                                 
                             if (CommunicationsStub.getInstance().addObjectsToFavoritesFolder(objClass, objId, localFavoritesFolder.getId())) {
                                 
@@ -174,8 +174,8 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                             List<String> objClass = new ArrayList<>();
                             objClass.add(favoritesItem.getObject().getClassName());
                                 
-                            List<Long> objId = new ArrayList<>();
-                            objId.add(favoritesItem.getObject().getOid());
+                            List<String> objId = new ArrayList<>();
+                            objId.add(favoritesItem.getObject().getId());
                             if (CommunicationsStub.getInstance().removeObjectsFromFavoritesFolder(
                                 objClass, 
                                 objId, 
@@ -218,8 +218,8 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                 Constants.PROPERTY_NAME, this, lb.getName());
         generalPropertySet.put(propertyName);
         
-        generalPropertySet.setName(I18N.gm("general_information"));
-        generalPropertySet.setDisplayName(I18N.gm("general_attributes"));
+        generalPropertySet.setName(I18N.gm("general_properties"));
+        generalPropertySet.setDisplayName(I18N.gm("general_properties"));
         sheet.put(generalPropertySet);
         return sheet;
     }

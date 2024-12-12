@@ -16,13 +16,8 @@
  */
 package org.inventory.core.templates.layouts;
 
-import java.util.List;
-import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.templates.layouts.nodes.DeviceLayoutsRootNode;
 import org.inventory.core.services.api.behaviors.Refreshable;
-import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.core.services.i18n.I18N;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
@@ -36,7 +31,7 @@ import org.openide.util.NbBundle.Messages;
 
 /**
  * Top component which displays the existing device layouts
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 @ConvertAsProperties(
         dtd = "-//org.inventory.core.templates.layouts//DeviceLayouts//EN",
@@ -94,13 +89,7 @@ public final class DeviceLayoutsTopComponent extends TopComponent implements Exp
     public void componentOpened() {
         beanTreeView.setRootVisible(false);
         
-        List<LocalObjectLight> deviceLayouts = CommunicationsStub.getInstance().getDeviceLayouts();
-        if (deviceLayouts == null) {
-            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
-                NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-            componentClosed();
-        }                    
-        em.setRootContext(new DeviceLayoutsRootNode(deviceLayouts));
+        em.setRootContext(new DeviceLayoutsRootNode());
     }
 
     @Override

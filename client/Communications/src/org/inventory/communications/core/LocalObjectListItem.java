@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,17 +19,18 @@ import org.inventory.communications.util.Constants;
 
 /**
  * This is a local representation of an element within a list (enumerations and so on)
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class LocalObjectListItem extends LocalObjectLight {
     /**
      * Id for null values
      */
-    public static final long NULL_ID = 0;
+    public static final String NULL_ID = "0";
     private String displayName;
 
-    public LocalObjectListItem(){
-        this.oid = NULL_ID;
+    public LocalObjectListItem() {
+        this.id = NULL_ID;
+        this.className = "";
         this.name = "None";
     }
 
@@ -39,16 +40,8 @@ public class LocalObjectListItem extends LocalObjectLight {
      * @param className
      * @param name
      */
-    public LocalObjectListItem(long id, String className, String name){
+    public LocalObjectListItem(String id, String className, String name){
         super(id, name, className);
-    }
-
-    public long getId() {
-        return oid;
-    }
-
-    public void setId(long id) {
-        this.oid = id;
     }
 
     public String getDisplayName() {

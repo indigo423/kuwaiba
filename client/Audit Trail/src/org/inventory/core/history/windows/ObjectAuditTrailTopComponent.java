@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Show the activity log associated to an object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ObjectAuditTrailTopComponent extends TopComponent implements ExportableTable, Refreshable {
     private JToolBar barMain;
@@ -57,7 +57,7 @@ public class ObjectAuditTrailTopComponent extends TopComponent implements Export
     private LocalObjectLight object;
 
     public ObjectAuditTrailTopComponent(LocalObjectLight object) {
-        LocalApplicationLogEntry[] entries = CommunicationsStub.getInstance().getBusinessObjectAuditTrail(object.getClassName(), object.getOid());
+        LocalApplicationLogEntry[] entries = CommunicationsStub.getInstance().getBusinessObjectAuditTrail(object.getClassName(), object.getId());
         if (entries == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             return;
@@ -95,7 +95,7 @@ public class ObjectAuditTrailTopComponent extends TopComponent implements Export
     
     @Override
     protected String preferredID() {
-        return "ObjectAuditTrailTopComponent_" + object.getOid(); //NOI18N
+        return "ObjectAuditTrailTopComponent_" + object.getId(); //NOI18N
     }
     
     private TableModel buildTableModel(final LocalApplicationLogEntry[] logEntries) {
@@ -188,7 +188,7 @@ public class ObjectAuditTrailTopComponent extends TopComponent implements Export
     @Override
     public void refresh() {
         setName(String.format(I18N.gm("audit_trail_for"), object));
-        LocalApplicationLogEntry[] entries = CommunicationsStub.getInstance().getBusinessObjectAuditTrail(object.getClassName(), object.getOid());
+        LocalApplicationLogEntry[] entries = CommunicationsStub.getInstance().getBusinessObjectAuditTrail(object.getClassName(), object.getId());
         if (entries == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             return;

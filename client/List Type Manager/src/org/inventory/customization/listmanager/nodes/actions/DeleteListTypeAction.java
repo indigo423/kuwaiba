@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 
 /**
  * Action to delete an a list type item
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public final class DeleteListTypeAction extends GenericInventoryAction {
 
@@ -44,7 +44,7 @@ public final class DeleteListTypeAction extends GenericInventoryAction {
         if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this list type item?",
                 "Delete Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION){
 
-            if (CommunicationsStub.getInstance().deleteListTypeItem(node.getObject().getClassName(), node.getObject().getOid(),false)){
+            if (CommunicationsStub.getInstance().deleteListTypeItem(node.getObject().getClassName(), node.getObject().getId(),false)){
                 NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "List type item deleted successfully");
                 ((AbstractChildren)node.getParentNode().getChildren()).addNotify();
                 //Refresh cache

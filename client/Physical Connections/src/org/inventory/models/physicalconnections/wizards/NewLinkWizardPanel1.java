@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.openide.util.HelpCtx;
 
 /**
  * Logic of the first step of the New Link wizard
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class NewLinkWizardPanel1 implements WizardDescriptor.Panel<WizardDescriptor>,
         WizardDescriptor.ValidatingPanel<WizardDescriptor> {
@@ -73,6 +73,8 @@ public class NewLinkWizardPanel1 implements WizardDescriptor.Panel<WizardDescrip
     public void validate() throws WizardValidationException {
         if (component.getLinkName().trim().isEmpty())
             throw new WizardValidationException(component, "The name of the connection can not be empty", "The name of the connection can not be empty");
+        if (component.getLinkClass() == null)
+            throw new WizardValidationException(component, "The connection class can not be empty", "The connection class can not be empty");
     }  
 
 }

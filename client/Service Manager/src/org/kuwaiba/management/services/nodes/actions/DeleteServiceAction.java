@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.openide.util.Utilities;
 
 /**
  * Action to delete a business object
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 class DeleteServiceAction extends GenericInventoryAction {
 
@@ -52,13 +52,13 @@ class DeleteServiceAction extends GenericInventoryAction {
                 return;
             
             ArrayList<String> classNames = new ArrayList<>();
-            ArrayList<Long> oids = new ArrayList<>();
+            ArrayList<String> oids = new ArrayList<>();
             HashSet<Node> parents = new HashSet<>();
             
             while (selectedNodes.hasNext()) {
                 ServiceNode selectedNode = selectedNodes.next();
                 classNames.add(selectedNode.getObject().getClassName());
-                oids.add(selectedNode.getObject().getOid());
+                oids.add(selectedNode.getObject().getId());
                 parents.add(selectedNode.getParentNode());
             }
                         

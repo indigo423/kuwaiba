@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.openide.windows.WindowManager;
 
 /**
  * Top component which displays the shape hierarchy of a layout
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public final class ShapeHierarchyTopComponent extends TopComponent implements ExplorerManager.Provider {
     private final ExplorerManager em = new ExplorerManager();

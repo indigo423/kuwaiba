@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.openide.util.actions.Presenter;
 
 /**
  * Action to creates a Project
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class AddProjectAction extends GenericInventoryAction implements Presenter.Popup {
     private final ResourceBundle bundle;
@@ -60,7 +60,7 @@ public class AddProjectAction extends GenericInventoryAction implements Presente
         
         if (selectedNode == null)
             return;
-        long id = selectedNode.getPool().getOid();
+        String id = selectedNode.getPool().getId();
         String className = selectedNode.getPool().getClassName();
         
         LocalObjectLight newProject = CommunicationsStub.getInstance().addProject(id, className, ((JMenuItem)e.getSource()).getText());

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
@@ -29,7 +30,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * Creates a software asset and relates it to an element
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class CreateSoftwareAssetAction extends GenericObjectNodeAction {
@@ -42,7 +43,7 @@ public class CreateSoftwareAssetAction extends GenericObjectNodeAction {
     public void actionPerformed(ActionEvent e) {
         HashMap<String, Object> attributes = new HashMap<>();
         LocalObjectLight newLicense = CommunicationsStub.getInstance().createSpecialObject("SoftwareLicense", selectedObjects.get(0).getClassName(), 
-                selectedObjects.get(0).getOid(), attributes, -1);
+                selectedObjects.get(0).getId(), attributes, null);
         if (newLicense == null)
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else{
@@ -56,7 +57,7 @@ public class CreateSoftwareAssetAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 

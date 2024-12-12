@@ -19,11 +19,11 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="poolId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="poolId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="attributeNames" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="attributeValues" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="templateId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="templateId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -44,28 +44,36 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class CreatePoolItem {
 
-    protected long poolId;
+    protected String poolId;
     protected String className;
     @XmlElement(nillable = true)
     protected List<String> attributeNames;
     @XmlElement(nillable = true)
     protected List<String> attributeValues;
-    protected long templateId;
+    protected String templateId;
     protected String sessionId;
 
     /**
      * Gets the value of the poolId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getPoolId() {
+    public String getPoolId() {
         return poolId;
     }
 
     /**
      * Sets the value of the poolId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setPoolId(long value) {
+    public void setPoolId(String value) {
         this.poolId = value;
     }
 
@@ -154,16 +162,24 @@ public class CreatePoolItem {
     /**
      * Gets the value of the templateId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getTemplateId() {
+    public String getTemplateId() {
         return templateId;
     }
 
     /**
      * Sets the value of the templateId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setTemplateId(long value) {
+    public void setTemplateId(String value) {
         this.templateId = value;
     }
 

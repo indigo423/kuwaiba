@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,14 +20,13 @@ import java.util.Collections;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
-import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.openide.nodes.Node;
 
 /**
  * The same SpecialChildren, but creates ActionlessSpecialObjectNodes instead of SpecialObjectNodes
  * in addition this children only show the class WireContainer
- * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
+ * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
 public class ActionlessSpecialFilteredChildren extends SpecialChildren {
     
@@ -51,7 +50,7 @@ public class ActionlessSpecialFilteredChildren extends SpecialChildren {
         LocalObjectLight parentObject = ((ActionlessSpecialFilteredObjectNode)getNode()).getObject();
 
         List<LocalObjectLight> specialChildren = CommunicationsStub.getInstance().
-                getObjectSpecialChildren(parentObject.getClassName(), parentObject.getOid());
+                getObjectSpecialChildren(parentObject.getClassName(), parentObject.getId());
        
         if (specialChildren == null){
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());

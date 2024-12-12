@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.core.LocalValidator;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
@@ -38,7 +39,7 @@ import org.openide.util.lookup.ServiceProvider;
 
 /**
  * General Purpose version of the Deletes a physical link
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class GeneralPurposeDeletePhysicalContainer extends GenericObjectNodeAction implements Presenter.Popup {
@@ -56,7 +57,7 @@ public class GeneralPurposeDeletePhysicalContainer extends GenericObjectNodeActi
     }
        
     @Override
-    public String[] getValidators() {
+    public LocalValidator[] getValidators() {
         return null;
     }
 
@@ -75,7 +76,7 @@ public class GeneralPurposeDeletePhysicalContainer extends GenericObjectNodeActi
                 ObjectNode selectedNode = selectedNodes.next();
             
                 if (CommunicationsStub.getInstance().deletePhysicalConnection(selectedNode.getObject().getClassName(), 
-                        selectedNode.getObject().getOid())) {
+                        selectedNode.getObject().getId())) {
                     
                     //If the node is in a tree, update the list
                     if (selectedNode.getParentNode() != null && AbstractChildren.class.isInstance(selectedNode.getParentNode().getChildren()))

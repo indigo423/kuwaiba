@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.openide.util.lookup.Lookups;
 
 /**
  * A node wrapping a ClassMetadataLight
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 public class ClassMetadataNode extends AbstractNode {
    private static final String PARENT_ICON_PATH = "org/inventory/core/containment/res/flag-green.png";
@@ -95,7 +95,7 @@ public class ClassMetadataNode extends AbstractNode {
                     LocalClassMetadataLight data = (LocalClassMetadataLight)obj.getTransferData(
                             LocalClassMetadataLight.DATA_FLAVOR);
 
-                    long[] tokens = new long[]{data.getOid()};
+                    long[] tokens = new long[]{data.getId()};
 
                     //This is supposed to support multiple object drags,
                     //but since I can't make it work, It'll be commented out
@@ -103,7 +103,7 @@ public class ClassMetadataNode extends AbstractNode {
 //                                data)){
 //                            for (Object obj : data)
 //                                getChildren().add(new Node[]{new ClassMetadataNode((LocalClassMetadataLight)data)});
-                    if (CommunicationsStub.getInstance().addPossibleChildren(object.getOid(), tokens)) {
+                    if (CommunicationsStub.getInstance().addPossibleChildren(object.getId(), tokens)) {
                         ((ClassMetadataChildren) getChildren()).add(new ClassMetadataNode[]{new ClassMetadataNode(data)});
                         CommunicationsStub.getInstance().refreshCache(false, false, false, true, false);
 

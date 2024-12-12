@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -28,7 +28,7 @@ import org.inventory.navigation.special.relationships.scene.SpecialRelationships
 
 /**
  * Provides the business logic for the related TopComponent
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class GraphicalRepSpecialRelationshipService {
     private final SpecialRelationshipsGraphExplorerScene scene;
@@ -46,16 +46,16 @@ public class GraphicalRepSpecialRelationshipService {
     
     private HashMap<String, LocalObjectLight[]> getSpecialRelationships(LocalObjectLight lol) {
         HashMap<String, LocalObjectLight[]> specialRelationships = CommunicationsStub.getInstance()
-            .getSpecialAttributes(lol.getClassName(), lol.getOid());
+            .getSpecialAttributes(lol.getClassName(), lol.getId());
         
         if (specialRelationships == null) {
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             return null;
         } else {
-            LocalObjectLight parent = CommunicationsStub.getInstance().getParent(lol.getClassName(), lol.getOid());
+            LocalObjectLight parent = CommunicationsStub.getInstance().getParent(lol.getClassName(), lol.getId());
             
             //Ignore the dummy root and the pools
-            if (parent != null && parent.getOid() != -1 && !parent.getClassName().startsWith("Pool of")) 
+            if (parent != null && parent.getId() != null && !parent.getId().equals("-1") && !parent.getClassName().startsWith("Pool of")) 
                 specialRelationships.put(Constants.PROPERTY_PARENT, new LocalObjectLight[] { parent });
             //else
             //    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
@@ -100,7 +100,7 @@ public class GraphicalRepSpecialRelationshipService {
                             
                             if (inputRelationshipName.equals(relationshipName)) {
                                 LocalObjectLight sourceLol =  scene.getEdgeSource(inputEdge).getLocalObjectLightWrapped();
-                                if (sourceLol.getOid() == specialRelatedObjNode.getOid()) {
+                                if (sourceLol.getId().equals(specialRelatedObjNode.getId())) {
                                     relationshipExist = true;
                                     break;
                                 }

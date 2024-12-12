@@ -28,7 +28,7 @@ import org.inventory.core.templates.layouts.scene.DeviceLayoutScene;
 
 /**
  * The service class associated to the main device layout edition component
- * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
+ * @author Johny Andres Ortega Ruiz {@literal <johny.ortega@kuwaiba.org>}
  */
 public class DeviceLayoutEditorService {
     private final LocalObjectListItem model;
@@ -70,7 +70,7 @@ public class DeviceLayoutEditorService {
         byte[] structure = scene.getAsXML();
         if (deviceLayoutView == null) {
             long viewId = CommunicationsStub.getInstance().createListTypeItemRelatedView(
-                model.getId(), model.getClassName(), "DeviceLayoutView", null, null, structure, scene.getBackgroundImage()); //NOI18N
+                model.getId(), model.getClassName(), "DeviceLayoutView", " ", null, structure, scene.getBackgroundImage()); //NOI18N
             
             if (viewId != -1) { //Success
                 deviceLayoutView = new LocalObjectView(viewId, "DeviceLayoutView", null, null, structure, scene.getBackgroundImage()); //NOI18N

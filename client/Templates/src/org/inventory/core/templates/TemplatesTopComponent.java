@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  * 
 * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -36,7 +36,7 @@ import org.openide.util.NbBundle.Messages;
 
 /**
  * Template Manager Top component.
- * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
 @ConvertAsProperties(
         dtd = "-//org.inventory.core.templates//Templates//EN",
