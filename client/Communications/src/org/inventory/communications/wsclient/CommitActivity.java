@@ -16,9 +16,9 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="processInstanceId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="activityDefinitionId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="artifact" type="{http://ws.interfaces.kuwaiba.org/}remoteArtifact" minOccurs="0"/>
+ *         &lt;element name="processInstanceId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="activityDefinitionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="artifact" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteArtifact" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -37,40 +37,56 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class CommitActivity {
 
-    protected long processInstanceId;
-    protected long activityDefinitionId;
+    protected String processInstanceId;
+    protected String activityDefinitionId;
     protected RemoteArtifact artifact;
     protected String sessionId;
 
     /**
      * Gets the value of the processInstanceId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getProcessInstanceId() {
+    public String getProcessInstanceId() {
         return processInstanceId;
     }
 
     /**
      * Sets the value of the processInstanceId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setProcessInstanceId(long value) {
+    public void setProcessInstanceId(String value) {
         this.processInstanceId = value;
     }
 
     /**
      * Gets the value of the activityDefinitionId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getActivityDefinitionId() {
+    public String getActivityDefinitionId() {
         return activityDefinitionId;
     }
 
     /**
      * Sets the value of the activityDefinitionId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setActivityDefinitionId(long value) {
+    public void setActivityDefinitionId(String value) {
         this.activityDefinitionId = value;
     }
 

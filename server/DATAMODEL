@@ -200,3 +200,27 @@
 * Added class SupportContract
 * VirtualMachine is now subclass of GenericSoftwareAsset
 * Added class MPLSLink
+
+2.1
+* Added class GenericContact
+* Added class GenericProject
+* Class GenericMPLSService is now abstract
+* Created class GenericVirtualElement
+* VirtualMachine class moved under GenericVirtualElement
+* Added class GenericNetworkFunction
+* Added class RoutingFunction
+* Added class GenericSplicingDevice
+* SpliceBox and FiberCassette moved under GenericSplicingDevice
+* Class Lambda removed, Wavelength should be used instead
+* Attributes longitude and latitude added to all classes under GenericPhysicalLocation
+* Created class GenericLastMileCircuit under GenericLogicalConnection
+* Created class Circuit under GenericLastMileCircuit
+* Created class Path GenericLastMileCircuit
+* Added attribute isManagementInterface to class GenericCommunicationsPort
+* Added class Manhole (again)
+* Added class GenericCorporateCustomer under GenericCustomer
+* TelecommunicationsOperator is now subclass of GenericCorporateCustomer
+* SubnetIPv4 SubnetIPv6 attribute ipAddress was removed, attribute mask was added
+* IP Address attribute isManagementAddress was renamed to isManagement
+* IP Address attribute isManagementAddress was removed
+* GenericCommunicationsPort attribute isManagement(boolean) was added

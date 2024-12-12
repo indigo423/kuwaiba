@@ -17,7 +17,7 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="taskId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="notificationType" type="{http://ws.interfaces.kuwaiba.org/}taskNotificationDescriptor" minOccurs="0"/>
+ *         &lt;element name="notificationType" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskNotificationDescriptor" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -36,7 +36,7 @@ import javax.xml.bind.annotation.XmlType;
 public class UpdateTaskNotificationType {
 
     protected long taskId;
-    protected TaskNotificationDescriptor notificationType;
+    protected RemoteTaskNotificationDescriptor notificationType;
     protected String sessionId;
 
     /**
@@ -60,10 +60,10 @@ public class UpdateTaskNotificationType {
      * 
      * @return
      *     possible object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public TaskNotificationDescriptor getNotificationType() {
+    public RemoteTaskNotificationDescriptor getNotificationType() {
         return notificationType;
     }
 
@@ -72,10 +72,10 @@ public class UpdateTaskNotificationType {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public void setNotificationType(TaskNotificationDescriptor value) {
+    public void setNotificationType(RemoteTaskNotificationDescriptor value) {
         this.notificationType = value;
     }
 

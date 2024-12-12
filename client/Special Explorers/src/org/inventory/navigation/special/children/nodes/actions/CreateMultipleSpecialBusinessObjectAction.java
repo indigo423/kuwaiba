@@ -1,5 +1,5 @@
-/*
- *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
+/**
+ *  Copyright 2010-2018 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
@@ -70,26 +69,13 @@ public class CreateMultipleSpecialBusinessObjectAction extends GenericObjectNode
         txtNamePattern.setName("txtNamePattern"); //NOI18N
         txtNamePattern.setColumns(20);
         
-        JSpinner spinnerNumberOfObjects = new JSpinner();
-        spinnerNumberOfObjects.setName("spinnerNumberOfObjects"); //NOI18N
-        spinnerNumberOfObjects.setValue(1);
-        
         JComplexDialogPanel saveDialog = new JComplexDialogPanel(
-            new String[] {"Name Pattern", "Number of Special Objects"}, new JComponent[] {txtNamePattern, spinnerNumberOfObjects});
+            new String[] {"Naming Pattern"}, new JComponent[] {txtNamePattern});
         
         if (JOptionPane.showConfirmDialog(null, saveDialog, "New Special Multiple", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             String namePattern = ((JTextField)saveDialog.getComponent("txtNamePattern")).getText();
-            int numberOfSpecialObjects = 0;
-            Object spinnerValue= ((JSpinner)saveDialog.getComponent("spinnerNumberOfObjects")).getValue();
-            if (spinnerValue instanceof Integer) {
-                numberOfSpecialObjects = (Integer) spinnerValue;
-                if (numberOfSpecialObjects <= 0) {
-                    JOptionPane.showMessageDialog(null, "The number of objects to create must be greater than 0", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-            }
             
-            List<LocalObjectLight> newSpecialObjects = com.createBulkSpecialObjects(((JMenuItem)e.getSource()).getName(), node.getObject().getClassName(), node.getObject().getId(), numberOfSpecialObjects, namePattern);
+            List<LocalObjectLight> newSpecialObjects = com.createBulkSpecialObjects(((JMenuItem)e.getSource()).getName(), node.getObject().getClassName(), node.getObject().getId(), namePattern);
                 
             if (newSpecialObjects == null)
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());

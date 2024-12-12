@@ -47,6 +47,7 @@ public class Constants {
      * Name for the class InventoryObject
      */
     public static final String CLASS_INVENTORYOBJECT = "InventoryObject";
+    public static final String CLASS_CONFIGURATIONITEM = "ConfigurationItem";
     /**
      * Name for the class GenericObjectList
      */
@@ -264,10 +265,6 @@ public class Constants {
      * This relationship is used to relate a VLAN with a Subnet
      */
     public static final String RELATIONSHIP_IPAMBELONGSTOVLAN = "ipamBelongsToVlan";
-    /**
-     * This relationship is used to relate a Port with a VLAN
-     */
-    public static final String RELATIONSHIP_PORT_BELONGS_TO_VLAN = "portBelongsToVlan";
     /**
      * This relationship is used to relate a VRF with a Subnet
      */

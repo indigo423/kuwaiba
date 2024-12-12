@@ -17,7 +17,7 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="taskId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="schedule" type="{http://ws.interfaces.kuwaiba.org/}taskScheduleDescriptor" minOccurs="0"/>
+ *         &lt;element name="schedule" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskScheduleDescriptor" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -36,7 +36,7 @@ import javax.xml.bind.annotation.XmlType;
 public class UpdateTaskSchedule {
 
     protected long taskId;
-    protected TaskScheduleDescriptor schedule;
+    protected RemoteTaskScheduleDescriptor schedule;
     protected String sessionId;
 
     /**
@@ -60,10 +60,10 @@ public class UpdateTaskSchedule {
      * 
      * @return
      *     possible object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public TaskScheduleDescriptor getSchedule() {
+    public RemoteTaskScheduleDescriptor getSchedule() {
         return schedule;
     }
 
@@ -72,10 +72,10 @@ public class UpdateTaskSchedule {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public void setSchedule(TaskScheduleDescriptor value) {
+    public void setSchedule(RemoteTaskScheduleDescriptor value) {
         this.schedule = value;
     }
 

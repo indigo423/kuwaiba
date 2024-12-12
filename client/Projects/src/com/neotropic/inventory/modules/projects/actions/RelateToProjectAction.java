@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -47,9 +47,9 @@ public class RelateToProjectAction extends GenericObjectNodeAction implements Co
     @Override
     public void actionPerformed(ActionEvent e) {
         List<LocalObjectLight> projects = ProjectsModuleService.getAllProjects();
-        if (projects == null)
+        if (projects == null) {
             JOptionPane.showMessageDialog(null, "This database seems outdated. Contact your administrator to apply the necessary patches to use the Projects module", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
-        else {
+        } else {
             if (projects.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "There are no projects created. Create at least one using the Projects Module", 
                     I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
@@ -80,7 +80,6 @@ public class RelateToProjectAction extends GenericObjectNodeAction implements Co
             if (selectedValue == null)
                 JOptionPane.showMessageDialog(null, "Select a project from the list");
             else {
-                boolean allGood = true;
                 for (LocalObjectLight selectedObject : selectedObjects) {
                     String objId = selectedObject.getId();
                     String objClassName = selectedObject.getClassName();
@@ -88,17 +87,13 @@ public class RelateToProjectAction extends GenericObjectNodeAction implements Co
                     String projectId = ((LocalObjectLight) selectedValue).getId();
                     String projectClass = ((LocalObjectLight) selectedValue).getClassName();
                     
-                    if (CommunicationsStub.getInstance().associateObjectToProject(projectClass, projectId, objClassName, objId))
+                    if (CommunicationsStub.getInstance().associateObjectToProject(projectClass, projectId, objClassName, objId)) {
+                        
+                        JOptionPane.showMessageDialog(null, String.format("%s added to project %s", selectedObject, selectedValue));
                         frame.dispose();
-                    else {
+                    } else
                         JOptionPane.showMessageDialog(null, CommunicationsStub.getInstance().getError(), I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
-                        allGood = false;
-                    }
                 }
-                
-                if (allGood)
-                    JOptionPane.showMessageDialog(null, String.format("%s successfully related to project %s", 
-                            selectedObjects.size() == 1 ? "Object" : "Objects", selectedValue));
             }
         }
     }

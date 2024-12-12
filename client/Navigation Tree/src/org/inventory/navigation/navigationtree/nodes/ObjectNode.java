@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -85,6 +85,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
     protected static OpenLocalExplorerAction explorerAction = new OpenLocalExplorerAction();
     protected CommunicationsStub com = CommunicationsStub.getInstance();
     protected Image icon;
+    protected UpdateObjectCallback updateObjectCallback;
     /**
      * This custom color is set depending on the validators found in the LocalObjectLightInstance
      */
@@ -92,6 +93,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
 
     public ObjectNode(Children children, Lookup lookup) {
         super(children, lookup);
+        this.updateObjectCallback = new BusinessObjectUpdateCallback();
         LocalObjectLight anObject = lookup.lookup(LocalObjectLight.class);
         for (LocalValidator aValidator : anObject.getValidators()) {
             if (aValidator.getProperties().getProperty("color") != null) //NOI18N
@@ -143,15 +145,26 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             return sheet;
         }
+        Boolean isListTypeItem = false;
+        LocalObjectLight lol;
+        if (com.isSubclassOf(object.getClassName(), Constants.CLASS_GENERICOBJECTLIST)) {
+            lol = com.getListTypeItem(object.getClassName(), object.getId());
+            isListTypeItem = true;
+        } else 
+            lol = com.getObjectInfo(object.getClassName(), object.getId());
         
-        LocalObject lo = com.getObjectInfo(object.getClassName(), object.getId());
-        
-        if (lo == null) {
+        if (lol == null) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             return sheet;
         }
+        HashMap<String, Object> attributes;
+        if (isListTypeItem) 
+            attributes = ((LocalObjectListItem) lol).getAttributes();
+        else 
+            attributes = ((LocalObject) lol).getAttributes();
+      
         
-        object.setName(lo.getName());
+        object.setName(lol.getName());
         
         List<LocalAttributeMetadata>sortedAttributes = new ArrayList<>(meta.getAttributes());
         Collections.sort(sortedAttributes);
@@ -163,9 +176,9 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                 switch (mapping) {
                     case Constants.MAPPING_TIMESTAMP:
                     case Constants.MAPPING_DATE:
-                        property = new DateTypeProperty((Date)lo.getAttribute(lam.getName()) , 
+                        property = new DateTypeProperty((Date)attributes.get(lam.getName()) , 
                                 lam.getName(), Date.class, lam.getDisplayName(),
-                                lam.getDescription(), this);
+                                lam.getDescription(), this, updateObjectCallback);
                         break;
                     case Constants.MAPPING_PRIMITIVE:
                         if (!lam.getType().equals(LocalObjectLight.class)) {
@@ -173,7 +186,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                     lam.getName(),
                                     lam.getType(),
                                     lam.getDisplayName().isEmpty() ? lam.getName() : lam.getDisplayName(),
-                                    lam.getDescription(), this, lo.getAttribute(lam.getName()));
+                                    lam.getDescription(), this, attributes.get(lam.getName()), 
+                                    updateObjectCallback);
                         }
                         break;
                     case Constants.MAPPING_MANYTOONE: {
@@ -184,11 +198,11 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                             return sheet;
                         }
                         LocalObjectListItem val = null;
-                        if (lo.getAttribute(lam.getName()) == null) 
+                        if (attributes.get(lam.getName()) == null) 
                             val = list.get(0); //None
                         else {
                             for (LocalObjectListItem loli : list) {
-                                if (lo.getAttribute(lam.getName()).equals(loli)) {
+                                if (attributes.get(lam.getName()).equals(loli)) {
                                     val = loli;
                                     break;
                                 }
@@ -200,7 +214,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                 lam.getDescription(),
                                 list,
                                 this,
-                                val);
+                                val,
+                                updateObjectCallback);
                         break;
                     }
                     case Constants.MAPPING_MANYTOMANY: {
@@ -216,7 +231,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                 lam.getDescription(),
                                 list,
                                 this,
-                                (List<LocalObjectListItem>)lo.getAttribute(lam.getName()));
+                                (List<LocalObjectListItem>)attributes.get(lam.getName()), updateObjectCallback);
                         break;
                     }
                     default:
@@ -474,7 +489,6 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
 
     @Override
     public void setName(String newName) {
-        
         HashMap<String, Object> attributesToUpdate = new HashMap<>();
         attributesToUpdate.put(Constants.PROPERTY_NAME, newName);
         

@@ -16,8 +16,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="oid" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="activityClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="activityId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="releaseReltationships" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -30,64 +30,64 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "deleteActivity", propOrder = {
-    "className",
-    "oid",
+    "activityClass",
+    "activityId",
     "releaseReltationships",
     "sessionId"
 })
 public class DeleteActivity {
 
-    protected String className;
-    protected String oid;
+    protected String activityClass;
+    protected String activityId;
     protected boolean releaseReltationships;
     protected String sessionId;
 
     /**
-     * Gets the value of the className property.
+     * Gets the value of the activityClass property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getClassName() {
-        return className;
+    public String getActivityClass() {
+        return activityClass;
     }
 
     /**
-     * Sets the value of the className property.
+     * Sets the value of the activityClass property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setClassName(String value) {
-        this.className = value;
+    public void setActivityClass(String value) {
+        this.activityClass = value;
     }
 
     /**
-     * Gets the value of the oid property.
+     * Gets the value of the activityId property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getOid() {
-        return oid;
+    public String getActivityId() {
+        return activityId;
     }
 
     /**
-     * Sets the value of the oid property.
+     * Sets the value of the activityId property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setOid(String value) {
-        this.oid = value;
+    public void setActivityId(String value) {
+        this.activityId = value;
     }
 
     /**

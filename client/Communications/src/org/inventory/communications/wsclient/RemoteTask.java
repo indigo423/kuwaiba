@@ -25,10 +25,10 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="enabled" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="commitOnExecute" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="script" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="parameters" type="{http://ws.interfaces.kuwaiba.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="schedule" type="{http://ws.interfaces.kuwaiba.org/}taskScheduleDescriptor" minOccurs="0"/>
- *         &lt;element name="notificationType" type="{http://ws.interfaces.kuwaiba.org/}taskNotificationDescriptor" minOccurs="0"/>
- *         &lt;element name="users" type="{http://ws.interfaces.kuwaiba.org/}userInfoLight" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="parameters" type="{http://ws.northbound.kuwaiba.neotropic.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="schedule" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskScheduleDescriptor" minOccurs="0"/>
+ *         &lt;element name="notificationType" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskNotificationDescriptor" minOccurs="0"/>
+ *         &lt;element name="users" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteUserInfoLight" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -60,10 +60,10 @@ public class RemoteTask {
     protected String script;
     @XmlElement(nillable = true)
     protected List<StringPair> parameters;
-    protected TaskScheduleDescriptor schedule;
-    protected TaskNotificationDescriptor notificationType;
+    protected RemoteTaskScheduleDescriptor schedule;
+    protected RemoteTaskNotificationDescriptor notificationType;
     @XmlElement(nillable = true)
-    protected List<UserInfoLight> users;
+    protected List<RemoteUserInfoLight> users;
 
     /**
      * Gets the value of the id property.
@@ -219,10 +219,10 @@ public class RemoteTask {
      * 
      * @return
      *     possible object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public TaskScheduleDescriptor getSchedule() {
+    public RemoteTaskScheduleDescriptor getSchedule() {
         return schedule;
     }
 
@@ -231,10 +231,10 @@ public class RemoteTask {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public void setSchedule(TaskScheduleDescriptor value) {
+    public void setSchedule(RemoteTaskScheduleDescriptor value) {
         this.schedule = value;
     }
 
@@ -243,10 +243,10 @@ public class RemoteTask {
      * 
      * @return
      *     possible object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public TaskNotificationDescriptor getNotificationType() {
+    public RemoteTaskNotificationDescriptor getNotificationType() {
         return notificationType;
     }
 
@@ -255,10 +255,10 @@ public class RemoteTask {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public void setNotificationType(TaskNotificationDescriptor value) {
+    public void setNotificationType(RemoteTaskNotificationDescriptor value) {
         this.notificationType = value;
     }
 
@@ -280,13 +280,13 @@ public class RemoteTask {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link UserInfoLight }
+     * {@link RemoteUserInfoLight }
      * 
      * 
      */
-    public List<UserInfoLight> getUsers() {
+    public List<RemoteUserInfoLight> getUsers() {
         if (users == null) {
-            users = new ArrayList<UserInfoLight>();
+            users = new ArrayList<RemoteUserInfoLight>();
         }
         return this.users;
     }

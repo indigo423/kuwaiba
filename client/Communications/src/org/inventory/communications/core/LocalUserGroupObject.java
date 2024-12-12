@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.wsclient.GroupInfo;
 import org.inventory.communications.wsclient.PrivilegeInfo;
-import org.inventory.communications.wsclient.UserInfo;
+import org.inventory.communications.wsclient.RemoteUserInfo;
 
 /**
  * Implementation for the local representation of an application users group
@@ -41,7 +41,7 @@ public class LocalUserGroupObject extends LocalUserGroupObjectLight {
         for (PrivilegeInfo remotePrivilege : group.getPrivileges())
             privileges.add(new LocalPrivilege(remotePrivilege.getFeatureToken(), remotePrivilege.getAccessLevel()));
         
-        for (UserInfo remoteUser : group.getUsers()) {
+        for (RemoteUserInfo remoteUser : group.getUsers()) {
             List<LocalPrivilege> userPrivileges = new ArrayList<>();
             for (PrivilegeInfo remotePrivilege : remoteUser.getPrivileges())
                 userPrivileges.add(new LocalPrivilege(remotePrivilege.getFeatureToken(), remotePrivilege.getAccessLevel()));

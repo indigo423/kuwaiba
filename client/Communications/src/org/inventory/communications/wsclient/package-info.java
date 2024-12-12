@@ -1,2 +1,2 @@
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://ws.interfaces.kuwaiba.org/")
+@javax.xml.bind.annotation.XmlSchema(namespace = "http://ws.northbound.kuwaiba.neotropic.org/")
 package org.inventory.communications.wsclient;

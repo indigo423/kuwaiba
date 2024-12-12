@@ -16,9 +16,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="oid" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="releaseRelationships" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
+ *         &lt;element name="projectClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="projectId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -30,80 +29,62 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "deleteProject", propOrder = {
-    "className",
-    "oid",
-    "releaseRelationships",
+    "projectClass",
+    "projectId",
     "sessionId"
 })
 public class DeleteProject {
 
-    protected String className;
-    protected String oid;
-    protected boolean releaseRelationships;
+    protected String projectClass;
+    protected String projectId;
     protected String sessionId;
 
     /**
-     * Gets the value of the className property.
+     * Gets the value of the projectClass property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getClassName() {
-        return className;
+    public String getProjectClass() {
+        return projectClass;
     }
 
     /**
-     * Sets the value of the className property.
+     * Sets the value of the projectClass property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setClassName(String value) {
-        this.className = value;
+    public void setProjectClass(String value) {
+        this.projectClass = value;
     }
 
     /**
-     * Gets the value of the oid property.
+     * Gets the value of the projectId property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getOid() {
-        return oid;
+    public String getProjectId() {
+        return projectId;
     }
 
     /**
-     * Sets the value of the oid property.
+     * Sets the value of the projectId property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setOid(String value) {
-        this.oid = value;
-    }
-
-    /**
-     * Gets the value of the releaseRelationships property.
-     * 
-     */
-    public boolean isReleaseRelationships() {
-        return releaseRelationships;
-    }
-
-    /**
-     * Sets the value of the releaseRelationships property.
-     * 
-     */
-    public void setReleaseRelationships(boolean value) {
-        this.releaseRelationships = value;
+    public void setProjectId(String value) {
+        this.projectId = value;
     }
 
     /**

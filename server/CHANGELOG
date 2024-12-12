@@ -141,3 +141,27 @@
 * Migration to Java 8, Neo4J 3.x and Vaadin 8.x
 * Added a preliminary Outside Plant module version
 * Service Manager partly ported to the web interface
+
+2.1
+* About 90% of functionality migrated to web. Process Manager, Synchronization Framework, IP Address Manager and SDH still to be migrated.
+* All migrated modules either provide the same desktop client functionality or improve it (Topology Manager, Rack View, Physical Tree) 
+* Server is now a Spring Boot Project, no a J2EE application.
+* Threading model changed.
+* Operations such as IP addressing space calculation, node geo-location loading and end-to-end views improved, performance-wise. 
+* Dependencies updated: Vaadin 14.4.x, Neo4J 3.5.5, Groovy 3.0.1
+* OSP module rewritten to widen the scope, now supporting splicing, mid-span access, multiple node paths, position synchronization, and much more.
+* Navigation module no longer revolves around the Nav Tree, but smart searches.
+* Filters capability added to the navigation module. The filters are scripted queries than return a set of elements contained inside, or 
+  related to, a given object. A use case is, instead of seeing all the direct children of an object (say a rack), make a filter to show only the
+  children with available resources (for example, ports without connections).
+* Modules involving custom scripts now provide Groovy syntax recognition in the script editor.
+* Several tasks and reports updated.
+* The concept of "Filters" as a way to improve the navigation by allowing the admin to create custom algorithms to explore the inventory through the containment 
+  hierarchy was introduced.
+* The concept of "Scripted Queries" as a way to create custom queries with parameters and direct access to the database was introduced.
+* Validators now support also fill colors and UNICODE emojis.
+* Synchronization Management only works on web.
+* Added a Proxy Manager module to help in integration scenarios when is necessary to group several inventory assets seen as one by an external 
+  application. A proxy acts as that group, and the external application will only have to inquire by the proxy, not the actual invetory objects. 
+* Several bug-fixes (see https://sourceforge.net/p/kuwaiba/bugs/search/?q=status%3Aclosed-duplicate+or+status%3Aclosed-wont-fix+or+status%3Aclosed-fixed+or+status%3Aclosed) and feature requests closed (see https://sourceforge.net/p/kuwaiba/feature-requests/search/?q=status%3Awont-fix+or+status%3Aclosed)
+* IPAM was migrated to web and added dashboards to better manage the information on display.

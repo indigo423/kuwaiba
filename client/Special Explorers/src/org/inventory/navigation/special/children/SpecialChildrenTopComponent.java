@@ -16,6 +16,8 @@
 package org.inventory.navigation.special.children;
 
 import java.awt.BorderLayout;
+import org.inventory.core.templates.layouts.customshapes.nodes.CustomShapeNode;
+import org.inventory.customization.listmanager.nodes.ListTypeItemNode;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.special.children.nodes.SpecialChildren;
 import org.inventory.navigation.special.children.nodes.SpecialObjectNode;
@@ -116,6 +118,10 @@ public class SpecialChildrenTopComponent extends TopComponent
             ObjectNode node = (ObjectNode)lookupResult.allInstances().iterator().next();
             
             if (node instanceof SpecialObjectNode) //Ignore its own nodes
+                return;
+            if (node instanceof ListTypeItemNode) 
+                return;
+            if (node instanceof CustomShapeNode) 
                 return;
             
             //If the current object is the same that the last selected object, do nothing

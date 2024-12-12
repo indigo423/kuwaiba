@@ -14,7 +14,7 @@ import javax.xml.bind.annotation.XmlType;
  * <pre>
  * &lt;complexType name="remoteInventoryProxy">
  *   &lt;complexContent>
- *     &lt;extension base="{http://ws.interfaces.kuwaiba.org/}remoteObject">
+ *     &lt;extension base="{http://ws.northbound.kuwaiba.neotropic.org/}remoteObject">
  *       &lt;sequence>
  *       &lt;/sequence>
  *     &lt;/extension>

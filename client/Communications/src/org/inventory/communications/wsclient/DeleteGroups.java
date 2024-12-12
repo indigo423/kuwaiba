@@ -36,7 +36,7 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class DeleteGroups {
 
-    @XmlElement(nillable = true)
+    @XmlElement(type = Long.class)
     protected List<Long> oids;
     protected String sessionId;
 

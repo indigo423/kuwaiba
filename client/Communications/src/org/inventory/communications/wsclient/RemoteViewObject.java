@@ -14,7 +14,7 @@ import javax.xml.bind.annotation.XmlType;
  * <pre>
  * &lt;complexType name="remoteViewObject">
  *   &lt;complexContent>
- *     &lt;extension base="{http://ws.interfaces.kuwaiba.org/}remoteViewObjectLight">
+ *     &lt;extension base="{http://ws.northbound.kuwaiba.neotropic.org/}remoteViewObjectLight">
  *       &lt;sequence>
  *         &lt;element name="background" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>
  *         &lt;element name="structure" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>

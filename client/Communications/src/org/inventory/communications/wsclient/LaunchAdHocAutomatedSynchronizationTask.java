@@ -38,7 +38,7 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class LaunchAdHocAutomatedSynchronizationTask {
 
-    @XmlElement(nillable = true)
+    @XmlElement(type = Long.class)
     protected List<Long> synDsConfigIds;
     protected String providersName;
     protected String sessionId;

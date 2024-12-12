@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -159,12 +159,12 @@ public class ConnectionSettingsPanel extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void radBtnHttpActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_radBtnHttpActionPerformed
-        this.txtServerPort.setText("8080"); //NOI18N
+        this.txtServerPort.setText("80"); //NOI18N
         chkHostVerification.setEnabled(false);
     }//GEN-LAST:event_radBtnHttpActionPerformed
 
     private void radBtnHttpsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_radBtnHttpsActionPerformed
-        this.txtServerPort.setText("8181"); //NOI18N
+        this.txtServerPort.setText("443" /* default value*/); //NOI18N
         chkHostVerification.setEnabled(true);
     }//GEN-LAST:event_radBtnHttpsActionPerformed
 

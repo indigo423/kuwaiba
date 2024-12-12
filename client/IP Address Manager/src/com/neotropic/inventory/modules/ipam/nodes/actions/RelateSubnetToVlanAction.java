@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -37,7 +37,6 @@ import org.openide.util.Utilities;
  * Relates a subnet with a VLAN
  * @author Adrian Martinez Molina {@literal <adrian.martinez@kuwaiba.org>}
  */
-@Deprecated
 public class RelateSubnetToVlanAction extends GenericInventoryAction {
     
     private static RelateSubnetToVlanAction instance;

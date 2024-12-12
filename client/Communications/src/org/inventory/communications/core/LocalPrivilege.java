@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,9 +51,9 @@ public class LocalPrivilege {
     public static final String PRIVILEGE_SYNC = "sync";
     public static final String PRIVILEGE_CONTACTS = "contacts";
     public static final String PRIVILEGE_CONFIG_VARIABLES = "config-variables";
-    public static final String PRIVILEGE_PROXIES = "proxies";
     public static final String PRIVILEGE_VALIDATORS = "validators";
     public static final String PRIVILEGE_WAREHOUSES = "warehouses";
+    public static final String PRIVILEGE_PROXIES = "proxies";
     
     /**
      * For now, these privileges will be hard-coded, however in the near future, every module will provide its own set of tokens

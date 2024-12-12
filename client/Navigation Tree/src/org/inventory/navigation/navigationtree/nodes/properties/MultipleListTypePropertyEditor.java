@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.inventory.navigation.navigationtree.nodes.properties;
 import java.awt.Component;
 import java.beans.PropertyEditorSupport;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.JList;
@@ -28,6 +27,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
 
 /**
  * Provides a custom property editor for list-type values where you can choose more than one item
@@ -50,11 +50,17 @@ public class MultipleListTypePropertyEditor extends PropertyEditorSupport {
      * A reference to the actual property
      */
     private MultipleListTypeProperty property;
+    /**
+     * The piece of logic to execute upon an update.
+     */
+    private UpdateObjectCallback updateCallback;
     
-    public MultipleListTypePropertyEditor(List<LocalObjectListItem> list, List<LocalObjectListItem> initialValues, MultipleListTypeProperty property) {
+    public MultipleListTypePropertyEditor(List<LocalObjectListItem> list, List<LocalObjectListItem> initialValues, 
+            MultipleListTypeProperty property, UpdateObjectCallback updateCallback) {
         this.property = property;
         this. pnlListTypes = new JScrollPane();
         this.lstListTypes = new JList<>(list.toArray(new LocalObjectListItem[0]));
+        this.updateCallback = updateCallback;
         lstListTypes.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         
         List<Integer> selectedIndices = new ArrayList<>();
@@ -84,17 +90,16 @@ public class MultipleListTypePropertyEditor extends PropertyEditorSupport {
     @Override
     public void setValue(Object value) {
         if (save) {
-            HashMap<String, Object> attributesToUpdate = new HashMap<>();
-            
-            attributesToUpdate.put(property.getName(),  lstListTypes.getSelectedValuesList().stream().map(n -> String.valueOf(n.getId())
-            ).collect(Collectors.joining(";")));
-
-            if(!CommunicationsStub.getInstance().updateObject(property.getNode().getObject().getClassName(), 
-                    property.getNode().getObject().getId(), attributesToUpdate))
+            try {
+                this.updateCallback.executeChange(property.getNode().getObject().getClassName(), 
+                        property.getNode().getObject().getId(), property.getName(),
+                        lstListTypes.getSelectedValuesList().stream().map(n -> String.valueOf(n.getId())
+                                        ).collect(Collectors.joining(";")));
+                property.getNode().refresh();
+            } catch (IllegalArgumentException ex) {
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                     NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-            else
-                property.getNode().refresh();
+            }
             
             save = false;
         }

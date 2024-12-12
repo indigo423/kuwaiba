@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
                 for (LocalObjectLight contract : contracts) {
                     SubMenuItem subMenuItem = new SubMenuItem(contract.toString());
                     subMenuItem.addProperty(Constants.PROPERTY_ID, contract.getId());
+                    subMenuItem.addProperty(Constants.PROPERTY_CLASSNAME, contract.getClassName());
                     subMenuItems.add(subMenuItem);
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -97,7 +98,9 @@ public class ReleaseFromContractAction extends GenericObjectNodeAction implement
                 while (selectedNodes.hasNext()) {
                     ObjectNode selectedNode = selectedNodes.next();
                     if (CommunicationsStub.getInstance().releaseObjectFromContract(selectedNode.getObject().getClassName(), 
-                        selectedNode.getObject().getId(), (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID))) {
+                        selectedNode.getObject().getId()
+                            , (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_CLASSNAME)
+                            , (String) ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getProperty(Constants.PROPERTY_ID))) {
                         if (selectedNode.getParentNode() instanceof ContractNode)
                             ((ContractNode.ContractChildren)selectedNode.getParentNode().getChildren()).addNotify();
                     } else {

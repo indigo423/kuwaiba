@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}remoteReportLight" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteReportMetadataLight" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -35,7 +35,7 @@ import javax.xml.bind.annotation.XmlType;
 public class GetClassLevelReportsResponse {
 
     @XmlElement(name = "return")
-    protected List<RemoteReportLight> _return;
+    protected List<RemoteReportMetadataLight> _return;
 
     /**
      * Gets the value of the return property.
@@ -55,13 +55,13 @@ public class GetClassLevelReportsResponse {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link RemoteReportLight }
+     * {@link RemoteReportMetadataLight }
      * 
      * 
      */
-    public List<RemoteReportLight> getReturn() {
+    public List<RemoteReportMetadataLight> getReturn() {
         if (_return == null) {
-            _return = new ArrayList<RemoteReportLight>();
+            _return = new ArrayList<RemoteReportMetadataLight>();
         }
         return this._return;
     }

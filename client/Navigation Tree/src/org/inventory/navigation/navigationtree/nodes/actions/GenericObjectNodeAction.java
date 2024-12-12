@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 package org.inventory.navigation.navigationtree.nodes.actions;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.openide.util.Lookup;
 import org.openide.util.Utilities;
 
 
@@ -35,13 +35,16 @@ public abstract class GenericObjectNodeAction extends GenericInventoryAction {
         
     @Override
     public boolean isEnabled() {
-        Collection<? extends ObjectNode> selectedObjectNodes = Utilities.actionsGlobalContext().lookupAll(ObjectNode.class);
+        Lookup.Result<? extends ObjectNode> selectedObjectNode = Utilities.actionsGlobalContext().lookupResult(ObjectNode.class);
         
-        if (selectedObjectNodes == null || selectedObjectNodes.isEmpty())
+        if (selectedObjectNode == null)
             return false;
         
         selectedObjects = new ArrayList<>();
-        selectedObjectNodes.forEach( aSelectedNode -> selectedObjects.add(aSelectedNode.getObject()));
+        
+        for (ObjectNode selectedNode : selectedObjectNode.allInstances())
+            selectedObjects.add(selectedNode.getObject());
+        
         return numberOfNodes() == -1 ? !selectedObjects.isEmpty() : selectedObjects.size() == numberOfNodes();
     }
     

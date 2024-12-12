@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -77,7 +77,8 @@ public final class DeleteBusinessObjectAction extends CallbackSystemAction {
                     parents.add(selectedNode.getParentNode());
             }
                         
-            if (CommunicationsStub.getInstance().deleteObjects(classNames, oids)) {
+            if (CommunicationsStub.getInstance().deleteObjects(classNames, oids)){
+                
                 for (Node parent : parents) {
                     if (AbstractChildren.class.isInstance(parent.getChildren()))
                         ((AbstractChildren)parent.getChildren()).addNotify();

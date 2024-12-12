@@ -19,8 +19,8 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="attributes" type="{http://ws.interfaces.kuwaiba.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="oid" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="attributes" type="{http://ws.northbound.kuwaiba.neotropic.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -33,14 +33,14 @@ import javax.xml.bind.annotation.XmlType;
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "updateObject", propOrder = {
     "className",
-    "id",
+    "oid",
     "attributes",
     "sessionId"
 })
 public class UpdateObject {
 
     protected String className;
-    protected String id;
+    protected String oid;
     protected List<StringPair> attributes;
     protected String sessionId;
 
@@ -69,27 +69,27 @@ public class UpdateObject {
     }
 
     /**
-     * Gets the value of the id property.
+     * Gets the value of the oid property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getId() {
-        return id;
+    public String getOid() {
+        return oid;
     }
 
     /**
-     * Sets the value of the id property.
+     * Sets the value of the oid property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setId(String value) {
-        this.id = value;
+    public void setOid(String value) {
+        this.oid = value;
     }
 
     /**

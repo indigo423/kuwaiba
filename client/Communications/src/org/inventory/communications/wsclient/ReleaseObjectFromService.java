@@ -18,7 +18,7 @@ import javax.xml.bind.annotation.XmlType;
  *       &lt;sequence>
  *         &lt;element name="serviceClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="serviceId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="targetId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="objectId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -32,14 +32,14 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "releaseObjectFromService", propOrder = {
     "serviceClass",
     "serviceId",
-    "targetId",
+    "objectId",
     "sessionId"
 })
 public class ReleaseObjectFromService {
 
     protected String serviceClass;
     protected String serviceId;
-    protected String targetId;
+    protected String objectId;
     protected String sessionId;
 
     /**
@@ -91,27 +91,27 @@ public class ReleaseObjectFromService {
     }
 
     /**
-     * Gets the value of the targetId property.
+     * Gets the value of the objectId property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getTargetId() {
-        return targetId;
+    public String getObjectId() {
+        return objectId;
     }
 
     /**
-     * Sets the value of the targetId property.
+     * Sets the value of the objectId property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setTargetId(String value) {
-        this.targetId = value;
+    public void setObjectId(String value) {
+        this.objectId = value;
     }
 
     /**

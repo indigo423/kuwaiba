@@ -16,6 +16,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
+ *         &lt;element name="page" type="{http://www.w3.org/2001/XMLSchema}int"/>
+ *         &lt;element name="limit" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -27,11 +29,47 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "getAllProjects", propOrder = {
+    "page",
+    "limit",
     "sessionId"
 })
 public class GetAllProjects {
 
+    protected int page;
+    protected int limit;
     protected String sessionId;
+
+    /**
+     * Gets the value of the page property.
+     * 
+     */
+    public int getPage() {
+        return page;
+    }
+
+    /**
+     * Sets the value of the page property.
+     * 
+     */
+    public void setPage(int value) {
+        this.page = value;
+    }
+
+    /**
+     * Gets the value of the limit property.
+     * 
+     */
+    public int getLimit() {
+        return limit;
+    }
+
+    /**
+     * Sets the value of the limit property.
+     * 
+     */
+    public void setLimit(int value) {
+        this.limit = value;
+    }
 
     /**
      * Gets the value of the sessionId property.

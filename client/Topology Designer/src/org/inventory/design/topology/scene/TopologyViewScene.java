@@ -24,7 +24,6 @@ import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -278,7 +277,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
     public void render(byte[] structure) throws IllegalArgumentException {
         //Here is where we use Woodstox as StAX provider
         XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-        
+
         QName qNode = new QName("node"); //NOI18N
         QName qView = new QName("view"); //NOI18N
         QName qEdge = new QName("edge"); //NOI18N
@@ -300,7 +299,7 @@ public class TopologyViewScene extends AbstractScene<LocalObjectLight, String> {
                               clear();
                               break;
                          }
-                    } else if (reader.getName().equals(qNode)){
+                    } else if (reader.getName().equals(qNode)) {
                         String objectClass = reader.getAttributeValue(null, "class");
 
                         int x = Double.valueOf(reader.getAttributeValue(null,"x")).intValue();

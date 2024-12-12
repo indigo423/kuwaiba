@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import org.openide.util.NbBundle.Messages;
 @TopComponent.Description(
         preferredID = "ConfigurationVariablesTopComponent",
         iconBase="org/kuwaiba/core/config/res/variables.png", 
-        persistenceType = TopComponent.PERSISTENCE_NEVER
+        persistenceType = TopComponent.PERSISTENCE_ALWAYS
 )
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Window", id = "org.kuwaiba.core.config.variables.ConfigurationVariablesTopComponent")

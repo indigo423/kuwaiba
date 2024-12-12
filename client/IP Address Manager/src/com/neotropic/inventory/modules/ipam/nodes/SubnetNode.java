@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -23,6 +23,8 @@ import javax.swing.Action;
 import org.inventory.communications.core.LocalObjectLight;
 import com.neotropic.inventory.modules.ipam.nodes.actions.DeleteSubnetAction;
 import com.neotropic.inventory.modules.ipam.nodes.actions.RelateSubnetToVFRAction;
+import com.neotropic.inventory.modules.ipam.nodes.actions.RelateSubnetToVlanAction;
+import com.neotropic.inventory.modules.ipam.nodes.actions.ReleaseSubnetFromVlanAction;
 import com.neotropic.inventory.modules.ipam.nodes.actions.ReleaseSubnetFromVFRAction;
 import com.neotropic.inventory.modules.ipam.nodes.properties.GeneralProperty;
 import com.neotropic.inventory.modules.ipam.nodes.properties.NotEditableProperty;
@@ -70,8 +72,8 @@ public class SubnetNode extends ObjectNode {
             null,
             Lookup.getDefault().lookup(RelateToServiceAction.class),
             Lookup.getDefault().lookup(ReleaseFromServiceAction.class),
-            //RelateSubnetToVlanAction.getInstance(),
-            //ReleaseSubnetFromVlanAction.getInstance(),
+            RelateSubnetToVlanAction.getInstance(),
+            ReleaseSubnetFromVlanAction.getInstance(),
             RelateSubnetToVFRAction.getInstance(),
             ReleaseSubnetFromVFRAction.getInstance(),
             null,

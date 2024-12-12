@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ public class ShowEndToEndViewAction extends GenericObjectNodeAction {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (selectedObjects.size() != 1)
-            JOptionPane.showMessageDialog(null, "Select only one node service.", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Select only one service node.", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
         else{
             //TopComponent endToEndTC = ((EndToEndViewTopComponent)WindowManager.getDefault().
             //  findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getId()));

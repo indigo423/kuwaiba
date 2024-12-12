@@ -100,7 +100,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
         configObject.setProperty("saved", true);
         
         scene.setActiveTool(TopologyViewScene.ACTION_SELECT);
-        add(scene.createView());
+        pnlScrollMain.setViewportView(scene.createView());
     }
 
     /**
@@ -111,7 +111,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jToolBar1 = new javax.swing.JToolBar();
+        barMain = new javax.swing.JToolBar();
         btnNewTopology = new javax.swing.JButton();
         btnOpen = new javax.swing.JButton();
         btnSave = new javax.swing.JButton();
@@ -124,14 +124,14 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
         btnAddBackgroundImage = new javax.swing.JButton();
         btnRemoveBackground = new javax.swing.JButton();
         btnRefresh = new javax.swing.JButton();
-        pnlMainScrollPanel = new javax.swing.JScrollPane();
+        pnlScrollMain = new javax.swing.JScrollPane();
 
         setLayout(new java.awt.BorderLayout());
 
-        jToolBar1.setRollover(true);
-        jToolBar1.setMaximumSize(new java.awt.Dimension(392, 38));
-        jToolBar1.setMinimumSize(new java.awt.Dimension(392, 38));
-        jToolBar1.setPreferredSize(new java.awt.Dimension(392, 38));
+        barMain.setRollover(true);
+        barMain.setMaximumSize(new java.awt.Dimension(392, 38));
+        barMain.setMinimumSize(new java.awt.Dimension(392, 38));
+        barMain.setPreferredSize(new java.awt.Dimension(392, 38));
 
         btnNewTopology.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/add.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnNewTopology, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnNewTopology.text")); // NOI18N
@@ -144,7 +144,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnNewTopologyActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnNewTopology);
+        barMain.add(btnNewTopology);
 
         btnOpen.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/open.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnOpen, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnOpen.text")); // NOI18N
@@ -157,7 +157,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnOpenActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnOpen);
+        barMain.add(btnOpen);
 
         btnSave.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/save.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnSave, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnSave.text")); // NOI18N
@@ -171,7 +171,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnSaveActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnSave);
+        barMain.add(btnSave);
 
         btnDelete.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/delete.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnDelete, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnDelete.text")); // NOI18N
@@ -185,7 +185,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnDeleteActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnDelete);
+        barMain.add(btnDelete);
 
         btnExport.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/export.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnExport, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnExport.text")); // NOI18N
@@ -199,7 +199,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnExportActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnExport);
+        barMain.add(btnExport);
 
         btnSelect.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/select.png"))); // NOI18N
         btnSelect.setSelected(true);
@@ -217,7 +217,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnSelectActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnSelect);
+        barMain.add(btnSelect);
 
         btnConnect.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/connect.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnConnect, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnConnect.text")); // NOI18N
@@ -234,7 +234,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnConnectActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnConnect);
+        barMain.add(btnConnect);
 
         btnCloud.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/cloud.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnCloud, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnCloud.text")); // NOI18N
@@ -247,7 +247,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnCloudActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnCloud);
+        barMain.add(btnCloud);
 
         btnFrame.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/frame.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnFrame, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnFrame.text")); // NOI18N
@@ -260,7 +260,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnFrameActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnFrame);
+        barMain.add(btnFrame);
 
         btnAddBackgroundImage.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/add-background.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnAddBackgroundImage, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnAddBackgroundImage.text")); // NOI18N
@@ -273,7 +273,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnAddBackgroundImageActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnAddBackgroundImage);
+        barMain.add(btnAddBackgroundImage);
 
         btnRemoveBackground.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/remove-background.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnRemoveBackground, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnRemoveBackground.text")); // NOI18N
@@ -287,7 +287,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnRemoveBackgroundActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnRemoveBackground);
+        barMain.add(btnRemoveBackground);
 
         btnRefresh.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/inventory/design/topology/res/refresh.png"))); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(btnRefresh, org.openide.util.NbBundle.getMessage(TopologyDesignTopComponent.class, "TopologyDesignTopComponent.btnRefresh.text")); // NOI18N
@@ -300,10 +300,10 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
                 btnRefreshActionPerformed(evt);
             }
         });
-        jToolBar1.add(btnRefresh);
+        barMain.add(btnRefresh);
 
-        add(jToolBar1, java.awt.BorderLayout.PAGE_START);
-        add(pnlMainScrollPanel, java.awt.BorderLayout.CENTER);
+        add(barMain, java.awt.BorderLayout.PAGE_START);
+        add(pnlScrollMain, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnNewTopologyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNewTopologyActionPerformed
@@ -475,6 +475,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
     }//GEN-LAST:event_btnRefreshActionPerformed
  
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JToolBar barMain;
     private javax.swing.JButton btnAddBackgroundImage;
     private javax.swing.JButton btnCloud;
     private javax.swing.JToggleButton btnConnect;
@@ -487,8 +488,7 @@ public final class TopologyDesignTopComponent extends TopComponent implements Ex
     private javax.swing.JButton btnRemoveBackground;
     private javax.swing.JButton btnSave;
     private javax.swing.JToggleButton btnSelect;
-    private javax.swing.JToolBar jToolBar1;
-    private javax.swing.JScrollPane pnlMainScrollPanel;
+    private javax.swing.JScrollPane pnlScrollMain;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {

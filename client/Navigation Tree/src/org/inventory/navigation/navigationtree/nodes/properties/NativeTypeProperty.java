@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2020, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package org.inventory.navigation.navigationtree.nodes.properties;
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
 import org.openide.nodes.PropertySupport;
 
 /**
@@ -32,12 +32,14 @@ import org.openide.nodes.PropertySupport;
 public class NativeTypeProperty extends PropertySupport.ReadWrite {
     private ObjectNode node;
     private Object value;
+    private UpdateObjectCallback updateObjectCallback;
     
     public NativeTypeProperty(String name, Class valueType, String displayName,
-            String toolTextTip, ObjectNode node, Object value) {
+            String toolTextTip, ObjectNode node, Object value, UpdateObjectCallback updateObjectCallback) {
         super(name, valueType, displayName, toolTextTip);
         this.node = node;
         this.value = value;
+        this.updateObjectCallback = updateObjectCallback;
     }
     
     @Override
@@ -51,18 +53,14 @@ public class NativeTypeProperty extends PropertySupport.ReadWrite {
     public void setValue(Object t) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         if (t == null || t.equals(value) || t.equals("<null value>")) //Don't update if no changes were performed
             return;
-        
-        HashMap<String, Object> attributesToUpdate = new HashMap<>();
-        attributesToUpdate.put(getName(), t);
-
-        if(!CommunicationsStub.getInstance().updateObject(node.getObject().getClassName(), 
-                node.getObject().getId(), attributesToUpdate))
-            NotificationUtil.getInstance().showSimplePopup("Error", 
-                    NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-        else {
+        try {
+            this.updateObjectCallback.executeChange(node.getObject().getClassName(), node.getObject().getId(), getName(), t);
             value = t;
             if (getName().equals(Constants.PROPERTY_NAME))
                 node.getObject().setName((String)t);
+        } catch (IllegalArgumentException ex) {
+            NotificationUtil.getInstance().showSimplePopup("Error", 
+                    NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         }
     }
 

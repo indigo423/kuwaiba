@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -182,7 +182,7 @@ public class LocalAttributeMetadata implements Comparable<LocalAttributeMetadata
     }
     
     public final int getMappingFromType(String type, boolean multiple) {
-        if (type.equals("String") || type.equals("Integer") || type.equals("Float") || type.equals("Long") || type.equals("Boolean"))
+        if (type.equals("String") || type.equals("Integer") || type.equals("Float") || type.equals("Double") || type.equals("Long") || type.equals("Boolean"))
             return Constants.MAPPING_PRIMITIVE;
         if (type.equals("Timestamp"))
             return Constants.MAPPING_TIMESTAMP;

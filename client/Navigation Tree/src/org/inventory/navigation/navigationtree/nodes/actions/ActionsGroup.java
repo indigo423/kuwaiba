@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@ package org.inventory.navigation.navigationtree.nodes.actions;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalValidator;
 import org.inventory.core.services.utils.MenuScroller;
@@ -60,8 +62,21 @@ public class ActionsGroup extends GenericObjectNodeAction implements Presenter.P
     @Override
     public void actionPerformed(ActionEvent e) {
         GenericObjectNodeAction action = (GenericObjectNodeAction) getValue(((JMenuItem) e.getSource()).getName());
-        if (action != null)
+        
+        if (action != null) { 
+            List<LocalObjectLight> objects = new ArrayList<>();           
+            Iterator selectedNodes = Utilities.actionsGlobalContext().lookupResult(ObjectNode.class).allInstances().iterator();
+            
+            if (!selectedNodes.hasNext())
+                return;
+                      
+            while (selectedNodes.hasNext()) {
+                ObjectNode selectedNode = (ObjectNode)selectedNodes.next();
+                objects.add(selectedNode.getObject());
+            }
+                        action.setSelectedObjects(objects);
             action.actionPerformed(e);
+        }
     }
 
     @Override

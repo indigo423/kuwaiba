@@ -16,8 +16,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="processinstanceId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="activityId" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="processinstanceId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="activityId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -35,39 +35,55 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class GetArtifactForActivity {
 
-    protected long processinstanceId;
-    protected long activityId;
+    protected String processinstanceId;
+    protected String activityId;
     protected String sessionId;
 
     /**
      * Gets the value of the processinstanceId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getProcessinstanceId() {
+    public String getProcessinstanceId() {
         return processinstanceId;
     }
 
     /**
      * Sets the value of the processinstanceId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setProcessinstanceId(long value) {
+    public void setProcessinstanceId(String value) {
         this.processinstanceId = value;
     }
 
     /**
      * Gets the value of the activityId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getActivityId() {
+    public String getActivityId() {
         return activityId;
     }
 
     /**
      * Sets the value of the activityId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setActivityId(long value) {
+    public void setActivityId(String value) {
         this.activityId = value;
     }
 

@@ -18,6 +18,7 @@ import javax.xml.bind.annotation.XmlType;
  *       &lt;sequence>
  *         &lt;element name="objectClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="objectId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="contractClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="contractId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -32,6 +33,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "releaseObjectFromContract", propOrder = {
     "objectClass",
     "objectId",
+    "contractClass",
     "contractId",
     "sessionId"
 })
@@ -39,6 +41,7 @@ public class ReleaseObjectFromContract {
 
     protected String objectClass;
     protected String objectId;
+    protected String contractClass;
     protected String contractId;
     protected String sessionId;
 
@@ -88,6 +91,30 @@ public class ReleaseObjectFromContract {
      */
     public void setObjectId(String value) {
         this.objectId = value;
+    }
+
+    /**
+     * Gets the value of the contractClass property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getContractClass() {
+        return contractClass;
+    }
+
+    /**
+     * Sets the value of the contractClass property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setContractClass(String value) {
+        this.contractClass = value;
     }
 
     /**

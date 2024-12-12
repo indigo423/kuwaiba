@@ -19,7 +19,6 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="oldSyncGroupId" type="{http://www.w3.org/2001/XMLSchema}long"/>
  *         &lt;element name="newSyncGroupId" type="{http://www.w3.org/2001/XMLSchema}long"/>
  *         &lt;element name="syncDataSourceConfiguration" type="{http://www.w3.org/2001/XMLSchema}long" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
@@ -33,34 +32,16 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "moveSyncDataSourceConfiguration", propOrder = {
-    "oldSyncGroupId",
     "newSyncGroupId",
     "syncDataSourceConfiguration",
     "sessionId"
 })
 public class MoveSyncDataSourceConfiguration {
 
-    protected long oldSyncGroupId;
     protected long newSyncGroupId;
     @XmlElement(nillable = true)
     protected List<Long> syncDataSourceConfiguration;
     protected String sessionId;
-
-    /**
-     * Gets the value of the oldSyncGroupId property.
-     * 
-     */
-    public long getOldSyncGroupId() {
-        return oldSyncGroupId;
-    }
-
-    /**
-     * Sets the value of the oldSyncGroupId property.
-     * 
-     */
-    public void setOldSyncGroupId(long value) {
-        this.oldSyncGroupId = value;
-    }
 
     /**
      * Gets the value of the newSyncGroupId property.

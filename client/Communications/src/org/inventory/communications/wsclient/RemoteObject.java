@@ -18,9 +18,9 @@ import javax.xml.bind.annotation.XmlType;
  * <pre>
  * &lt;complexType name="remoteObject">
  *   &lt;complexContent>
- *     &lt;extension base="{http://ws.interfaces.kuwaiba.org/}remoteObjectLight">
+ *     &lt;extension base="{http://ws.northbound.kuwaiba.neotropic.org/}remoteObjectLight">
  *       &lt;sequence>
- *         &lt;element name="attributes" type="{http://ws.interfaces.kuwaiba.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="attributes" type="{http://ws.northbound.kuwaiba.neotropic.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/extension>
  *   &lt;/complexContent>

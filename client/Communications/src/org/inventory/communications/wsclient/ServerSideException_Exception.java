@@ -10,7 +10,7 @@ import javax.xml.ws.WebFault;
  * Generated source version: 2.2
  * 
  */
-@WebFault(name = "ServerSideException", targetNamespace = "http://ws.interfaces.kuwaiba.org/")
+@WebFault(name = "ServerSideException", targetNamespace = "http://ws.northbound.kuwaiba.neotropic.org/")
 public class ServerSideException_Exception
     extends Exception
 {

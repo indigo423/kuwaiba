@@ -22,7 +22,6 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="sessionType" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="firstName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="lastName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="ipAddress" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -38,8 +37,7 @@ import javax.xml.bind.annotation.XmlType;
     "userId",
     "sessionType",
     "firstName",
-    "lastName",
-    "ipAddress"
+    "lastName"
 })
 public class RemoteSession {
 
@@ -49,7 +47,6 @@ public class RemoteSession {
     protected int sessionType;
     protected String firstName;
     protected String lastName;
-    protected String ipAddress;
 
     /**
      * Gets the value of the sessionId property.
@@ -177,30 +174,6 @@ public class RemoteSession {
      */
     public void setLastName(String value) {
         this.lastName = value;
-    }
-
-    /**
-     * Gets the value of the ipAddress property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getIpAddress() {
-        return ipAddress;
-    }
-
-    /**
-     * Sets the value of the ipAddress property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setIpAddress(String value) {
-        this.ipAddress = value;
     }
 
 }

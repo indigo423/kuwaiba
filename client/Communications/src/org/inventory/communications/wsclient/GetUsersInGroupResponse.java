@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}userInfo" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteUserInfo" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -35,7 +35,7 @@ import javax.xml.bind.annotation.XmlType;
 public class GetUsersInGroupResponse {
 
     @XmlElement(name = "return")
-    protected List<UserInfo> _return;
+    protected List<RemoteUserInfo> _return;
 
     /**
      * Gets the value of the return property.
@@ -55,13 +55,13 @@ public class GetUsersInGroupResponse {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link UserInfo }
+     * {@link RemoteUserInfo }
      * 
      * 
      */
-    public List<UserInfo> getReturn() {
+    public List<RemoteUserInfo> getReturn() {
         if (_return == null) {
-            _return = new ArrayList<UserInfo>();
+            _return = new ArrayList<RemoteUserInfo>();
         }
         return this._return;
     }

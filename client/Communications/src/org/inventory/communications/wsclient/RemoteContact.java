@@ -14,9 +14,9 @@ import javax.xml.bind.annotation.XmlType;
  * <pre>
  * &lt;complexType name="remoteContact">
  *   &lt;complexContent>
- *     &lt;extension base="{http://ws.interfaces.kuwaiba.org/}remoteObject">
+ *     &lt;extension base="{http://ws.northbound.kuwaiba.neotropic.org/}remoteObject">
  *       &lt;sequence>
- *         &lt;element name="customer" type="{http://ws.interfaces.kuwaiba.org/}remoteObjectLight" minOccurs="0"/>
+ *         &lt;element name="customer" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteObjectLight" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/extension>
  *   &lt;/complexContent>

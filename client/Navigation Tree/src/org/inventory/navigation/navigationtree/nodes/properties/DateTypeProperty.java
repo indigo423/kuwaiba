@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019, Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2020, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package org.inventory.navigation.navigationtree.nodes.properties;
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
-import java.util.HashMap;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
 import org.openide.nodes.PropertySupport;
 
 /**
@@ -32,12 +32,14 @@ import org.openide.nodes.PropertySupport;
 public class DateTypeProperty extends PropertySupport.ReadWrite<Date> {
     private Date value;
     private ObjectNode node;
+    private UpdateObjectCallback updateObjectCallback;
     
     public DateTypeProperty(Date date, String name, Class<Date> type, 
-                                String displayName, String shortDescription, ObjectNode node) {
+                                String displayName, String shortDescription, ObjectNode node, UpdateObjectCallback updateObjectCallback) {
         super(name, type, displayName, shortDescription);
         this.value = date;
         this.node = node;
+        this.updateObjectCallback = updateObjectCallback;
     }
     
     @Override
@@ -47,14 +49,13 @@ public class DateTypeProperty extends PropertySupport.ReadWrite<Date> {
 
     @Override
     public void setValue(Date value) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-        HashMap<String, Object> attributesToUpdate = new HashMap<>();
-        attributesToUpdate.put(getName(), value);
-
-        if(CommunicationsStub.getInstance().updateObject(node.getObject().getClassName(), 
-                node.getObject().getId(), attributesToUpdate))
+        try {
+            this.updateObjectCallback.executeChange(node.getObject().getClassName(), node.getObject().getId(), getName(), value);
             this.value = value;
-        else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+        } catch (IllegalArgumentException ex) {
+            NotificationUtil.getInstance().showSimplePopup("Error", 
+                    NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+        }
     }
     @Override
     public PropertyEditor getPropertyEditor(){        

@@ -17,9 +17,6 @@
 package org.neotropic.kuwaiba.integration.proxies.nodes;
 
 import java.awt.Image;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyVetoException;
-import java.beans.VetoableChangeListener;
 import java.util.Date;
 import java.util.List;
 import javax.swing.Action;
@@ -30,13 +27,14 @@ import org.inventory.communications.core.LocalInventoryProxy;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.util.Constants;
-import org.inventory.core.services.api.nodes.DateTypeProperty;
-import org.inventory.core.services.api.nodes.MultipleListTypeProperty;
-import org.inventory.core.services.api.nodes.NativeTypeProperty;
-import org.inventory.core.services.api.nodes.SingleListTypeProperty;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.i18n.I18N;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
+import org.inventory.navigation.navigationtree.nodes.properties.DateTypeProperty;
+import org.inventory.navigation.navigationtree.nodes.properties.MultipleListTypeProperty;
+import org.inventory.navigation.navigationtree.nodes.properties.NativeTypeProperty;
+import org.inventory.navigation.navigationtree.nodes.properties.SingleListTypeProperty;
 import org.neotropic.kuwaiba.integration.proxies.nodes.actions.ProxiesActionFactory;
 import org.openide.nodes.Children;
 import org.openide.nodes.PropertySupport;
@@ -48,12 +46,20 @@ import org.openide.util.lookup.Lookups;
  * A node representing an inventory proxy.
  * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
  */
-public class ProxyNode extends ObjectNode implements VetoableChangeListener {
+public class ProxyNode extends ObjectNode {
     private static final Image ICON = ImageUtilities.loadImage("org/neotropic/kuwaiba/integration/proxies/res/proxyNodeIcon.png");
     
     public ProxyNode(LocalInventoryProxy inventoryProxy) {
         super(Children.LEAF, Lookups.singleton(inventoryProxy));
         setDisplayName(inventoryProxy.getName());
+        this.updateObjectCallback = new UpdateObjectCallback() {
+            @Override
+            public void executeChange(String objectClassName, String id, String propertyName, Object value) throws IllegalArgumentException {
+                if (!CommunicationsStub.getInstance().updateProxy(objectClassName,
+                        id, propertyName, String.valueOf(value)))
+                    throw new IllegalArgumentException(CommunicationsStub.getInstance().getError());
+            }
+        };
     }
     
     @Override
@@ -110,7 +116,7 @@ public class ProxyNode extends ObjectNode implements VetoableChangeListener {
                     case Constants.MAPPING_DATE:
                         property = new DateTypeProperty((Date)proxy.getAttribute(lam.getName()) , 
                                 lam.getName(), Date.class, lam.getDisplayName(),
-                                lam.getDescription(), this);
+                                lam.getDescription(), this, updateObjectCallback);
                         break;
                     case Constants.MAPPING_PRIMITIVE:
                         if (!lam.getType().equals(LocalObjectLight.class)) {
@@ -118,7 +124,8 @@ public class ProxyNode extends ObjectNode implements VetoableChangeListener {
                                     lam.getName(),
                                     lam.getType(),
                                     lam.getDisplayName().isEmpty() ? lam.getName() : lam.getDisplayName(),
-                                    lam.getDescription(), proxy.getAttribute(lam.getName()), this);
+                                    lam.getDescription(), this, proxy.getAttribute(lam.getName()), 
+                                    this.updateObjectCallback);
                         }
                         break;
                     case Constants.MAPPING_MANYTOONE: {
@@ -145,7 +152,8 @@ public class ProxyNode extends ObjectNode implements VetoableChangeListener {
                                 lam.getDescription(),
                                 list,
                                 this,
-                                val);
+                                val, 
+                                this.updateObjectCallback);
                         break;
                     }
                     case Constants.MAPPING_MANYTOMANY: {
@@ -161,7 +169,8 @@ public class ProxyNode extends ObjectNode implements VetoableChangeListener {
                                 lam.getDescription(),
                                 list,
                                 this,
-                                (List<LocalObjectListItem>)proxy.getAttribute(lam.getName()));
+                                (List<LocalObjectListItem>)proxy.getAttribute(lam.getName()), 
+                                this.updateObjectCallback);
                         break;
                     }
                     default:
@@ -206,26 +215,13 @@ public class ProxyNode extends ObjectNode implements VetoableChangeListener {
     @Override
     public void setName(String name) {
         try {
-            vetoableChange(new PropertyChangeEvent(getLookup().lookup(LocalInventoryProxy.class), Constants.PROPERTY_NAME, getName(), name));
-            getLookup().lookup(LocalInventoryProxy.class).setName(name);
+            LocalInventoryProxy selectedProxy = getLookup().lookup(LocalInventoryProxy.class);
+            this.updateObjectCallback.executeChange(selectedProxy.getClassName(), selectedProxy.getId(), Constants.PROPERTY_NAME, name);
+            selectedProxy.setName(name);
             if (getSheet() != null)
                 setSheet(createSheet());
-        } catch (PropertyVetoException ex) {
+        } catch (IllegalArgumentException ex) {
             NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, ex.getLocalizedMessage());
-        }
-    }
-    
-    @Override
-    public void vetoableChange(PropertyChangeEvent evt) throws PropertyVetoException {
-        LocalInventoryProxy selectedProxy = getLookup().lookup(LocalInventoryProxy.class);
-        if (!CommunicationsStub.getInstance().updateProxy(selectedProxy.getClassName(),
-                selectedProxy.getId(), evt.getPropertyName(), (String)evt.getNewValue()))
-            throw new PropertyVetoException(CommunicationsStub.getInstance().getError(), evt);
-        else {
-            if (evt.getPropertyName().equals(Constants.PROPERTY_NAME)) {
-                getLookup().lookup(LocalInventoryProxy.class).setName((String)evt.getNewValue());
-                fireNameChange("", (String)evt.getNewValue());
-            }
         }
     }
 }

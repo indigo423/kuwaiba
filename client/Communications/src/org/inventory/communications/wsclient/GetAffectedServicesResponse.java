@@ -17,7 +17,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}assetLevelCorrelatedInformation" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteAssetLevelCorrelatedInformation" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -33,17 +33,17 @@ import javax.xml.bind.annotation.XmlType;
 public class GetAffectedServicesResponse {
 
     @XmlElement(name = "return")
-    protected AssetLevelCorrelatedInformation _return;
+    protected RemoteAssetLevelCorrelatedInformation _return;
 
     /**
      * Gets the value of the return property.
      * 
      * @return
      *     possible object is
-     *     {@link AssetLevelCorrelatedInformation }
+     *     {@link RemoteAssetLevelCorrelatedInformation }
      *     
      */
-    public AssetLevelCorrelatedInformation getReturn() {
+    public RemoteAssetLevelCorrelatedInformation getReturn() {
         return _return;
     }
 
@@ -52,10 +52,10 @@ public class GetAffectedServicesResponse {
      * 
      * @param value
      *     allowed object is
-     *     {@link AssetLevelCorrelatedInformation }
+     *     {@link RemoteAssetLevelCorrelatedInformation }
      *     
      */
-    public void setReturn(AssetLevelCorrelatedInformation value) {
+    public void setReturn(RemoteAssetLevelCorrelatedInformation value) {
         this._return = value;
     }
 

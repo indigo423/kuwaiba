@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -89,8 +89,6 @@ public final class ObjectViewTopComponent extends TopComponent
     }
     
     public final void initCustomComponents(){
-        
-        
         configObject = new ObjectViewConfigurationObject();
         configObject.setProperty("saved", true);
         configObject.setProperty("currentObject", currentObject);
@@ -163,7 +161,6 @@ public final class ObjectViewTopComponent extends TopComponent
         btnExport = new javax.swing.JButton();
         btnRefresh = new javax.swing.JButton();
         pnlScrollMain = new javax.swing.JScrollPane();
-        pnlRight = new javax.swing.JPanel();
 
         setLayout(new java.awt.BorderLayout());
 
@@ -313,9 +310,6 @@ public final class ObjectViewTopComponent extends TopComponent
 
         add(barMain, java.awt.BorderLayout.PAGE_START);
         add(pnlScrollMain, java.awt.BorderLayout.CENTER);
-
-        pnlRight.setLayout(new java.awt.BorderLayout());
-        add(pnlRight, java.awt.BorderLayout.LINE_END);
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSelectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSelectActionPerformed
@@ -390,7 +384,6 @@ public final class ObjectViewTopComponent extends TopComponent
     private javax.swing.JToggleButton btnSelect;
     private javax.swing.JToggleButton btnShowConnectionLabels;
     private javax.swing.JToolBar.Separator jSeparator2;
-    private javax.swing.JPanel pnlRight;
     private javax.swing.JScrollPane pnlScrollMain;
     // End of variables declaration//GEN-END:variables
     

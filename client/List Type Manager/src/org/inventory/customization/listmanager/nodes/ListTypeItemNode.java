@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,10 +17,14 @@
 package org.inventory.customization.listmanager.nodes;
 
 import java.awt.Image;
+import java.util.HashMap;
 import javax.swing.Action;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectListItem;
+import org.inventory.communications.util.Constants;
+import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.customization.listmanager.nodes.actions.DeleteListTypeAction;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.navigationtree.nodes.actions.EditObjectAction;
@@ -32,14 +36,16 @@ import org.openide.util.ImageUtilities;
  */
 public class ListTypeItemNode extends ObjectNode {
 
-    private static Image icon = ImageUtilities.loadImage("org/inventory/customization/listmanager/res/list-type-item.png");
+    private static Image ICON = ImageUtilities.loadImage("org/inventory/customization/listmanager/res/list-type-item.png");
 
     public ListTypeItemNode(LocalObjectListItem lol) {
         super(lol, true);
+        this.updateObjectCallback = new ListTypeItemUpdateCallback();
     }
     
     public ListTypeItemNode(LocalObjectLight lol) {
         super(lol, true);
+        this.updateObjectCallback = new ListTypeItemUpdateCallback();
     }
 
     @Override
@@ -48,17 +54,26 @@ public class ListTypeItemNode extends ObjectNode {
             EditObjectAction.getInstance(this), 
             new DeleteListTypeAction(this)};
     }
-
+    
     @Override
     public void setName(String newName) {
-        super.setName(newName);
-        //Refresh the cache
-        CommunicationsStub.getInstance().getList(getObject().getClassName(), true, true);
+        HashMap<String, Object> attributesToUpdate = new HashMap<>();
+        attributesToUpdate.put(Constants.PROPERTY_NAME, newName);
+        
+        if (CommunicationsStub.getInstance().updateListTypeItem(getObject().getClassName(), 
+                getObject().getId(), attributesToUpdate)) {
+            getObject().setName(newName);
+            if (getSheet() != null)
+                setSheet(createSheet());
+            CommunicationsStub.getInstance().getList(getObject().getClassName(), true, true);
+        }
+        else
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());      
     }
     
     @Override
     public Image getIcon(int i){
-        return icon;
+        return ICON;
     }
     
     @Override

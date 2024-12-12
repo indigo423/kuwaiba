@@ -20,8 +20,8 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="processDefinitionId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="properties" type="{http://ws.interfaces.kuwaiba.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="processDefinitionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="properties" type="{http://ws.northbound.kuwaiba.neotropic.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="structure" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -41,7 +41,7 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class UpdateProcessDefinition {
 
-    protected long processDefinitionId;
+    protected String processDefinitionId;
     protected List<StringPair> properties;
     @XmlElementRef(name = "structure", type = JAXBElement.class, required = false)
     protected JAXBElement<byte[]> structure;
@@ -50,16 +50,24 @@ public class UpdateProcessDefinition {
     /**
      * Gets the value of the processDefinitionId property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getProcessDefinitionId() {
+    public String getProcessDefinitionId() {
         return processDefinitionId;
     }
 
     /**
      * Sets the value of the processDefinitionId property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setProcessDefinitionId(long value) {
+    public void setProcessDefinitionId(String value) {
         this.processDefinitionId = value;
     }
 

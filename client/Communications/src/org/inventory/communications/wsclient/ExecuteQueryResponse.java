@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}resultRecord" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteResultRecord" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -35,7 +35,7 @@ import javax.xml.bind.annotation.XmlType;
 public class ExecuteQueryResponse {
 
     @XmlElement(name = "return", nillable = true)
-    protected List<ResultRecord> _return;
+    protected List<RemoteResultRecord> _return;
 
     /**
      * Gets the value of the return property.
@@ -55,13 +55,13 @@ public class ExecuteQueryResponse {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link ResultRecord }
+     * {@link RemoteResultRecord }
      * 
      * 
      */
-    public List<ResultRecord> getReturn() {
+    public List<RemoteResultRecord> getReturn() {
         if (_return == null) {
-            _return = new ArrayList<ResultRecord>();
+            _return = new ArrayList<RemoteResultRecord>();
         }
         return this._return;
     }

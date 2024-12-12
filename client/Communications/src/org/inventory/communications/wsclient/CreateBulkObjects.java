@@ -19,8 +19,8 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="className" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="parentClassName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="parentOid" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="numberOfObjects" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="namePattern" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="templateId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -35,8 +35,8 @@ import javax.xml.bind.annotation.XmlType;
     "className",
     "parentClassName",
     "parentOid",
-    "numberOfObjects",
     "namePattern",
+    "templateId",
     "sessionId"
 })
 public class CreateBulkObjects {
@@ -44,8 +44,8 @@ public class CreateBulkObjects {
     protected String className;
     protected String parentClassName;
     protected String parentOid;
-    protected int numberOfObjects;
     protected String namePattern;
+    protected String templateId;
     protected String sessionId;
 
     /**
@@ -121,22 +121,6 @@ public class CreateBulkObjects {
     }
 
     /**
-     * Gets the value of the numberOfObjects property.
-     * 
-     */
-    public int getNumberOfObjects() {
-        return numberOfObjects;
-    }
-
-    /**
-     * Sets the value of the numberOfObjects property.
-     * 
-     */
-    public void setNumberOfObjects(int value) {
-        this.numberOfObjects = value;
-    }
-
-    /**
      * Gets the value of the namePattern property.
      * 
      * @return
@@ -158,6 +142,30 @@ public class CreateBulkObjects {
      */
     public void setNamePattern(String value) {
         this.namePattern = value;
+    }
+
+    /**
+     * Gets the value of the templateId property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getTemplateId() {
+        return templateId;
+    }
+
+    /**
+     * Sets the value of the templateId property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setTemplateId(String value) {
+        this.templateId = value;
     }
 
     /**

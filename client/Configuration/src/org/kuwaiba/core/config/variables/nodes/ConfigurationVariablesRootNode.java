@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,13 +59,13 @@ public class ConfigurationVariablesRootNode extends AbstractNode {
 
         @Override
         public void addNotify() {
-            List<LocalPool> configurationVariablesPools = CommunicationsStub.getInstance().getConfigurationVariablesPools();
+            List<LocalPool> customerPools = CommunicationsStub.getInstance().getConfigurationVariablesPools();
 
-            if (configurationVariablesPools == null)
+            if (customerPools == null)
                 NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                         CommunicationsStub.getInstance().getError());
             else 
-                setKeys(configurationVariablesPools);
+                setKeys(customerPools);
         }
         
         @Override

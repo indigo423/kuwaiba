@@ -17,6 +17,8 @@ package org.inventory.navigation.special.relationships;
 
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.behaviors.Refreshable;
+import org.inventory.core.templates.layouts.customshapes.nodes.CustomShapeNode;
+import org.inventory.customization.listmanager.nodes.ListTypeItemNode;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.special.relationships.nodes.SpecialRelatedObjectNode;
 import org.netbeans.api.settings.ConvertAsProperties;
@@ -188,6 +190,10 @@ public final class SpecialRelationshipsTopComponent extends TopComponent impleme
             ObjectNode node = (ObjectNode)lookupResult.allInstances().iterator().next();
             
             if (node instanceof SpecialRelatedObjectNode) //Ignore its own nodes
+                return;
+            if (node instanceof ListTypeItemNode) 
+                return;
+            if (node instanceof CustomShapeNode) 
                 return;
             
             if (!btnSpecialRelationshipsGraphExplorer.isEnabled())

@@ -168,6 +168,7 @@
             </module-dependencies>
             <public-packages>
                 <package>org.inventory.core.templates.layouts</package>
+                <package>org.inventory.core.templates.layouts.customshapes.nodes</package>
             </public-packages>
         </data>
     </configuration>

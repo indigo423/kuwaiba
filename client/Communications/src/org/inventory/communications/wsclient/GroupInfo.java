@@ -17,10 +17,10 @@ import javax.xml.bind.annotation.XmlType;
  * <pre>
  * &lt;complexType name="groupInfo">
  *   &lt;complexContent>
- *     &lt;extension base="{http://ws.interfaces.kuwaiba.org/}groupInfoLight">
+ *     &lt;extension base="{http://ws.northbound.kuwaiba.neotropic.org/}groupInfoLight">
  *       &lt;sequence>
- *         &lt;element name="users" type="{http://ws.interfaces.kuwaiba.org/}userInfo" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="privileges" type="{http://ws.interfaces.kuwaiba.org/}privilegeInfo" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="users" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteUserInfo" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="privileges" type="{http://ws.northbound.kuwaiba.neotropic.org/}privilegeInfo" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/extension>
  *   &lt;/complexContent>
@@ -39,7 +39,7 @@ public class GroupInfo
 {
 
     @XmlElement(nillable = true)
-    protected List<UserInfo> users;
+    protected List<RemoteUserInfo> users;
     @XmlElement(nillable = true)
     protected List<PrivilegeInfo> privileges;
 
@@ -61,13 +61,13 @@ public class GroupInfo
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link UserInfo }
+     * {@link RemoteUserInfo }
      * 
      * 
      */
-    public List<UserInfo> getUsers() {
+    public List<RemoteUserInfo> getUsers() {
         if (users == null) {
-            users = new ArrayList<UserInfo>();
+            users = new ArrayList<RemoteUserInfo>();
         }
         return this.users;
     }

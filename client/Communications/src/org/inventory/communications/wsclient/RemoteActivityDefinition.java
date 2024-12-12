@@ -18,18 +18,18 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="name" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="type" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="idling" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="confirm" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="color" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="arfifact" type="{http://ws.interfaces.kuwaiba.org/}remoteArtifactDefinition" minOccurs="0"/>
- *         &lt;element name="actor" type="{http://ws.interfaces.kuwaiba.org/}remoteActor" minOccurs="0"/>
- *         &lt;element name="nextActivity" type="{http://ws.interfaces.kuwaiba.org/}remoteActivityDefinition" minOccurs="0"/>
- *         &lt;element name="kpis" type="{http://ws.interfaces.kuwaiba.org/}remoteKpi" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="kpiActions" type="{http://ws.interfaces.kuwaiba.org/}remoteKpiAction" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="arfifact" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteArtifactDefinition" minOccurs="0"/>
+ *         &lt;element name="actor" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteActor" minOccurs="0"/>
+ *         &lt;element name="nextActivity" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteActivityDefinition" minOccurs="0"/>
+ *         &lt;element name="kpis" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteKpi" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="kpiActions" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteKpiAction" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -55,7 +55,7 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class RemoteActivityDefinition {
 
-    protected long id;
+    protected String id;
     protected String name;
     protected String description;
     protected int type;
@@ -71,16 +71,24 @@ public class RemoteActivityDefinition {
     /**
      * Gets the value of the id property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getId() {
+    public String getId() {
         return id;
     }
 
     /**
      * Sets the value of the id property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setId(long value) {
+    public void setId(String value) {
         this.id = value;
     }
 

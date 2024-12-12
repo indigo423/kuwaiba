@@ -1,11 +1,8 @@
 
 package org.inventory.communications.wsclient;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
 
@@ -19,13 +16,12 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}long"/>
+ *         &lt;element name="id" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="name" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="version" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="type" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="definition" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>
- *         &lt;element name="sharedInformation" type="{http://www.w3.org/2001/XMLSchema}string" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="preconditionsScript" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>
  *         &lt;element name="postconditionsScript" type="{http://www.w3.org/2001/XMLSchema}base64Binary" minOccurs="0"/>
  *         &lt;element name="printable" type="{http://www.w3.org/2001/XMLSchema}boolean" minOccurs="0"/>
@@ -47,7 +43,6 @@ import javax.xml.bind.annotation.XmlType;
     "version",
     "type",
     "definition",
-    "sharedInformation",
     "preconditionsScript",
     "postconditionsScript",
     "printable",
@@ -56,14 +51,12 @@ import javax.xml.bind.annotation.XmlType;
 })
 public class RemoteArtifactDefinition {
 
-    protected long id;
+    protected String id;
     protected String name;
     protected String description;
     protected String version;
     protected int type;
     protected byte[] definition;
-    @XmlElement(nillable = true)
-    protected List<String> sharedInformation;
     protected byte[] preconditionsScript;
     protected byte[] postconditionsScript;
     protected Boolean printable;
@@ -73,16 +66,24 @@ public class RemoteArtifactDefinition {
     /**
      * Gets the value of the id property.
      * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
      */
-    public long getId() {
+    public String getId() {
         return id;
     }
 
     /**
      * Sets the value of the id property.
      * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
      */
-    public void setId(long value) {
+    public void setId(String value) {
         this.id = value;
     }
 
@@ -194,35 +195,6 @@ public class RemoteArtifactDefinition {
      */
     public void setDefinition(byte[] value) {
         this.definition = value;
-    }
-
-    /**
-     * Gets the value of the sharedInformation property.
-     * 
-     * <p>
-     * This accessor method returns a reference to the live list,
-     * not a snapshot. Therefore any modification you make to the
-     * returned list will be present inside the JAXB object.
-     * This is why there is not a <CODE>set</CODE> method for the sharedInformation property.
-     * 
-     * <p>
-     * For example, to add a new item, do as follows:
-     * <pre>
-     *    getSharedInformation().add(newItem);
-     * </pre>
-     * 
-     * 
-     * <p>
-     * Objects of the following type(s) are allowed in the list
-     * {@link String }
-     * 
-     * 
-     */
-    public List<String> getSharedInformation() {
-        if (sharedInformation == null) {
-            sharedInformation = new ArrayList<String>();
-        }
-        return this.sharedInformation;
     }
 
     /**

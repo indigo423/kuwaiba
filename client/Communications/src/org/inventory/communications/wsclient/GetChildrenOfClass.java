@@ -19,6 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="parentOid" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="parentClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="childrenClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="page" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="maxResults" type="{http://www.w3.org/2001/XMLSchema}int"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
@@ -34,6 +35,7 @@ import javax.xml.bind.annotation.XmlType;
     "parentOid",
     "parentClass",
     "childrenClass",
+    "page",
     "maxResults",
     "sessionId"
 })
@@ -42,6 +44,7 @@ public class GetChildrenOfClass {
     protected String parentOid;
     protected String parentClass;
     protected String childrenClass;
+    protected int page;
     protected int maxResults;
     protected String sessionId;
 
@@ -115,6 +118,22 @@ public class GetChildrenOfClass {
      */
     public void setChildrenClass(String value) {
         this.childrenClass = value;
+    }
+
+    /**
+     * Gets the value of the page property.
+     * 
+     */
+    public int getPage() {
+        return page;
+    }
+
+    /**
+     * Sets the value of the page property.
+     * 
+     */
+    public void setPage(int value) {
+        this.page = value;
     }
 
     /**

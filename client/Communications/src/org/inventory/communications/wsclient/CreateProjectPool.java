@@ -16,9 +16,9 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="name" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="instanceOfClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="poolName" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="poolDescription" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="poolClass" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -30,88 +30,88 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "createProjectPool", propOrder = {
-    "name",
-    "description",
-    "instanceOfClass",
+    "poolName",
+    "poolDescription",
+    "poolClass",
     "sessionId"
 })
 public class CreateProjectPool {
 
-    protected String name;
-    protected String description;
-    protected String instanceOfClass;
+    protected String poolName;
+    protected String poolDescription;
+    protected String poolClass;
     protected String sessionId;
 
     /**
-     * Gets the value of the name property.
+     * Gets the value of the poolName property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getName() {
-        return name;
+    public String getPoolName() {
+        return poolName;
     }
 
     /**
-     * Sets the value of the name property.
+     * Sets the value of the poolName property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setName(String value) {
-        this.name = value;
+    public void setPoolName(String value) {
+        this.poolName = value;
     }
 
     /**
-     * Gets the value of the description property.
+     * Gets the value of the poolDescription property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getDescription() {
-        return description;
+    public String getPoolDescription() {
+        return poolDescription;
     }
 
     /**
-     * Sets the value of the description property.
+     * Sets the value of the poolDescription property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setDescription(String value) {
-        this.description = value;
+    public void setPoolDescription(String value) {
+        this.poolDescription = value;
     }
 
     /**
-     * Gets the value of the instanceOfClass property.
+     * Gets the value of the poolClass property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getInstanceOfClass() {
-        return instanceOfClass;
+    public String getPoolClass() {
+        return poolClass;
     }
 
     /**
-     * Sets the value of the instanceOfClass property.
+     * Sets the value of the poolClass property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setInstanceOfClass(String value) {
-        this.instanceOfClass = value;
+    public void setPoolClass(String value) {
+        this.poolClass = value;
     }
 
     /**

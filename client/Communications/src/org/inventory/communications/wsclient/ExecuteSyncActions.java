@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
  *         &lt;element name="syncGroupId" type="{http://www.w3.org/2001/XMLSchema}long"/>
- *         &lt;element name="actions" type="{http://ws.interfaces.kuwaiba.org/}syncAction" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="actions" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteSyncAction" maxOccurs="unbounded" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -38,7 +38,7 @@ import javax.xml.bind.annotation.XmlType;
 public class ExecuteSyncActions {
 
     protected long syncGroupId;
-    protected List<SyncAction> actions;
+    protected List<RemoteSyncAction> actions;
     protected String sessionId;
 
     /**
@@ -75,13 +75,13 @@ public class ExecuteSyncActions {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link SyncAction }
+     * {@link RemoteSyncAction }
      * 
      * 
      */
-    public List<SyncAction> getActions() {
+    public List<RemoteSyncAction> getActions() {
         if (actions == null) {
-            actions = new ArrayList<SyncAction>();
+            actions = new ArrayList<RemoteSyncAction>();
         }
         return this.actions;
     }

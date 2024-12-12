@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -451,6 +451,31 @@ public class SubnetEngine {
         Matcher ipv4 = ipv4Pattern.matcher(ipAddress);
         Matcher ipv6 = ipv6Pattern.matcher(ipAddress);
         return ipv4.matches() || ipv6.matches();
+    }
+    
+    
+    /**
+     * Checks if a given string is an ip address 
+     * @param ipAddress a possible ip address
+     * @return true if the string is an ip address
+     */
+    public static boolean isIPv4Address(String ipAddress){
+        String ipv4Regex = "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$";
+        Pattern ipv4Pattern = Pattern.compile(ipv4Regex);
+        Matcher ipv4 = ipv4Pattern.matcher(ipAddress);
+        return ipv4.matches();
+    }
+    
+    /**
+     * Checks if a given string is an ip address 
+     * @param ipAddress a possible ip address
+     * @return true if the string is an ip address
+     */
+    public static boolean isIPv6Address(String ipAddress){
+        String ipv6Regex = "^s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]d|1dd|[1-9]?d)(.(25[0-5]|2[0-4]d|1dd|[1-9]?d)){3}))|:)))(%.+)?s*";
+        Pattern ipv6Pattern = Pattern.compile(ipv6Regex);
+        Matcher ipv6 = ipv6Pattern.matcher(ipAddress);
+        return ipv6.matches();
     }
     
     /**

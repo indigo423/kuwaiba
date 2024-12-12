@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ public class EndToEndViewTopComponent extends TopComponent implements
     
     public EndToEndViewTopComponent(final LocalObjectLight currentService, final AbstractScene scene) {
         this.currentService = currentService;
+        this.scene = scene;
         List<LocalObjectViewLight> serviceViews = com.getObjectRelatedViews(this.currentService.getId(), this.currentService.getClassName());
         List<LocalObjectLight> serviceResources = com.getServiceResources(currentService.getClassName(), currentService.getId());
         
@@ -73,12 +74,14 @@ public class EndToEndViewTopComponent extends TopComponent implements
             for (LocalObjectViewLight serviceView : serviceViews) {
                 if (EndToEndViewScene.VIEW_CLASS.equals(serviceView.getClassName())) {
                     currentView = com.getObjectRelatedView(currentService.getId(), currentService.getClassName(), serviceView.getId());
-                    currentView = com.validateSavedE2EView(classes, ids, currentView);
-                    
+                    if(currentView != null)
+                        currentView = com.validateSavedE2EView(classes, ids, currentView);
                     break;
                 }
             }
-        } else//it will be generated from scrtach
+        } 
+        //we try to generated from scratch
+        if (currentView == null)
             currentView = com.getE2EView(classes, ids);
         
         if (currentView == null) {
@@ -86,8 +89,8 @@ public class EndToEndViewTopComponent extends TopComponent implements
             setEnabled(false);
             return;
         } 
+        
         setLayout(new BorderLayout());
-        this.scene = scene;
 
         JScrollPane pnlScrollMain = new JScrollPane(scene.createView());
         add(pnlScrollMain);

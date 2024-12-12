@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
  */
 package org.inventory.communications.core;
 
+import java.util.HashMap;
+import java.util.List;
 import org.inventory.communications.util.Constants;
+import org.inventory.communications.util.Utils;
+import org.inventory.communications.wsclient.StringPair;
 
 /**
  * This is a local representation of an element within a list (enumerations and so on)
@@ -27,6 +31,10 @@ public class LocalObjectListItem extends LocalObjectLight {
      */
     public static final String NULL_ID = "0";
     private String displayName;
+    /**
+     * A dictionary containing the names of the attributes and their respective values of the current object
+     */
+    private HashMap<String, Object> attributes;
 
     public LocalObjectListItem() {
         this.id = NULL_ID;
@@ -43,6 +51,14 @@ public class LocalObjectListItem extends LocalObjectLight {
     public LocalObjectListItem(String id, String className, String name){
         super(id, name, className);
     }
+    
+    public LocalObjectListItem(String id, String className, String name, List<StringPair> remoteAttributes, LocalClassMetadata classMetadata){
+        super(id, name, className);
+        this.attributes = new HashMap<>();
+        for (StringPair remoteAttribute : remoteAttributes)
+            attributes.put(remoteAttribute.getKey(), Utils.getRealValue(classMetadata.getTypeForAttribute(remoteAttribute.getKey()), 
+                                                classMetadata.getMappingForAttribute(remoteAttribute.getKey()), remoteAttribute.getValue()));                            
+    }
 
     public String getDisplayName() {
         return displayName;
@@ -51,6 +67,14 @@ public class LocalObjectListItem extends LocalObjectLight {
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
     }
+
+    public HashMap<String, Object> getAttributes() {
+        return attributes;
+    }
+
+    public void setAttributes(HashMap<String, Object> attributes) {
+        this.attributes = attributes;
+    }  
 
     @Override
     public String toString(){

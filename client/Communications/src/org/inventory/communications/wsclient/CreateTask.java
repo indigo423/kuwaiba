@@ -23,9 +23,9 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="enabled" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="commitOnExecute" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
  *         &lt;element name="script" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
- *         &lt;element name="parameters" type="{http://ws.interfaces.kuwaiba.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
- *         &lt;element name="schedule" type="{http://ws.interfaces.kuwaiba.org/}taskScheduleDescriptor" minOccurs="0"/>
- *         &lt;element name="notificationType" type="{http://ws.interfaces.kuwaiba.org/}taskNotificationDescriptor" minOccurs="0"/>
+ *         &lt;element name="parameters" type="{http://ws.northbound.kuwaiba.neotropic.org/}stringPair" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="schedule" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskScheduleDescriptor" minOccurs="0"/>
+ *         &lt;element name="notificationType" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteTaskNotificationDescriptor" minOccurs="0"/>
  *         &lt;element name="sessionId" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
@@ -55,8 +55,8 @@ public class CreateTask {
     protected boolean commitOnExecute;
     protected String script;
     protected List<StringPair> parameters;
-    protected TaskScheduleDescriptor schedule;
-    protected TaskNotificationDescriptor notificationType;
+    protected RemoteTaskScheduleDescriptor schedule;
+    protected RemoteTaskNotificationDescriptor notificationType;
     protected String sessionId;
 
     /**
@@ -197,10 +197,10 @@ public class CreateTask {
      * 
      * @return
      *     possible object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public TaskScheduleDescriptor getSchedule() {
+    public RemoteTaskScheduleDescriptor getSchedule() {
         return schedule;
     }
 
@@ -209,10 +209,10 @@ public class CreateTask {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskScheduleDescriptor }
+     *     {@link RemoteTaskScheduleDescriptor }
      *     
      */
-    public void setSchedule(TaskScheduleDescriptor value) {
+    public void setSchedule(RemoteTaskScheduleDescriptor value) {
         this.schedule = value;
     }
 
@@ -221,10 +221,10 @@ public class CreateTask {
      * 
      * @return
      *     possible object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public TaskNotificationDescriptor getNotificationType() {
+    public RemoteTaskNotificationDescriptor getNotificationType() {
         return notificationType;
     }
 
@@ -233,10 +233,10 @@ public class CreateTask {
      * 
      * @param value
      *     allowed object is
-     *     {@link TaskNotificationDescriptor }
+     *     {@link RemoteTaskNotificationDescriptor }
      *     
      */
-    public void setNotificationType(TaskNotificationDescriptor value) {
+    public void setNotificationType(RemoteTaskNotificationDescriptor value) {
         this.notificationType = value;
     }
 

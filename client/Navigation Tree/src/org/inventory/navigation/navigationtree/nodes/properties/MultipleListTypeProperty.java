@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
 import org.openide.nodes.PropertySupport;
 
 /**
@@ -32,13 +33,15 @@ public class MultipleListTypeProperty extends PropertySupport.ReadWrite<String> 
     private List<LocalObjectListItem> value;
     private List<LocalObjectListItem> list;
     private ObjectNode node;
+    private UpdateObjectCallback updateCallback;
 
     public MultipleListTypeProperty(String name, String displayName, String toolTextTip, 
-            List<LocalObjectListItem> list, ObjectNode node, List<LocalObjectListItem> value) {
+            List<LocalObjectListItem> list, ObjectNode node, List<LocalObjectListItem> value, UpdateObjectCallback updateCallback) {
         super(name, String.class, displayName, toolTextTip);
         this.value = value == null ? new ArrayList<>() : value;
         this.node = node;
         this.list = list;
+        this.updateCallback = updateCallback;
     }
 
     @Override
@@ -49,7 +52,7 @@ public class MultipleListTypeProperty extends PropertySupport.ReadWrite<String> 
     @Override
     public PropertyEditor getPropertyEditor() {
         if (propertyEditor == null)
-            propertyEditor = new MultipleListTypePropertyEditor(list, value, this);
+            propertyEditor = new MultipleListTypePropertyEditor(list, value, this, updateCallback);
         return propertyEditor;
     }
     

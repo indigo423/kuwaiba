@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2019 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2020 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ public class RelateToServiceAction extends GenericObjectNodeAction implements Co
             
             if (selectedValue == null)
                 JOptionPane.showMessageDialog(null, "Select a service from the list");
-            else {
+            else{
                 List<String> classNames = new ArrayList<>();
                 List<String> objectIds = new ArrayList<>();
                 for(LocalObjectLight selectedObject : selectedObjects){
@@ -96,7 +96,7 @@ public class RelateToServiceAction extends GenericObjectNodeAction implements Co
                     ((LocalObjectLight) selectedValue).getClassName(),
                     ((LocalObjectLight) selectedValue).getId())){
                         JOptionPane.showMessageDialog(null, String.format(selectedObjects.size() > 1 ? 
-                                "%s objects were related to service %s" : "%s object was related to service %s", selectedObjects.size(), selectedValue));
+                                "%s obejcts were related to service %s" : "%s object was related to service %s", selectedObjects.size(), selectedValue));
                         frame.dispose();
                 }
                 else 

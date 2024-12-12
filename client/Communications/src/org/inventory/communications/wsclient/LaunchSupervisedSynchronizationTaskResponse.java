@@ -19,7 +19,7 @@ import javax.xml.bind.annotation.XmlType;
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="return" type="{http://ws.interfaces.kuwaiba.org/}syncFinding" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="return" type="{http://ws.northbound.kuwaiba.neotropic.org/}remoteSyncFinding" maxOccurs="unbounded" minOccurs="0"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -35,7 +35,7 @@ import javax.xml.bind.annotation.XmlType;
 public class LaunchSupervisedSynchronizationTaskResponse {
 
     @XmlElement(name = "return")
-    protected List<SyncFinding> _return;
+    protected List<RemoteSyncFinding> _return;
 
     /**
      * Gets the value of the return property.
@@ -55,13 +55,13 @@ public class LaunchSupervisedSynchronizationTaskResponse {
      * 
      * <p>
      * Objects of the following type(s) are allowed in the list
-     * {@link SyncFinding }
+     * {@link RemoteSyncFinding }
      * 
      * 
      */
-    public List<SyncFinding> getReturn() {
+    public List<RemoteSyncFinding> getReturn() {
         if (_return == null) {
-            _return = new ArrayList<SyncFinding>();
+            _return = new ArrayList<RemoteSyncFinding>();
         }
         return this._return;
     }

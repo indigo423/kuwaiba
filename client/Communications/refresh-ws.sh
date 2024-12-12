@@ -3,7 +3,7 @@
 # This script generates the Java client side stubs necessary to consume the platform's web service. Use -h flag to see the full list of options
 
 # Defaults
-url="http://localhost:8080/kuwaiba/KuwaibaService?wsdl"
+url="http://localhost:8081/kuwaiba/KuwaibaService?wsdl"
 destination="src"
 
 while getopts u:cd:h option
@@ -13,7 +13,7 @@ do
         u) url=${OPTARG};;
         c) clean=true;;
         d) destination=${OPTARG};;
-        h) echo $'Kuwaiba Open Network Inventory - Web Service Stub Generator v0.4\n -u WSDL URL. Default: http://localhost:8080/kuwaiba/KuwaibaService?wsdl\n -c Clean the destination directory before parsing the WSDL\n -d Destination directory. Default: src';exit;;
+        h) echo $'Kuwaiba Open Network Inventory - Web Service Stub Generator v0.4\n -u WSDL URL. Default: http://localhost:8181/kuwaiba/KuwaibaService?wsdl\n -c Clean the destination directory before parsing the WSDL\n -d Destination directory. Default: src';exit;;
     esac
 done
 

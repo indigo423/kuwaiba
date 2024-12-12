@@ -1,0 +1,37 @@
+/*
+ *  Copyright 2010-2021 Neotropic SAS <contact@neotropic.co>.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       https://apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.inventory.customization.listmanager.nodes;
+
+import java.util.HashMap;
+import org.inventory.communications.CommunicationsStub;
+import org.inventory.navigation.navigationtree.nodes.UpdateObjectCallback;
+
+/**
+ * Handles the update of list type items through the property sheet.
+ * @author Charles Edward Bedon Cortazar {@literal <charles.bedon@kuwaiba.org>}
+ */
+public class ListTypeItemUpdateCallback implements UpdateObjectCallback {
+
+    @Override
+    public void executeChange(String objectClassName, String id, String propertyName, Object value) throws IllegalArgumentException {
+        HashMap<String, Object> attributesToBeUpdated = new HashMap<>();
+        attributesToBeUpdated.put(propertyName, value);
+        if (!CommunicationsStub.getInstance().updateListTypeItem(objectClassName, id, attributesToBeUpdated))
+            throw new IllegalArgumentException(CommunicationsStub.getInstance().getError());
+    }
+
+}
