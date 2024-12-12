@@ -180,6 +180,13 @@
                         </attributes>
                         <subclasses/>
                       </class>
+		      <class name="PowerLinkType" javaModifiers="1" applicationModifiers="0" classType="2" classPackage="org.kuwaiba.entity.multiple.types.links">
+			<attributes>
+				<attribute name="displayName" type="String" javaModifiers="4" applicationModifiers="0"/>
+				<attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
+			</attributes>
+			<subclasses/>
+                      </class>
                       <class name="WirelessLinkType" javaModifiers="1" applicationModifiers="0" classType="2" classPackage="org.kuwaiba.entity.multiple.types.links">
                         <attributes>
                           <attribute name="displayName" type="String" javaModifiers="4" applicationModifiers="0"/>
@@ -644,7 +651,7 @@
                               <attribute name="vendor" type="EquipmentVendor" javaModifiers="4" applicationModifiers="0"/>
                               <attribute name="conditions" type="EnvironmentalCondition" javaModifiers="4" applicationModifiers="0"/>
                               <attribute name="state" type="OperationalState" javaModifiers="4" applicationModifiers="0"/>
-                              
+                              <attribute name="rackUnits" type="Integer" javaModifiers="4" applicationModifiers="0"/>
                               <attribute name="creationDate" type="Date" javaModifiers="4" applicationModifiers="5"/>
                               <attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
                             </attributes>
@@ -933,6 +940,18 @@
                                 </attributes>
                                 <subclasses/>
                               </class>
+							   <class applicationModifiers="0" classPackage="org.kuwaiba.entity.equipment.datalinklayer.parts.boards" classType="1" displayName="PDHBoard" javaModifiers="1" name="PDHBoard">
+                                  <description><![CDATA[]]></description>
+                                  <attributes>
+                                     <attribute applicationModifiers="1" description="" displayname="serialNumber" javaModifiers="4" name="serialNumber" type="String"/>
+                                     <attribute applicationModifiers="0" description="" displayname="vendor" javaModifiers="4" name="vendor" type="EquipmentVendor"/>
+                                     <attribute applicationModifiers="0" description="" displayname="conditions" javaModifiers="4" name="conditions" type="EnvironmentalCondition"/>
+                                     <attribute applicationModifiers="0" description="" displayname="state" javaModifiers="4" name="state" type="OperationalState"/>
+                                     <attribute applicationModifiers="5" description="" displayname="creationDate" javaModifiers="4" name="creationDate" type="Date"/>
+                                     <attribute applicationModifiers="0" description="" displayname="name" javaModifiers="4" name="name" type="String"/>
+                                  </attributes>
+                                  <subclasses/>
+                               </class>
                               <class name="DWDMBoard" javaModifiers="1" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.equipment.physicallayer.parts.boards">
                                 <attributes>
                                   <attribute name="serialNumber" type="String" javaModifiers="4" applicationModifiers="1"/>
@@ -2054,20 +2073,6 @@
                         </attributes>
                         <subclasses/>
                       </class>
-                      <class name="SDHLink" javaModifiers="1" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.logical">
-                        <attributes>
-                          <attribute name="creationDate" type="Date" javaModifiers="4" applicationModifiers="5"/>
-                          <attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
-                        </attributes>
-                        <subclasses/>
-                      </class>
-                      <class name="SONETLink" javaModifiers="1" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.logical">
-                        <attributes>
-                          <attribute name="creationDate" type="Date" javaModifiers="4" applicationModifiers="5"/>
-                          <attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
-                        </attributes>
-                        <subclasses/>
-                      </class>
                     </subclasses>
                   </class>
 				  <class name="GenericPhysicalConnection" javaModifiers="1025" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.physical">
@@ -2106,8 +2111,6 @@
 				          </class>
 				          <class name="GenericPhysicalLink" javaModifiers="1025" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.physical">
 				            <attributes>
-				              <attribute name="owner" type="GenericCompany" javaModifiers="4" applicationModifiers="0"/>
-				              <attribute name="operator" type="GenericCompany" javaModifiers="4" applicationModifiers="0"/>
 				              <attribute name="creationDate" type="Date" javaModifiers="4" applicationModifiers="5"/>
 				              <attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
 				            </attributes>
@@ -2131,6 +2134,14 @@
 				                  <attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
 				                </attributes>
 				                <subclasses/>
+				              </class>
+					      <class name="PowerLink" javaModifiers="1" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.physical">
+						<attributes>
+							<attribute name="type" type="PowerLinkType" javaModifiers="4" applicationModifiers="0"/>
+							<attribute name="creationDate" type="Date" javaModifiers="4" applicationModifiers="5"/>
+							<attribute name="name" type="String" javaModifiers="4" applicationModifiers="0"/>
+						</attributes>
+						<subclasses/>
 				              </class>
 				              <class name="RadioLink" javaModifiers="1" applicationModifiers="0" classType="1" classPackage="org.kuwaiba.entity.connections.physical">
 				                <attributes>

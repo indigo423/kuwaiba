@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,18 +15,20 @@
  */
 package org.inventory.navigation.navigationtree;
 
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
-import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.text.DefaultEditorKit;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
+import org.inventory.navigation.applicationnodes.objectnodes.actions.DeleteBusinessObjectAction;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerUtils;
@@ -34,7 +36,7 @@ import org.openide.explorer.view.BeanTreeView;
 import org.openide.nodes.Node;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
-import org.openide.windows.Mode;
+import org.openide.util.actions.SystemAction;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 
@@ -61,7 +63,6 @@ public final class NavigationTreeTopComponent extends TopComponent
         setName(NbBundle.getMessage(NavigationTreeTopComponent.class, "CTL_NavigationTreeTopComponent"));
         setToolTipText(NbBundle.getMessage(NavigationTreeTopComponent.class, "HINT_NavigationTreeTopComponent"));
         setIcon(ImageUtilities.loadImage(ICON_PATH, true));
-        //setDisplayName(java.util.ResourceBundle.getBundle("org/inventory/navigation/navigationtree/Bundle").getString("LBL_TITLE"));
     }
 
         /*
@@ -75,14 +76,15 @@ public final class NavigationTreeTopComponent extends TopComponent
         map.put(DefaultEditorKit.copyAction, ExplorerUtils.actionCopy(em));
         map.put(DefaultEditorKit.cutAction, ExplorerUtils.actionCut(em));
         map.put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
-
+        map.put(DeleteBusinessObjectAction.ACTION_MAP_KEY, SystemAction.get(DeleteBusinessObjectAction.class));
 
         //Now the keystrokes
-        InputMap keys = getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-//        keys.put(KeyStroke.getKeyStroke("control C"), DefaultEditorKit.copyAction);
-//        keys.put(KeyStroke.getKeyStroke("control X"), DefaultEditorKit.cutAction);
-//        keys.put(KeyStroke.getKeyStroke("control V"), DefaultEditorKit.pasteAction);
-
+        InputMap keys = getInputMap(WHEN_IN_FOCUSED_WINDOW);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.copyAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.cutAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.pasteAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), DeleteBusinessObjectAction.ACTION_MAP_KEY);
+        
         nts = new NavigationTreeService(this);
         associateLookup(ExplorerUtils.createLookup(em, map));
         treeView = new BeanTreeView();
@@ -143,22 +145,12 @@ public final class NavigationTreeTopComponent extends TopComponent
     public void componentOpened() {
         setRoot();
         ExplorerUtils.activateActions(em, true);
-        TopComponent propertiesWindow = WindowManager.getDefault().findTopComponent("properties");
-        Mode navigator = WindowManager.getDefault().findMode("navigator"); //NOI18N
-        if (!propertiesWindow.isOpened()){
-            propertiesWindow.open();
-            navigator.dockInto(propertiesWindow);
-        }
     }
 
     @Override
     public void componentClosed() {
         ExplorerUtils.activateActions(em, false);
-        em.getRootContext().getChildren().remove(em.getRootContext().getChildren().getNodes());
-        //Workaround, because when you close a TC whose mode is "explorer" and open it again,
-        //it docks as "explorer". This forces the TC to be always docked "explorer"
-        Mode myMode = WindowManager.getDefault().findMode("explorer"); //NOI18N
-        myMode.dockInto(this);
+        em.setRootContext(Node.EMPTY);
     }
 
     void writeProperties(java.util.Properties p) {
@@ -189,7 +181,7 @@ public final class NavigationTreeTopComponent extends TopComponent
     public void setRoot(){
         LocalObjectLight[] rootChildren = nts.getRootChildren();
         if (rootChildren != null){
-            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren, false));
+            RootObjectNode root = new RootObjectNode(new ObjectChildren(rootChildren));
             em.setRootContext(root);
         }
     }
@@ -197,14 +189,14 @@ public final class NavigationTreeTopComponent extends TopComponent
     @Override
     public void refresh() {
         if (em.getRootContext() instanceof RootObjectNode){
-            List<Node> toBeDeleted = new ArrayList<Node>();
+            List<Node> toBeDeleted = new ArrayList<>();
             for (Node child : em.getRootContext().getChildren().getNodes()){
                 if (!((ObjectNode)child).refresh())
                     toBeDeleted.add(child);
             }
             for (Node deadNode : toBeDeleted)
                 ((ObjectChildren)em.getRootContext().getChildren()).remove(new Node[]{deadNode});
-        }else{
+        }else {
             setRoot();
             revalidate();
         }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,12 +16,17 @@
 package org.kuwaiba.management.services.nodes.actions;
 
 import java.awt.event.ActionEvent;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.kuwaiba.management.services.windows.ServicesFrame;
+import org.openide.util.Lookup;
+import org.openide.util.Utilities;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
@@ -38,11 +43,20 @@ public class RelateToServiceAction extends GenericObjectNodeAction {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        LocalObjectLight[] services = CommunicationsStub.getInstance().getObjectsOfClassLight(Constants.CLASS_GENERICSERVICE);
+        List<LocalObjectLight> services = CommunicationsStub.getInstance().getObjectsOfClassLight(Constants.CLASS_GENERICSERVICE);
+        Lookup.Result<LocalObjectLight> selectedNodes = Utilities.actionsGlobalContext().lookupResult(LocalObjectLight.class);
+
         if (services ==  null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-        else{
-            ServicesFrame frame = new ServicesFrame(object, services);
+        else {
+            Collection lookupResult = selectedNodes.allInstances();
+            LocalObjectLight[] selectedObjects = new LocalObjectLight[lookupResult.size()];
+            int i = 0;
+            for (Iterator it = lookupResult.iterator(); it.hasNext();) {
+                selectedObjects[i] = (LocalObjectLight)it.next();
+                i++;
+            }
+            ServicesFrame frame = new ServicesFrame(selectedObjects, services);
             frame.setVisible(true);
         }
     }

@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -104,11 +104,11 @@ public class LocalTransientQuery {
     private String version = FORMAT_VERSION;
 
     public LocalTransientQuery() {
-        this.attributeNames = new ArrayList<String>();
-        this.attributeValues = new ArrayList<String>();
-        this.conditions = new ArrayList<Integer>();
-        this.joins = new ArrayList<LocalTransientQuery>();
-        visibleAttributeNames = new ArrayList<String>();
+        this.attributeNames = new ArrayList<>();
+        this.attributeValues = new ArrayList<>();
+        this.conditions = new ArrayList<>();
+        this.joins = new ArrayList<>();
+        visibleAttributeNames = new ArrayList<>();
     }
 
     public LocalTransientQuery(String className, int logicalConnector,
@@ -177,7 +177,7 @@ public class LocalTransientQuery {
         transientQuery.setLogicalConnector(localTransientQuery.getLogicalConnector());
         transientQuery.setVisibleAttributeNames(localTransientQuery.getVisibleAttributeNames());
 
-        ArrayList<TransientQuery> remoteJoins =  new ArrayList<TransientQuery>();
+        ArrayList<TransientQuery> remoteJoins =  new ArrayList<>();
         if (localTransientQuery.getJoins() != null){
             for (LocalTransientQuery myJoin : localTransientQuery.getJoins()){
                 if (myJoin == null)
@@ -286,9 +286,9 @@ public class LocalTransientQuery {
         LocalTransientQuery newJoin = new LocalTransientQuery(reader.getAttributeValue(null,"name"),  //NOI18N
                                                                 logicalConnector,true, limit, 0);
         
-        newJoin.visibleAttributeNames = new ArrayList<String>();
-        newJoin.attributeNames = new ArrayList<String>();
-        newJoin.joins = new ArrayList<LocalTransientQuery>();
+        newJoin.visibleAttributeNames = new ArrayList<>();
+        newJoin.attributeNames = new ArrayList<>();
+        newJoin.joins = new ArrayList<>();
         
         QName qVisibleAttributes = new QName("visibleattributes"); //NOI18N
         QName qAttribute = new QName("attribute"); //NOI18N

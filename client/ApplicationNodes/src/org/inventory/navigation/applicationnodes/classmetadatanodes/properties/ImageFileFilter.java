@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -49,13 +49,10 @@ public class ImageFileFilter extends FileFilter {
             return true;
 
         String extension = getExtension(f);
-        if (extension != null) {
-            if(extension.equals(gif) || extension.equals(jpeg) || extension.equals(jpg) ||
-                extension.equals(png)) 
-                    return true;
-            else 
-                return false;
-        }
+        if (extension != null)
+            return extension.equals(gif) || extension.equals(jpeg) || extension.equals(jpg) ||
+                    extension.equals(png);
+        
         return false;
     }
 

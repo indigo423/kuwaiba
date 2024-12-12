@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,12 +39,12 @@ public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalOb
     private Router router;
 
     public PhysicalPathScene() {       
-        nodesLayer = new LayerWidget(this);
-        edgesLayer = new LayerWidget(this);
-        router = RouterFactory.createOrthogonalSearchRouter(nodesLayer);
-        nodesLayer.setLayout(LayoutFactory.createHorizontalFlowLayout(LayoutFactory.SerialAlignment.LEFT_TOP, 50));
-        addChild(nodesLayer);
-        addChild(edgesLayer);
+        nodeLayer = new LayerWidget(this);
+        edgeLayer = new LayerWidget(this);
+        router = RouterFactory.createOrthogonalSearchRouter(nodeLayer);
+        nodeLayer.setLayout(LayoutFactory.createHorizontalFlowLayout(LayoutFactory.SerialAlignment.LEFT_TOP, 50));
+        addChild(nodeLayer);
+        addChild(edgeLayer);
     }
     
     @Override
@@ -60,7 +60,7 @@ public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalOb
     protected Widget attachEdgeWidget(LocalObjectLight edge) {
         SimpleObjectConnectionWidget widget = new SimpleObjectConnectionWidget(this, edge, Color.BLUE);
         widget.setStroke(new BasicStroke(2));
-        edgesLayer.addChild(widget);
+        edgeLayer.addChild(widget);
         return widget;
     }
 
@@ -74,7 +74,7 @@ public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalOb
     
     public void addRootWidget (Widget widget){
         widget.getActions().addAction(ActionFactory.createMoveAction());
-        nodesLayer.addChild(widget);
+        nodeLayer.addChild(widget);
     }
 
     public Router getRouter() {
@@ -83,7 +83,7 @@ public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalOb
     
     public void organizeNodes() {
         int x = 10;
-        for (Widget child : nodesLayer.getChildren()){
+        for (Widget child : nodeLayer.getChildren()){
             child.resolveBounds (new Point (x, 10), new Rectangle (child.getPreferredBounds().x, 
                     child.getPreferredBounds().y, child.getPreferredBounds().width, child.getPreferredBounds().height));
             x += child.getPreferredBounds().width + X_OFFSET;
@@ -95,9 +95,20 @@ public class PhysicalPathScene  extends AbstractScene <LocalObjectLight, LocalOb
         //For now
         return null;
     }
+    
+    @Override
+    public void render(byte[] structure) throws IllegalArgumentException {
+        //TODO: Render here, not in the service
+    }
 
     @Override
     public PhysicalConnectionProvider getConnectProvider() {
+        return null;
+    }
+    
+    @Override
+    public Color getConnectionColor(LocalObjectLight theConnection) {
+        //TODO: Calculate the connection color here, not in Utils
         return null;
     }
 

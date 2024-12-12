@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
+ * Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -23,7 +23,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
-import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalPool;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.navigation.applicationnodes.pools.PoolNode;
@@ -58,7 +58,7 @@ public class NewPoolAction extends AbstractAction{
         
         LocalClassMetadataLight[] allMeta = com.getAllLightMeta(false);
         
-        JComboBox lstType = new JComboBox(allMeta);
+        JComboBox<LocalClassMetadataLight> lstType = new JComboBox<>(allMeta);
         lstType.setName("lstType"); //NOI18N
         JComplexDialogPanel pnlMyDialog = new JComplexDialogPanel(
                 new String[]{java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NAME"), java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_DESCRIPTION"), java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_TYPE")},
@@ -70,9 +70,10 @@ public class NewPoolAction extends AbstractAction{
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
         
-                    LocalObjectLight newPool = com.createPool(-1, ((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
+                    LocalPool newPool = com.createRootPool(((JTextField)pnlMyDialog.getComponent("txtName")).getText(), 
                             ((JTextField)pnlMyDialog.getComponent("txtDescription")).getText(), 
-                            ((LocalClassMetadataLight)((JComboBox)pnlMyDialog.getComponent("lstType")).getSelectedItem()).getClassName());
+                            ((LocalClassMetadataLight)((JComboBox)pnlMyDialog.getComponent("lstType")).getSelectedItem()).getClassName(), 
+                            LocalPool.POOL_TYPE_GENERAL_PURPOSE);
                     
                     if (newPool ==  null)
                         NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());

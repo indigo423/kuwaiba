@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -39,20 +39,20 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 
 /**
- * Show the activity log associated to an object
+ * Shows the available services to associate to a resource
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class ServicesFrame extends JFrame{
+public class ServicesFrame extends JFrame {
     
     private JTextField txtField;
     private JScrollPane pnlScrollMain;
     private JList lstAvailableServices;
-    private LocalObjectLight object;
-    private LocalObjectLight[] services;
+    private LocalObjectLight[] selectedObjects;
+    private List<LocalObjectLight> services;
     
     
-    public ServicesFrame(LocalObjectLight object, LocalObjectLight[] services) {
-        this.object = object;
+    public ServicesFrame(LocalObjectLight[] selectedObjects, List<LocalObjectLight> services) {
+        this.selectedObjects = selectedObjects;
         this.services = services;
         setLayout(new BorderLayout());
         setTitle(java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_TITLE_AVAILABLE_SERVICES"));
@@ -64,7 +64,7 @@ public class ServicesFrame extends JFrame{
                 
         JPanel pnlSearch = new JPanel();
         pnlSearch.setLayout(new GridLayout(1, 2));
-        lstAvailableServices = new JList(services);
+        lstAvailableServices = new JList<>(services.toArray(new LocalObjectLight[0]));
         lstAvailableServices.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         pnlScrollMain = new JScrollPane();
         txtField = new JTextField();
@@ -119,22 +119,29 @@ public class ServicesFrame extends JFrame{
             if (lstAvailableServices.getSelectedValue() == null)
                 JOptionPane.showMessageDialog(null, "Select a service from the list");
             else{
-                if (CommunicationsStub.getInstance().associateObjectToService(
-                        object.getClassName(), object.getOid(), 
-                        ((LocalObjectLight)lstAvailableServices.getSelectedValue()).getClassName(),
-                        ((LocalObjectLight)lstAvailableServices.getSelectedValue()).getOid())){
-                    JOptionPane.showMessageDialog(null, String.format("The object was related to %s", lstAvailableServices.getSelectedValue()));
-                    dispose();
+                String [] objectsClassName = new String[selectedObjects.length];
+                Long [] objectsId = new Long[selectedObjects.length];
+                for(int i=0; i<selectedObjects.length; i++){
+                    objectsClassName[i] = selectedObjects[i].getClassName();
+                    objectsId [i] = selectedObjects[i].getOid();
+                }
+                
+                if (CommunicationsStub.getInstance().associateObjectsToService(
+                    objectsClassName, objectsId, 
+                    ((LocalObjectLight)lstAvailableServices.getSelectedValue()).getClassName(),
+                    ((LocalObjectLight)lstAvailableServices.getSelectedValue()).getOid())){
+                        JOptionPane.showMessageDialog(null, String.format("%s object was related to %s", selectedObjects.length, lstAvailableServices.getSelectedValue()));
+                        dispose();
                 }
                 else 
                     JOptionPane.showMessageDialog(null, CommunicationsStub.getInstance().getError(), 
-                            "Error", JOptionPane.ERROR_MESSAGE);
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
     
     public void servicesFilter(String text){
-        List<LocalObjectLight> filteredServices = new ArrayList<LocalObjectLight>();
+        List<LocalObjectLight> filteredServices = new ArrayList<>();
         for(LocalObjectLight service : services){
             if(service.getClassName().toLowerCase().contains(text.toLowerCase()) 
                     || service.getName().toLowerCase().contains(text.toLowerCase()))

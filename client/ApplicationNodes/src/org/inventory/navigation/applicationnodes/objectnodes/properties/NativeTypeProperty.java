@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015, 2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2016, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -17,26 +17,22 @@ package org.inventory.navigation.applicationnodes.objectnodes.properties;
 
 import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.Date;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.openide.nodes.PropertySupport.ReadWrite;
+import org.openide.nodes.PropertySupport;
 
 /**
  * Provides a valid representation of LocalObjects attributes as Properties,
  * as LocalObject is just a proxy and can't be a bean itself
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class NativeTypeProperty extends ReadWrite {
+public class NativeTypeProperty extends PropertySupport.ReadWrite {
     private ObjectNode node;
     private Object value;
-
-    /**
-     * This constructor is called when the type is anything but a list
-     */
+    
     public NativeTypeProperty(String name, Class valueType, String displayName,
             String toolTextTip, ObjectNode node, Object value) {
         super(name, valueType, displayName, toolTextTip);
@@ -69,15 +65,6 @@ public class NativeTypeProperty extends ReadWrite {
 
     @Override
     public PropertyEditor getPropertyEditor(){        
-        if (this.getValueType() ==  Date.class)
-            return java.beans.PropertyEditorManager.findEditor(String.class);
         return super.getPropertyEditor();
-    }
-
-    @Override
-    public boolean canWrite(){
-        //Dates are read only for now until we integrate a date picker
-        return !getValueType().equals(Date.class);
-            
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,18 +20,16 @@ import java.awt.Image;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Utils;
 import org.openide.nodes.AbstractNode;
-import org.openide.nodes.Children;
+import org.openide.nodes.Node;
 
 /**
- * A node that represents only a label
+ * A node that represents only a label and has LocalObjectLights as children
  */
 public class LabelNode extends AbstractNode {
-    private final Image icon = Utils.createRectangleIcon(new Color(170, 212,0), 10, 10);
+    private static final Image icon = Utils.createRectangleIcon(new Color(170, 212,0), 10, 10);
     public LabelNode(String label, LocalObjectLight[] children) {
-        super (new Children.Array());
+        super (new LabelChildren(children));
         setDisplayName(label);
-        for (LocalObjectLight child : children)
-            getChildren().add(new SpecialObjectNode[] {new SpecialObjectNode(child)});
     }
 
     @Override
@@ -44,5 +42,18 @@ public class LabelNode extends AbstractNode {
         return getIcon(type);
     }
     
-    
+    public static class LabelChildren extends AbstractChildren {
+
+        public LabelChildren(LocalObjectLight[] children) {
+            setKeys(children);
+        }
+        
+        @Override
+        protected Node[] createNodes(LocalObjectLight key) {
+            return new Node[] { new SpecialRelatedObjectNode(key) };
+        }
+
+        @Override
+        public void addNotify() {}
+    }
 }

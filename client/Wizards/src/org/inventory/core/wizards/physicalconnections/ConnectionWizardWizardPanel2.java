@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ public class ConnectionWizardWizardPanel2 implements WizardDescriptor.Panel {
                 ((ConnectionWizardVisualPanel2)component).getCmbConnectionType().addItem(type);
         }
         if (wizardType == ConnectionWizard.WIZARDTYPE_CONTAINERS){
-            LocalClassMetadataLight[] portClasses = com.getLightSubclasses(Constants.CLASS_GENERICPHYSICALLINK, false, false);
+            List<LocalClassMetadataLight> portClasses = com.getLightSubclasses(Constants.CLASS_GENERICPHYSICALLINK, false, false);
             if (portClasses != null){
                 for(LocalClassMetadataLight portClass : portClasses)
                     ((ConnectionWizardVisualPanel2)component).getCmbChildrenType().addItem(portClass);

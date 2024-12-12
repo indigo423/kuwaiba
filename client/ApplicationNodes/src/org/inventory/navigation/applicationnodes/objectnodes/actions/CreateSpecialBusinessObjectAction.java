@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.MenuScroller;
-import org.inventory.navigation.applicationnodes.objectnodes.SpecialChildren;
+import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
 import org.inventory.navigation.applicationnodes.objectnodes.SpecialObjectNode;
 import org.openide.util.actions.Presenter;
 
@@ -52,9 +52,8 @@ public final class CreateSpecialBusinessObjectAction extends AbstractAction
                 node.getObject().getOid(), 0);
         if (myLol == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
-        else{
-            if (!((SpecialChildren)node.getChildren()).isCollapsed())
-                ((SpecialChildren)node.getChildren()).add(new SpecialObjectNode[]{new SpecialObjectNode(myLol)});
+        else {
+            ((AbstractChildren)node.getChildren()).addNotify();
                 
             NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE,
                         java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATED"));

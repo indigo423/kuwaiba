@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ public class GroupsEditorSupport extends PropertyEditorSupport
     @Override
     public void vetoableChange(PropertyChangeEvent evt) throws PropertyVetoException {
         if(evt.getNewValue().equals(PropertyEnv.STATE_VALID)){
-            boolean success = com.setUserProperties(this.user.getOid(), null, null, null, null, myPanel.toBeAdded());
+            boolean success = com.setUserProperties(this.user.getUserId(), null, null, null, null, myPanel.toBeAdded());
             if (!success)
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             else

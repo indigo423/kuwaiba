@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,16 +15,13 @@
  */
 package org.inventory.navigation.pools;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.ActionMap;
-import org.inventory.communications.core.LocalObjectLight;
+import javax.swing.text.DefaultEditorKit;
+import org.inventory.communications.core.LocalPool;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectChildren;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.inventory.navigation.applicationnodes.objectnodes.RootObjectNode;
 import org.inventory.navigation.applicationnodes.pools.PoolRootNode;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
@@ -56,7 +53,7 @@ persistenceType = TopComponent.PERSISTENCE_NEVER)
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_PoolsAction",
 preferredID = "PoolsTopComponent")
-public final class PoolsTopComponent extends TopComponent implements ExplorerManager.Provider, Refreshable{
+public final class PoolsTopComponent extends TopComponent implements ExplorerManager.Provider, Refreshable {
     
     private static final String PREFERRED_ID = "PoolsTopComponent";
     private static PoolsTopComponent instance;
@@ -74,7 +71,11 @@ public final class PoolsTopComponent extends TopComponent implements ExplorerMan
     
     private void initCustomComponents(){
         ps = new PoolsService(this);
-        associateLookup(ExplorerUtils.createLookup(em, new ActionMap()));
+        ActionMap map = getActionMap();
+        map.put(DefaultEditorKit.copyAction, ExplorerUtils.actionCopy(em));
+        map.put(DefaultEditorKit.cutAction, ExplorerUtils.actionCut(em));
+        map.put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
+        associateLookup(ExplorerUtils.createLookup(em, map));
         treeView = new BeanTreeView();
         treeView.setWheelScrollingEnabled(true);
         add(treeView);
@@ -155,8 +156,8 @@ public final class PoolsTopComponent extends TopComponent implements ExplorerMan
         return em;
     }
 
-   public void setRoot(){
-        LocalObjectLight[] rootChildren = ps.getRootChildren();
+   public void setRoot() {
+        List<LocalPool> rootChildren = ps.getRootChildren();
         if (rootChildren != null)
             em.setRootContext(new PoolRootNode(rootChildren));
         else
@@ -165,18 +166,7 @@ public final class PoolsTopComponent extends TopComponent implements ExplorerMan
 
     @Override
     public void refresh() {
-        if (em.getRootContext() instanceof RootObjectNode){
-            List<Node> toBeDeleted = new ArrayList<Node>();
-            for (Node child : em.getRootContext().getChildren().getNodes()){
-                if (!((ObjectNode)child).refresh())
-                    toBeDeleted.add(child);
-            }
-            for (Node deadNode : toBeDeleted)
-                ((ObjectChildren)em.getRootContext().getChildren()).remove(new Node[]{deadNode});
-        }else{
-            setRoot();
-            revalidate();
-        }
+        setRoot();
     }
 
     public NotificationUtil getNotifier() {

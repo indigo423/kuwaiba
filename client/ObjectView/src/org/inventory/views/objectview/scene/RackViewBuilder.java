@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
-import org.inventory.core.visual.scene.AbstractScene;
 import org.inventory.views.objectview.ObjectViewService;
 import org.netbeans.api.visual.widget.Widget;
 
@@ -42,7 +41,7 @@ public class RackViewBuilder implements AbstractViewBuilder {
     }
 
     @Override
-    public AbstractScene getScene() {
+    public RackViewScene getScene() {
         return scene;
     }
     

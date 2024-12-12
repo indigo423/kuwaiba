@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.inventory.core.visual.export.filters;
 
 import java.io.IOException;
 import javax.swing.JPanel;
-import org.inventory.core.visual.export.ExportableScene;
+import org.inventory.core.visual.scene.AbstractScene;
 
 /**
  * All scene export filters must implement this interface
@@ -37,9 +37,11 @@ public abstract class SceneExportFilter {
     public abstract String getExtension();
     /**
      * The export action
-     * @throws 
+     * @param scene The scene to be exported
+     * @param fileName The target file name extension
+     * @throws java.io.IOException If there was any problem trying to save the file
      */
-    public abstract void export(ExportableScene scene, String fileName) throws IOException;
+    public abstract void export(AbstractScene scene, String fileName) throws IOException;
     /**
      * The settings panel
      * @return 

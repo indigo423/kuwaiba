@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -52,6 +52,12 @@ public class PhysicalConnectionProvider implements ConnectProvider {
      * Object to be used as parent to the new connections
      */
     private LocalObjectLight currentParentObject;
+    
+    private AbstractScene<LocalObjectLight, LocalObjectLight> scene;
+
+    public PhysicalConnectionProvider(AbstractScene scene) {
+        this.scene = scene;
+    }
 
     public void setConnectionClass(String connectionClass) {
         this.connectionClass = connectionClass;
@@ -90,16 +96,15 @@ public class PhysicalConnectionProvider implements ConnectProvider {
 
     @Override
     public void createConnection(Widget sourceWidget, Widget targetWidget) {
-
-        ConnectionWizard myWizard = new ConnectionWizard(wizardType,((AbstractNodeWidget)sourceWidget).getObject(),
-                ((AbstractNodeWidget)targetWidget).getObject(), connectionClass,
-                currentParentObject);
+        
+      
+        ConnectionWizard myWizard = new ConnectionWizard(wizardType, (LocalObjectLight)scene.findObject(sourceWidget),
+                (LocalObjectLight)scene.findObject(targetWidget), connectionClass, currentParentObject);
         
         myWizard.show();
         
         if (myWizard.getNewConnection() != null){
 
-            AbstractScene scene = (AbstractScene)sourceWidget.getScene();
             ConnectionWidget line = (ConnectionWidget)scene.addEdge(myWizard.getNewConnection());
 
             line.setTargetAnchor(AnchorFactory.createCenterAnchor(targetWidget));

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.inventory.views.objectview;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.visual.scene.PhysicalConnectionProvider;
 import org.inventory.views.objectview.scene.AbstractViewBuilder;
 import org.inventory.views.objectview.scene.ChildrenViewBuilder;
 import org.openide.util.Lookup;
@@ -128,7 +129,7 @@ public class ObjectViewService implements LookupListener {
     private void setCurrentObject(LocalObjectLight currentObject) {
         this.currentObject = currentObject;
         if (viewBuilder.getScene().supportsConnections())
-            viewBuilder.getScene().getConnectProvider().setCurrentParentObject(currentObject);
+            ((PhysicalConnectionProvider)viewBuilder.getScene().getConnectProvider()).setCurrentParentObject(currentObject);
     }
 
     public ObjectViewTopComponent getComponent(){

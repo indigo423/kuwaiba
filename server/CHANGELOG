@@ -81,6 +81,21 @@
 * Lots of bugfixes
 * Preliminary support for bulk uploads
 
-0.7.1
+0.7.1 (06112015)
 * The bulk upload file format was improved
 * Added method to allow the creation of multiple objects at once in the API
+
+1.0
+* The Persistence Service was merged to the web application
+* Service startup improved and logging level increased. 
+* Neo4J version changed to 2.3.2
+* Names of some web service methods changed. The types remain unchanged
+* The name of the web service class changed to KuwaibaService
+* JSF 2.2 is used now to support the administration console
+* Added isSubclassOf method to the web service API
+* Open session, close session, create user, delete users methods have now audit trail entries
+* The general views are no longer referenced by type (an integer), but by class name (it's more intuitive to know how to retrieved them)
+* The way the exceptions are raised and caught changed. It's all handled at webservice level
+* Added preliminary support for commercial modules
+* Webservice API improved and extended
+* HTTPS support now documented

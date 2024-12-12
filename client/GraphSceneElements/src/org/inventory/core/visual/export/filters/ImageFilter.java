@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import javax.swing.JComponent;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import org.inventory.core.services.utils.JComplexDialogPanel;
-import org.inventory.core.visual.export.ExportableScene;
+import org.inventory.core.visual.scene.AbstractScene;
 import org.netbeans.api.visual.export.SceneExporter;
 
 /**
@@ -58,8 +58,8 @@ public class ImageFilter extends SceneExportFilter {
     }
 
     @Override
-    public void export(ExportableScene exportable, String fileName) throws IOException {
-        SceneExporter.createImage(exportable.getExportable(),
+    public void export(AbstractScene exportable, String fileName) throws IOException {
+        SceneExporter.createImage(exportable,
                 new File(fileName),
                 myPanel == null ? SceneExporter.ImageType.PNG : (SceneExporter.ImageType)((JComboBox)myPanel.getComponent("cmbFormat")).getSelectedItem(),
                 myPanel == null ? SceneExporter.ZoomType.ACTUAL_SIZE : (SceneExporter.ZoomType)((JComboBox)myPanel.getComponent("cmbZoom")).getSelectedItem(),

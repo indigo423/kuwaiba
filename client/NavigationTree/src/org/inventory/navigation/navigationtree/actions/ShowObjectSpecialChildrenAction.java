@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import org.openide.util.NbBundle;
 @ActionID(category = "Tools", id = "org.inventory.navigation.navigationtree.actions.ShowObjectSpecialChildrenAction")
 @ActionRegistration(iconBase="org/inventory/navigation/navigationtree/res/special_children_explorer.png", displayName = "#CTL_ShowSpecialChildren")
 @ActionReference(path = "Menu/Tools/Navigation")
-@NbBundle.Messages({"CTL_ShowSpecialChildren=Show special children"})
+@NbBundle.Messages({"CTL_ShowSpecialChildren=Show Special Children"})
 public final class ShowObjectSpecialChildrenAction extends AbstractAction{
 
     @Override

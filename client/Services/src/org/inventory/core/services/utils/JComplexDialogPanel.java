@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import javax.swing.JPanel;
  * uses a BoxLayout.PAGE_AXIS layout, so the components should be provided in pair label-component
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class JComplexDialogPanel extends JPanel{
+public class JComplexDialogPanel extends JPanel {
 
     private HashMap<String, JComponent> components;
 
@@ -38,7 +38,7 @@ public class JComplexDialogPanel extends JPanel{
         if (labels.length != components.length)
             throw new RuntimeException("You must provide the same number of labels and components");
         
-        this.components = new HashMap<String, JComponent>();
+        this.components = new HashMap<>();
         setBorder(BorderFactory.createEmptyBorder(20, 20, 0, 20));
         setLayout(new GridBagLayout());
         GridBagConstraints gc = new GridBagConstraints();

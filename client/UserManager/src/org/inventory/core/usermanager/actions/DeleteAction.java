@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ public class DeleteAction extends AbstractAction {
             if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this user?", "Confirmation",JOptionPane.OK_CANCEL_OPTION) == JOptionPane.CANCEL_OPTION)
                 return;
 
-            if(com.deleteUsers(new long[]{((UserNode)this.node).getObject().getOid()})){
+            if(com.deleteUsers(new long[]{((UserNode)this.node).getObject().getUserId()})){
                 NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "The user was deleted successfully");
                 node.getParentNode().getChildren().remove(new Node[]{node});
                 ums.refreshUserList();

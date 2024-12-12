@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.inventory.communications.util;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -33,6 +34,8 @@ import java.util.Collection;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import org.inventory.communications.CommunicationsStub;
+import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectLight;
 
 /**
@@ -208,6 +211,24 @@ public class Utils {
     }
     
     /**
+     * Creates a circle Image with the specified diameter and color
+     * @param color Color of the icon
+     * @param diameter Diameter of the icon
+     * @return An Image object
+     */
+    public static Image createCircleIcon(Color color, int diameter){
+        BufferedImage image = new BufferedImage(diameter, diameter, BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D graphics = image.createGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                          RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics.setColor(color);
+        graphics.fillOval(0, 0, diameter, diameter);
+        graphics.dispose();
+        return image;
+    }
+    
+    /**
      * Gets the bytes from a file
      * @param f File object
      * @param format format to be read
@@ -266,14 +287,14 @@ public class Utils {
      * This method receives two conjuncts and extract the elements that are not common among them
      * @param groupA
      * @param groupB
-     * @return An array of two positions with the remaining elements in the conjunct A and the second with the B's elements
+     * @return An array of two positions with the remaining elements in the set A and the second with the B's elements
      */
     public static Collection[] inverseIntersection(Collection groupA, Collection groupB){
         for (Object elementA : groupA){
             for (Object elementB : groupB){
                 if (elementA.equals(elementB)){
-                    List<Object> myGroupA = new ArrayList<Object>(groupA);
-                    List<Object> myGroupB = new ArrayList<Object>(groupB);
+                    List<Object> myGroupA = new ArrayList<>(groupA);
+                    List<Object> myGroupB = new ArrayList<>(groupB);
                     myGroupA.remove(elementA);
                     myGroupB.remove(elementB);
                     return inverseIntersection(myGroupA, myGroupB);
@@ -341,5 +362,20 @@ public class Utils {
         if (globalFileChooser == null)
             globalFileChooser = new JFileChooser();
         return globalFileChooser;
+    }
+    
+    /**
+     * This is a utility method that sets an object's property. This is used mainly by property sheets
+     * @param className Object class
+     * @param objectId Object Id
+     * @param propertyName Name of the property to be set
+     * @param propertyValue Value of the property to be set
+     * @throws Exception The same exception capture in the CommunicationsStub
+     */
+    public static void updateObject(String className, long objectId, String propertyName, Object propertyValue) throws Exception {
+        LocalObject theUpdate = new LocalObject(className, objectId, new String [] { propertyName }, new Object [] { propertyValue });
+        
+        if(!CommunicationsStub.getInstance().saveObject(theUpdate))
+            throw new Exception(CommunicationsStub.getInstance().getError());
     }
 }

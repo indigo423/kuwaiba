@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,9 +30,9 @@ import org.inventory.communications.util.Constants;
  * This class is a simple representation of a business object with a very basic information
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class LocalObjectLight implements Transferable { //This class does not implement Transferable because of
+public class LocalObjectLight implements Transferable, Comparable<LocalObjectLight> { //This class does not implement Transferable because of
                                                                //LocalObjectLight interface extends from it
-    public static final DataFlavor DATA_FLAVOR =
+    public static DataFlavor DATA_FLAVOR =
             new DataFlavor(LocalObjectLight.class,"Object/LocalObjectLight");
     
     protected long oid;
@@ -52,7 +52,7 @@ public class LocalObjectLight implements Transferable { //This class does not im
      */
     public LocalObjectLight(){
         this.oid = -1;
-        this.propertyChangeListeners = new ArrayList<PropertyChangeListener>();
+        this.propertyChangeListeners = new ArrayList<>();
     }
 
     public LocalObjectLight(long oid, String name, String className) {
@@ -60,7 +60,7 @@ public class LocalObjectLight implements Transferable { //This class does not im
         this.oid = oid;
         this.name = name;
         this.className = className;
-        this.validators = new HashMap<String, Integer>();
+        this.validators = new HashMap<>();
     }
 
     public LocalObjectLight(String className, String name, long id, HashMap<String, Integer> validators){
@@ -102,7 +102,7 @@ public class LocalObjectLight implements Transferable { //This class does not im
 
     public void addPropertyChangeListener(PropertyChangeListener newListener){
         if (propertyChangeListeners == null)
-            propertyChangeListeners = new ArrayList<PropertyChangeListener>();
+            propertyChangeListeners = new ArrayList<>();
         if (propertyChangeListeners.contains(newListener))
             return;
         propertyChangeListeners.add(newListener);
@@ -157,5 +157,10 @@ public class LocalObjectLight implements Transferable { //This class does not im
     @Override
     public String toString(){
         return (getName() == null ? Constants.LABEL_NONAME : getName()) + " [" + getClassName() + "]"; //NOI18N
+    }
+
+    @Override
+    public int compareTo(LocalObjectLight o) {
+        return getName().compareTo(o.getName());
     }
 }

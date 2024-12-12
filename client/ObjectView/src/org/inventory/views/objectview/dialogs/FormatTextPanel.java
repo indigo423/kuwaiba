@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -183,6 +183,7 @@ public class FormatTextPanel extends javax.swing.JPanel {
 
             cmbFontSize.setRenderer(new ListCellRenderer() {
 
+                @Override
                 public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                     JLabel item = new JLabel();
                     if (value != null)
@@ -202,6 +203,7 @@ public class FormatTextPanel extends javax.swing.JPanel {
 
             cmbFontColor.setRenderer(new ListCellRenderer() {
 
+                @Override
                 public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                     JLabel item = new JLabel();
                     if (value != null){

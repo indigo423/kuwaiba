@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,78 +19,59 @@ import java.awt.Color;
 import java.awt.Dimension;
 import javax.swing.BorderFactory;
 import org.inventory.communications.core.LocalObjectLight;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
+import org.netbeans.api.visual.layout.LayoutFactory;
 import org.netbeans.api.visual.model.ObjectState;
-import org.netbeans.api.visual.widget.LayerWidget;
+import org.netbeans.api.visual.widget.LabelWidget;
 import org.netbeans.api.visual.widget.Scene;
 import org.netbeans.api.visual.widget.Widget;
-import org.openide.util.Lookup;
-import org.openide.util.lookup.Lookups;
 
 /**
  * Root to all widgets representing and object node
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class AbstractNodeWidget extends Widget implements SelectableWidget {
+public class AbstractNodeWidget extends SelectableNodeWidget {
     /**
      * Default widget size
      */
     public static final Dimension DEFAULT_DIMENSION = new Dimension(10, 10);
     /**
-     * Widget's lookup
-     */
-    private Lookup lookup;
-    /**
-     * Object node. The wrapped object will be referenced here
-     */
-    private ObjectNode node;
-    /**
      * The label
      */
-    private TagLabelWidget label;
-
+    private LabelWidget labelWidget;
+    /**
+     * The generic icon (a square)
+     */
+    private Widget squareWidget;
+    
     /**
      * Default constructor
      * @param scene Scene this widget belongs to
      * @param object object represented by this widget
-     * @param labelLayer Layer where the label associated with this widget will be placed. Null if none (no label will be added)
      */
-    public AbstractNodeWidget(Scene scene, LocalObjectLight object, LayerWidget labelLayer) {
-        super(scene);
-        this.node = new ObjectNode(object);
-        setPreferredSize(DEFAULT_DIMENSION);
-        setBackground(Color.ORANGE);
+    public AbstractNodeWidget(Scene scene, LocalObjectLight object) {
+        super(scene, object);
+        this.squareWidget = new Widget(scene);
+        this.labelWidget = new LabelWidget(scene);
+        
+        this.labelWidget.setLabel(object.toString());
+        
+        this.squareWidget.setPreferredSize(DEFAULT_DIMENSION);
+        this.squareWidget.setBackground(Color.ORANGE);
+        this.squareWidget.setOpaque(true);
+        
+        //Centers the text, and makes the widgets to stack one onto another
+        setLayout(LayoutFactory.createVerticalFlowLayout (LayoutFactory.SerialAlignment.CENTER, 5));
+        
+        addChild(squareWidget);
+        addChild(labelWidget);
+        
         setToolTipText(object.toString());
-        this.lookup = Lookups.singleton(object);
         createActions(AbstractScene.ACTION_SELECT);
         createActions(AbstractScene.ACTION_CONNECT);
-        setOpaque(true);
-        if (labelLayer != null){
-            label = new TagLabelWidget(scene, this, object.toString(), TagLabelWidget.BOTTOM);
-            labelLayer.addChild(label);
-            addDependency(label);
-        }
-    }
-
-    /**
-     * Convenience method to get the wrapped object
-     * @return The wrapped object
-     */
-    public LocalObjectLight getObject() {
-        return node.getObject();
-    }
-
-    /**
-     * Convenience method to set the wrapped object
-     * @param object the new object
-     */
-    public void setObject(LocalObjectLight object) {
-        this.node = new ObjectNode(object);
     }
     
-    @Override
-    public Lookup getLookup(){
-        return lookup;
+    public void showLabel(boolean shouldShow) {
+        labelWidget.setVisible(shouldShow);
     }
     
     /**
@@ -101,13 +82,9 @@ public class AbstractNodeWidget extends Widget implements SelectableWidget {
     @Override
     public void notifyStateChanged (ObjectState previousState, ObjectState state) {
         if (state.isSelected())
-            label.setBorder(BorderFactory.createLineBorder(Color.RED));
+            labelWidget.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Color.RED, 1, true), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
         else
-            label.setBorder(BorderFactory.createEmptyBorder());
-    }
-
-    @Override
-    public ObjectNode getNode() {
-        return node;
+            labelWidget.setBorder(BorderFactory.createEmptyBorder());
     }   
 }

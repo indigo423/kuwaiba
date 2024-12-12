@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,9 +20,8 @@ import javax.swing.AbstractAction;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemChildren;
-import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeItemNode;
 import org.inventory.navigation.applicationnodes.listmanagernodes.ListTypeNode;
+import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
 
 /**
  * Action to create a new list type item
@@ -41,11 +40,10 @@ public final class CreateListTypeAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent ev) {
         LocalObjectListItem myLol = com.createListTypeItem(node.getObject().getClassName());
-            if (myLol == null)
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-        else{
-            if (!((ListTypeItemChildren)node.getChildren()).isCollapsed())
-                node.getChildren().add(new ListTypeItemNode[]{new ListTypeItemNode(myLol)});
+        if (myLol == null)
+            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+        else {
+            ((AbstractChildren)node.getChildren()).addNotify();
             //Refresh cache
             com.getList(node.getObject().getClassName(), false, true);
         }

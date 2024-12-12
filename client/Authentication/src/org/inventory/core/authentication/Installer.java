@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ public class Installer extends ModuleInstall {
     private String oldHost;
     private String oldWSDLPath;
     private int oldPort;
+    private boolean oldProtocol; //true if HTTPS is enable
 
     @Override
     public void restored() {
@@ -79,6 +80,7 @@ public class Installer extends ModuleInstall {
                         oldHost = connSettings.getServerAddress();
                         oldWSDLPath = connSettings.getWSDLPath();
                         oldPort = connSettings.getServerPort();
+                        oldProtocol = connSettings.getProtocol();
 
                         DialogDescriptor myDialog = new DialogDescriptor(connSettings, "Connection Settings");
                         myDialog.setModal(true);
@@ -89,6 +91,7 @@ public class Installer extends ModuleInstall {
                                         evt.getNewValue()==DialogDescriptor.CLOSED_OPTION){
                                     connSettings.setServerAddress(oldHost);
                                     connSettings.setWSDLPath(oldWSDLPath);
+                                    connSettings.setProtocol(oldProtocol);
                                     connSettings.setServerPort(oldPort);
                                 }
                             }
@@ -103,7 +106,7 @@ public class Installer extends ModuleInstall {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
                 if(evt.getNewValue() == DialogDescriptor.CANCEL_OPTION ||
-                        evt.getNewValue()==DialogDescriptor.CLOSED_OPTION)
+                        evt.getNewValue() == DialogDescriptor.CLOSED_OPTION)
                     LifecycleManager.getDefault().exit();
             }
         });
@@ -114,7 +117,7 @@ public class Installer extends ModuleInstall {
     public boolean connect(){
         try {
             CommunicationsStub.setServerURL(
-                    new URL("http", connSettings.getServerAddress(), connSettings.getServerPort(),
+                    new URL(connSettings.getProtocol() ? "https" : "http", connSettings.getServerAddress(), connSettings.getServerPort(),
                     connSettings.getWSDLPath()));
 
         } catch (MalformedURLException ex) {
@@ -122,12 +125,13 @@ public class Installer extends ModuleInstall {
             return false;
         }
         try{
-            if (!CommunicationsStub.getInstance().createSession(pnlAuthentication.getTxtUser().getText(), new String(pnlAuthentication.getTxtPassword().getPassword()))){
+            if (!CommunicationsStub.getInstance().createSession(pnlAuthentication.getTxtUser().getText(), 
+                    new String(pnlAuthentication.getTxtPassword().getPassword()), connSettings.getHostVerification())){
                showExceptions(CommunicationsStub.getInstance().getError());
                return false;
             }else{
-                writeProperties(pnlAuthentication.getTxtUser().getText(), connSettings.getServerAddress(), connSettings.getServerPort(),
-                        connSettings.getWSDLPath());
+                writeProperties(pnlAuthentication.getTxtUser().getText(), connSettings.getServerAddress(), 
+                        connSettings.getServerPort(), connSettings.getWSDLPath(), connSettings.getProtocol());
                 //The title can't be set directly since it's overwritten right after the startup. We have to wait till the window is open
                 WindowManager.getDefault().getMainWindow().addWindowListener(new WindowListener() {
 
@@ -185,7 +189,7 @@ public class Installer extends ModuleInstall {
         return true;
     }
 
-    private void writeProperties(String userName, String serverAddress, int serverPort, String wsdlPath) {
+    private void writeProperties(String userName, String serverAddress, int serverPort, String wsdlPath, boolean protocol) {
         FileOutputStream output = null;
         try{
             output = new FileOutputStream(System.getProperty("user.dir") + "/.properties"); //NOI18N
@@ -193,6 +197,7 @@ public class Installer extends ModuleInstall {
             loginProperties.put("user", userName); //NOI18N
             loginProperties.put("address", serverAddress); //NOI18N
             loginProperties.put("port", String.valueOf(serverPort)); //NOI18N
+            loginProperties.put("protocol", String.valueOf(protocol)); //NOI18N
             loginProperties.put("path", wsdlPath); //NOI18N
             loginProperties.store(output, "Last login: " + Calendar.getInstance().getTimeInMillis());
             output.close();

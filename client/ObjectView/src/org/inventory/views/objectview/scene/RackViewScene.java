@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package org.inventory.views.objectview.scene;
 import java.awt.Color;
 import java.awt.Dimension;
 import org.inventory.communications.core.LocalObject;
+import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
-import org.inventory.core.visual.export.ExportableScene;
-import org.inventory.core.visual.export.Layer;
 import org.inventory.core.visual.scene.AbstractScene;
 import org.inventory.core.visual.scene.PhysicalConnectionProvider;
 import org.netbeans.api.visual.border.Border;
@@ -28,14 +27,13 @@ import org.netbeans.api.visual.border.BorderFactory;
 import org.netbeans.api.visual.layout.Layout;
 import org.netbeans.api.visual.layout.LayoutFactory;
 import org.netbeans.api.visual.widget.LabelWidget;
-import org.netbeans.api.visual.widget.Scene;
 import org.netbeans.api.visual.widget.Widget;
 
 /**
  * Scene class used in this module
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class RackViewScene extends AbstractScene<LocalObject, LocalObject> implements ExportableScene {
+public class RackViewScene extends AbstractScene<LocalObject, LocalObject> {
     public static final int STANDARD_RACK_WIDTH = 300;
     public static final int RACK_UNIT_IN_PX = 20;
     private Widget rackWidget;
@@ -114,22 +112,22 @@ public class RackViewScene extends AbstractScene<LocalObject, LocalObject> imple
         return rackWidget;
     }
 
-    @Override
-    public Scene getExportable() {
-        return this;
-    }
-
-    @Override
-    public Layer[] getLayers() {
-        return null;
-    }
-
     //Not needed
     @Override
     public byte[] getAsXML() {return null;}
+    
+    @Override
+    public void render(byte[] structure) throws IllegalArgumentException {
+        //TODO: Render the view here instead of in the service
+    }
 
     @Override
     public PhysicalConnectionProvider getConnectProvider() {
+        return null;
+    }
+    
+    @Override
+    public Color getConnectionColor(LocalObjectLight theConnection) {
         return null;
     }
 

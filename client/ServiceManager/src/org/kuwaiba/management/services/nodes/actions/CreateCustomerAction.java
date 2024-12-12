@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,65 +16,55 @@
 package org.kuwaiba.management.services.nodes.actions;
 
 import java.awt.event.ActionEvent;
+import java.util.Iterator;
+import java.util.List;
+import javax.swing.AbstractAction;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
-import org.inventory.core.services.api.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.kuwaiba.management.services.nodes.CustomerNode;
-import org.kuwaiba.management.services.nodes.CustomersPoolChildren;
-import org.kuwaiba.management.services.nodes.CustomersPoolNode;
-import org.kuwaiba.management.services.nodes.ServiceManagerRootNode;
+import org.kuwaiba.management.services.nodes.CustomerPoolNode;
+import org.openide.nodes.Node;
+import org.openide.util.Utilities;
 import org.openide.util.actions.Presenter;
 
 /**
  * This action allows to create a customer
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class CreateCustomerAction extends GenericObjectNodeAction implements Presenter.Popup {
-    private ServiceManagerRootNode rootNode;
-    private CustomersPoolNode customersPoolNode;
+public class CreateCustomerAction extends AbstractAction implements Presenter.Popup {
     
-    public CreateCustomerAction(ServiceManagerRootNode rootNode) {
-        this.rootNode = rootNode;
+    public CreateCustomerAction() {
         putValue(NAME, java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_CUSTOMER"));
-        
-    }
-
-    public CreateCustomerAction(CustomersPoolNode coustomersPoolNode) {
-        this.customersPoolNode = coustomersPoolNode;
-        putValue(NAME, java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_CUSTOMER"));
-        
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        String objectClass = ((JMenuItem)e.getSource()).getName();
-        if(object == null){
-            LocalObjectLight newCustomer = CommunicationsStub.getInstance().createCustomer(objectClass, null, null);
-            if (newCustomer != null)
-                rootNode.getChildren().add(new CustomerNode[] {new CustomerNode(newCustomer)});
-            else
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-        }
-        else if(object.getClassName().equals(Constants.CLASS_GENERICCUSTOMER)){
-            LocalObjectLight newCustomer = CommunicationsStub.getInstance().createPoolItem(customersPoolNode.getObject().getOid(), ((JMenuItem)e.getSource()).getName());
-            if (newCustomer == null)
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
-            else{
-                if (!((CustomersPoolChildren)customersPoolNode.getChildren()).isCollapsed())
-                    customersPoolNode.getChildren().add(new CustomerNode[]{new CustomerNode(newCustomer)});
-                NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATED"));
-            }
+        
+        Iterator<? extends CustomerPoolNode> selectedNodes = Utilities.actionsGlobalContext().lookupResult(CustomerPoolNode.class).allInstances().iterator();
+            
+        if (!selectedNodes.hasNext())
+            return;
+        
+        Node selectedNode = selectedNodes.next();
+        
+        LocalObjectLight newCustomer = CommunicationsStub.getInstance().
+                createPoolItem(((CustomerPoolNode)selectedNode).getPool().getOid(), 
+                ((JMenuItem)e.getSource()).getName());
+        if (newCustomer == null)
+            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+        else {
+            ((CustomerPoolNode.CustomerPoolChildren)selectedNode.getChildren()).addNotify();
+            NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATED"));
         }
     }
   
     @Override
     public JMenuItem getPopupPresenter() {
-        LocalClassMetadataLight[] customerClasses = CommunicationsStub.getInstance().
+        List<LocalClassMetadataLight> customerClasses = CommunicationsStub.getInstance().
                 getLightSubclasses(Constants.CLASS_GENERICCUSTOMER, false, false);
         JMenuItem menu = new JMenu(java.util.ResourceBundle.getBundle("org/kuwaiba/management/services/Bundle").getString("LBL_CREATE_CUSTOMER"));
         for (LocalClassMetadataLight customerClass : customerClasses){
@@ -84,10 +74,5 @@ public class CreateCustomerAction extends GenericObjectNodeAction implements Pre
             menu.add(customerEntry);
         }
         return menu;
-    }
-
-    @Override
-    public String getValidator() {
-        return null;
     }
 }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.inventory.views.objectview.scene;
 import org.inventory.core.visual.scene.PhysicalConnectionProvider;
 import com.ociweb.xml.StartTagWAX;
 import com.ociweb.xml.WAX;
+import java.awt.Color;
 import java.awt.Point;
 import java.io.ByteArrayOutputStream;
 import org.inventory.communications.core.LocalObjectLight;
@@ -30,7 +31,10 @@ import org.inventory.core.visual.scene.AbstractConnectionWidget;
 import org.inventory.core.visual.scene.AbstractNodeWidget;
 import org.inventory.core.visual.actions.CustomAddRemoveControlPointAction;
 import org.inventory.core.visual.actions.CustomMoveAction;
+import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
 import org.netbeans.api.visual.action.ActionFactory;
+import org.netbeans.api.visual.action.ConnectProvider;
+import org.netbeans.api.visual.action.PopupMenuProvider;
 import org.netbeans.api.visual.anchor.PointShape;
 import org.netbeans.api.visual.router.RouterFactory;
 import org.netbeans.api.visual.widget.LayerWidget;
@@ -60,19 +64,23 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
      * Default move widget action (shared by all connection widgets)
      */
     private CustomMoveAction moveAction = new CustomMoveAction(this);
+    /**
+     * Popup provider for all nodes and connections
+     */
+    private PopupMenuProvider defaultPopupMenuProvider;
     
     
     public ChildrenViewScene () {
         interactionLayer = new LayerWidget(this);
         backgroundLayer = new LayerWidget(this);
-        nodesLayer = new LayerWidget(this);
-        edgesLayer = new LayerWidget(this);
+        nodeLayer = new LayerWidget(this);
+        edgeLayer = new LayerWidget(this);
         labelsLayer = new LayerWidget(this);
-        myConnectionProvider = new PhysicalConnectionProvider();
+        myConnectionProvider = new PhysicalConnectionProvider(this);
         
         addChild(backgroundLayer);
-        addChild(edgesLayer);
-        addChild(nodesLayer);
+        addChild(edgeLayer);
+        addChild(nodeLayer);
         addChild(labelsLayer);
 	addChild(interactionLayer);
         
@@ -93,14 +101,14 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
      */
     @Override
     protected Widget attachNodeWidget(LocalObjectLight node) {
-        AbstractNodeWidget widget = new AbstractNodeWidget(this, node, labelsLayer);
+        AbstractNodeWidget widget = new AbstractNodeWidget(this, node);
         widget.getActions().addAction(ActionFactory.createPopupMenuAction(defaultPopupMenuProvider));
         //The order the actions are added to a widget matters, if Select goes
         //after Move, you will need a double click to select the widget
         widget.getActions(ACTION_SELECT).addAction(createSelectAction());
         widget.getActions(ACTION_SELECT).addAction(moveAction);
         widget.getActions(ACTION_CONNECT).addAction(ActionFactory.createConnectAction(interactionLayer, myConnectionProvider));
-        nodesLayer.addChild(widget);
+        nodeLayer.addChild(widget);
         return widget;
     }
 
@@ -115,7 +123,7 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
         widget.setEndPointShape(PointShape.SQUARE_FILLED_BIG);
         widget.setRouter(RouterFactory.createFreeRouter());
         if (newLineColor != null) widget.setLineColor(newLineColor);
-        edgesLayer.addChild(widget);
+        edgeLayer.addChild(widget);
         return widget;
     }
 
@@ -134,15 +142,15 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
     }
 
     public LayerWidget getNodesLayer(){
-        return nodesLayer;
+        return nodeLayer;
     }
 
     public LayerWidget getEdgesLayer(){
-        return edgesLayer;
+        return edgeLayer;
     }
    
     @Override
-    public PhysicalConnectionProvider getConnectProvider(){
+    public ConnectProvider getConnectProvider(){
         return this.myConnectionProvider;
     }
 
@@ -161,27 +169,33 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
         //TODO: Get the class name from some else
         mainTag.start("class").text("DefaultView").end();
         StartTagWAX nodesTag = mainTag.start("nodes");
-        for (Widget nodeWidget : nodesLayer.getChildren())
+        for (Widget nodeWidget : nodeLayer.getChildren())
             nodesTag.start("node").attr("x", nodeWidget.getPreferredLocation().x).
             attr("y", nodeWidget.getPreferredLocation().y).
-            attr("class", ((AbstractNodeWidget)nodeWidget).getObject().getClassName()).
-            text(String.valueOf(((AbstractNodeWidget)nodeWidget).getObject().getOid()) ).end();
+            attr("class", nodeWidget.getLookup().lookup(ObjectNode.class).getLookup().lookup(LocalObjectLight.class).getClassName()).
+            text(String.valueOf(nodeWidget.getLookup().lookup(ObjectNode.class).getLookup().lookup(LocalObjectLight.class).getOid()) ).end();
         nodesTag.end();
 
         StartTagWAX edgesTag = mainTag.start("edges");
-        for (Widget edgeWidget : edgesLayer.getChildren()){
+        for (Widget edgeWidget : edgeLayer.getChildren()){
             StartTagWAX edgeTag = edgesTag.start("edge");
-            edgeTag.attr("id", ((AbstractConnectionWidget)edgeWidget).getObject().getOid());
-            edgeTag.attr("class", ((AbstractConnectionWidget)edgeWidget).getObject().getClassName());
+            AbstractConnectionWidget castedEdgeWidget = (AbstractConnectionWidget)edgeWidget;
+            
+            LocalObjectLight edge = edgeWidget.getLookup().lookup(ObjectNode.class).getLookup().lookup(LocalObjectLight.class);
+            
+            edgeTag.attr("id", edge.getOid());
+            edgeTag.attr("class", edge.getClassName());
+            
             //I haven't managed to find out why sometimes the view gets screwed. This is a dirty
             //"solution", but I expect to solve it once we rewrite this module
-            if (((AbstractConnectionWidget)edgeWidget).getSourceAnchor() == null)
+            if (castedEdgeWidget.getSourceAnchor() == null)
                 continue;
-            edgeTag.attr("aside", ((AbstractNodeWidget)((AbstractConnectionWidget)edgeWidget).getSourceAnchor().getRelatedWidget()).getObject().getOid());
-            if (((AbstractConnectionWidget)edgeWidget).getTargetAnchor() == null)
+            edgeTag.attr("aside", castedEdgeWidget.getSourceAnchor().getRelatedWidget().getLookup().lookup(ObjectNode.class).getLookup().lookup(LocalObjectLight.class).getOid());
+            
+            if (castedEdgeWidget.getTargetAnchor().getRelatedWidget() == null)
                 continue;
-            edgeTag.attr("bside", ((AbstractNodeWidget)((AbstractConnectionWidget)edgeWidget).getTargetAnchor().getRelatedWidget()).getObject().getOid());
-            for (Point point : ((AbstractConnectionWidget)edgeWidget).getControlPoints())
+            edgeTag.attr("bside", castedEdgeWidget.getTargetAnchor().getRelatedWidget().getLookup().lookup(ObjectNode.class).getLookup().lookup(LocalObjectLight.class).getOid());
+            for (Point point : castedEdgeWidget.getControlPoints())
                 edgeTag.start("controlpoint").attr("x", point.x).attr("y", point.y).end();
             edgeTag.end();
         }
@@ -190,6 +204,17 @@ public final class ChildrenViewScene extends AbstractScene<LocalObjectLight, Loc
         return bas.toByteArray();
     }
 
+    @Override
+    public void render(byte[] structure) throws IllegalArgumentException {
+        //TODO: Change the view builder for an implementation of this method
+    }
+    
+    @Override
+    public Color getConnectionColor(LocalObjectLight theConnection) {
+        //TODO: Calculate the connection color here instead of in Utils
+        return null;
+    }
+    
     @Override
     public boolean supportsConnections() {
         return true;

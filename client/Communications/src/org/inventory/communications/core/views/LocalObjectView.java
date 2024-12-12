@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -47,8 +47,8 @@ public class LocalObjectView extends LocalObjectViewLight {
      */
     protected boolean dirty = false;
 
-    public LocalObjectView(long id, String name, String description, int viewType, byte[] viewStructure, byte[] background) {
-        super (id, name, description, viewType);
+    public LocalObjectView(long id, String className, String name, String description, byte[] viewStructure, byte[] background) {
+        super (id, name, description, className);
         this.background = Utils.getImageFromByteArray(background);
         this.structure = viewStructure;
     }

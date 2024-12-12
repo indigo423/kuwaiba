@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015, 2013 Neotropic SAS <contact@neotropic.co>
+ *  Copyright 2010-2016, Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License
@@ -17,6 +17,8 @@ package org.inventory.navigation.applicationnodes.classmetadatanodes.action;
 
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -50,13 +52,12 @@ public class CreateAttributeAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent ae) {
         
-        LocalClassMetadataLight[] instanceableListTypes = CommunicationsStub.getInstance().getInstanceableListTypes();
+        List<LocalClassMetadataLight> instanceableListTypes = CommunicationsStub.getInstance().getInstanceableListTypes();
         
-        ArrayList<String> attributeTypeslist = new ArrayList<String>();
+        ArrayList<String> attributeTypeslist = new ArrayList<>();
         
         //Primitive types
-        for(String primitive : Constants.ATTRIBUTE_TYPES)
-            attributeTypeslist.add(primitive);
+        attributeTypeslist.addAll(Arrays.asList(Constants.ATTRIBUTE_TYPES));
         
         //List types
         for(LocalClassMetadataLight listType : instanceableListTypes)
@@ -79,7 +80,7 @@ public class CreateAttributeAction extends AbstractAction {
                 new JComponent []{txtName, txtDisplayName, txtDescription, lstType});
         if (JOptionPane.showConfirmDialog(null,
                 pnlMyDialog,
-                java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW_POOL"),
+                java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW_ATTRIBUTE"),
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
                     if (CommunicationsStub.getInstance().createAttribute(classNode.getClassMetadata().getOid(), 

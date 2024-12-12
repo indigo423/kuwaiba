@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015, 2013 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016, Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,21 +15,20 @@
  */
 package org.inventory.navigation.applicationnodes.classmetadatanodes;
 
+import java.util.Collections;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.openide.nodes.Children.Array;
+import org.openide.nodes.Children;
 import org.openide.nodes.Node;
 
 /**
  * Represents the children for the navigation tree
  * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
-public class ClassMetadataChildren extends Array{
+public class ClassMetadataChildren extends Children.Keys<LocalClassMetadataLight> {
     
-    protected List<LocalClassMetadataLight> keys;
-
     /**
      * This constructor is used to create a node with no children
      *  since they're going to be created on demand (see method addNotify)
@@ -37,30 +36,44 @@ public class ClassMetadataChildren extends Array{
     public ClassMetadataChildren(){
     }   
     
-    public ClassMetadataChildren(LocalClassMetadataLight[] lcls) {
-        for (LocalClassMetadataLight lcml : lcls){
-            ClassMetadataNode newNode = new ClassMetadataNode(lcml);
-            add(new Node[]{newNode});
-        }
+    public ClassMetadataChildren(LocalClassMetadataLight[] lcls) {        
+        setKeys(lcls);
     }
    
     /**
      * Creates children nodes on demand
      */
     @Override
-    public void addNotify(){     
-        
+    public void addNotify(){
+        refreshList();
+    }
+    
+    @Override
+    public void removeNotify() {
+        setKeys(Collections.EMPTY_LIST);
+    }
+
+    @Override
+    protected Node[] createNodes(LocalClassMetadataLight key) {
+        return new Node[] { new ClassMetadataNode(key) };
+    }
+    
+    public void refreshList() {
         if (!(this.getNode() instanceof ClassMetadataNode))
             return;
         
         CommunicationsStub com = CommunicationsStub.getInstance();
         ClassMetadataNode node = ((ClassMetadataNode)this.getNode());
-        LocalClassMetadataLight[] subClasses = com.getLightSubclassesNoRecursive(node.getClassMetadata().getClassName(), true, false);
-        if (subClasses == null)
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "An error has occurred retrieving this Metadata Sub Class: "+com.getError());
-        else{
-             for (LocalClassMetadataLight subClass : subClasses)
-                 add(new Node[]{new ClassMetadataNode(subClass)});
+        List<LocalClassMetadataLight> subClasses = com.getLightSubclassesNoRecursive(node.getClassMetadata().getClassName(), true, false);
+
+        if (subClasses == null) {
+            setKeys(Collections.EMPTY_LIST);
+            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, 
+                    "An error has occurred retrieving the subclasses of this class: " + com.getError());
+        }
+        else {
+            Collections.sort(subClasses);
+            setKeys(subClasses);
         }
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -16,6 +16,7 @@
 package org.inventory.navigation.applicationnodes.pools.actions;
 
 import java.awt.event.ActionEvent;
+import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -24,8 +25,7 @@ import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.core.services.utils.MenuScroller;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.inventory.navigation.applicationnodes.pools.PoolChildren;
+import org.inventory.navigation.applicationnodes.objectnodes.AbstractChildren;
 import org.inventory.navigation.applicationnodes.pools.PoolNode;
 import org.openide.util.actions.Presenter;
 
@@ -33,7 +33,7 @@ import org.openide.util.actions.Presenter;
  * Creates a new element in a pool
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class NewPoolItemAction extends AbstractAction implements Presenter.Popup{
+public class NewPoolItemAction extends AbstractAction implements Presenter.Popup {
     private PoolNode poolNode;
     private CommunicationsStub com;
 
@@ -45,12 +45,11 @@ public class NewPoolItemAction extends AbstractAction implements Presenter.Popup
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        LocalObjectLight newObject = com.createPoolItem(poolNode.getObject().getOid(), ((JMenuItem)e.getSource()).getName());
+        LocalObjectLight newObject = com.createPoolItem(poolNode.getPool().getOid(), ((JMenuItem)e.getSource()).getName());
         if (newObject == null)
             NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
-        else{
-            if (!((PoolChildren)poolNode.getChildren()).isCollapsed())
-                poolNode.getChildren().add(new ObjectNode[]{new ObjectNode(newObject)});
+        else {
+            ((AbstractChildren)poolNode.getChildren()).addNotify();
             NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_CREATED"));
         }
     }
@@ -59,10 +58,9 @@ public class NewPoolItemAction extends AbstractAction implements Presenter.Popup
     public JMenuItem getPopupPresenter() {
         JMenu mnuPossibleChildren = new JMenu(java.util.ResourceBundle.getBundle("org/inventory/navigation/applicationnodes/Bundle").getString("LBL_NEW"));
 
-        LocalClassMetadataLight[] items;
-        items = com.getLightSubclasses(poolNode.getObject().getClassName(), false, true);
+        List<LocalClassMetadataLight> items = com.getLightSubclasses(poolNode.getPool().getClassName(), false, true);
 
-            if (items.length == 0)
+            if (items.isEmpty())
                 mnuPossibleChildren.setEnabled(false);
             else
                 for(LocalClassMetadataLight item: items){

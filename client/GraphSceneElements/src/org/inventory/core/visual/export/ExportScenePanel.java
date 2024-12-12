@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import org.inventory.core.services.api.export.filters.TextExportFilter;
 import org.inventory.core.visual.export.filters.SceneExportFilter;
+import org.inventory.core.visual.scene.AbstractScene;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
 
@@ -39,10 +40,9 @@ import org.openide.DialogDisplayer;
 public class ExportScenePanel extends JPanel implements ActionListener{
 
     private SceneExportFilter[] filters;
-    private ExportableScene exportable;
+    private AbstractScene exportable;
 
-    /** Creates new form ExportSettingsPanel */
-    public ExportScenePanel(SceneExportFilter[] filters, ExportableScene exportable) {
+    public ExportScenePanel(SceneExportFilter[] filters, AbstractScene exportable) {
         this.filters = filters;
         initComponents();
         initCustomComponents();

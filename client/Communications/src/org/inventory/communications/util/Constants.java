@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,14 @@ public class Constants {
     public static final int DEBUG_LEVEL_FINE = 2;
     public static int DEBUG_LEVEL = DEBUG_LEVEL_INFO;
     //public static int DEBUG_LEVEL = DEBUG_LEVEL_DISABLED;
-    
+     /**
+     * IP address type for IPv4
+     */
+    public static final int IPV4_TYPE = 4;
+    /**
+     * IP address type for IPv6
+     */
+    public static final int IPV6_TYPE = 6;
     /**
      * Name of the validator to indicate if a given class is a container
      */
@@ -47,9 +54,25 @@ public class Constants {
      */
     public static final String VALIDATOR_PHYSICAL_ENDPOINT = "physicalEndpoint";
     /**
+     * Name of the validator to indicate if a given class is the endpoint to a link
+     */
+    public static final String VALIDATOR_SERVICE_INSTANCE = "serviceInstance";
+    /**
      * All instances of classes tagged with this validator may be related to a software asset
      */
-    public static final String VALIDATOR_APPLICATION_ELEMENT = "applicationElement";
+    public static final String VALIDATOR_APPLICATION_ELEMENT = "genericApplicationElement";
+    /**
+     * All instances of classes tagged with this validator may be related to a subnet
+     */
+    public static final String VALIDATOR_SUBNET = "subnet";
+    /**
+     * All instances of classes tagged with this validator may be related to VLANs
+     */
+    public static final String VALIDATOR_VLAN = "vlanrule";
+    /**
+     * DummyRoot constant. It's a pseudo class
+     */
+    public static final String DUMMYROOT = "DummyRoot";
     /**
      * Name for the class InventoryObject
      */
@@ -63,6 +86,14 @@ public class Constants {
      */
     public static final String CLASS_GENERICSERVICE = "GenericService";
     /**
+     * Name for the class Service Instance
+     */
+    public static final String CLASS_SERVICEINSTANCE = "ServiceInstance";
+    /**
+     * Name for the class VRFInstance
+     */
+    public static final String CLASS_VRFINSTANCE = "VRFInstance";
+    /**
      * Name for the class GenericCustomer
      */
     public static final String CLASS_GENERICCUSTOMER = "GenericCustomer";
@@ -75,6 +106,10 @@ public class Constants {
      */
     public static final String CLASS_GENERICPHYSICALLINK = "GenericPhysicalLink";
     /**
+     * Root class of all communications equipment (GenericDataLinkLayerElement, GenericNetworkElement, etc)
+     */
+    public static final String CLASS_GENERICCOMMUNICATIONSELEMENT = "GenericCommunicationsElement";
+    /**
      * Class Rack
      */
     public static final String CLASS_RACK = "Rack";
@@ -82,6 +117,50 @@ public class Constants {
      * Name for the class User
      */
     public static final String CLASS_USER = "User";
+    /**
+     * Name for class subnet IPv4 is this constant used in the IPAM  module
+     */
+    public static final String CLASS_SUBNET = "Subnet";
+    /**
+     * Name for class subnet IPv4 is this constant used in the IPAM  module
+     */
+    public static final String CLASS_SUBNET_IPV4 = "SubnetIPv4";
+    /**
+     * Name for class subnet IPv6 is this constant used in the IPAM  module
+     */
+    public static final String CLASS_SUBNET_IPV6 = "SubnetIPv6";
+    /**
+     * Name for class Location owner this constant is used in the IPAM  module
+     */
+    public static final String CLASS_LOCATIONOWNER = "LocationOwner";
+    /**
+     * Name for class VLAN this constant is used in the IPAM  module
+     */
+    public static final String CLASS_VLAN = "VLAN";
+    /**
+     * Name for class GenericContract
+     */
+    public static final String CLASS_GENERICCONTRACT = "GenericContract";
+    /**
+     * Not an actual class, but yet used by the service manager to identify a pool mapped to a LocalObjectLight
+     */
+    public static final String CLASS_POOL = "Pool";
+    /**
+     * Class ViewableObject
+     */
+    public static final String CLASS_VIEWABLEOBJECT = "ViewableObject";
+    /**
+     * Class BridgeDomainInterface
+     */
+    public static final String CLASS_BRIDGEDOMAININTERFACE = "BridgeDomainInterface";
+    /**
+     * Class MPLSTunnel
+     */
+    public static final String CLASS_MPLSTUNNEL = "MPLSTunnel";
+    /**
+     * Class FrameRelay
+     */
+    public static final String CLASS_FRAMERELAYCIRCUIT = "FrameRelayCircuit";
     /**
      * Default type for a new attribute
      */
@@ -110,7 +189,22 @@ public class Constants {
      * Many to Many relationship (such as accountable persons for a given equipment)
      */
     public static final int MAPPING_MANYTOMANY = 6;
-    
+    /**
+     * This relationship is used to relate a GenericPort with an IP address 
+     */
+    public static final String RELATIONSHIP_IPAMHASADDRESS = "ipamHasIpAddress";
+    /**
+     * This relationship is used to relate a VLAN with a Subnet
+     */
+    public static final String RELATIONSHIP_IPAMBELONGSTOVLAN = "ipamBelongsToVlan";
+    /**
+     * This relationship is used to relate a VRF with a Subnet
+     */
+    public static final String RELATIONSHIP_IPAMBELONGSTOVRFINSTANCE = "ipamBelongsToVrfInstance";
+    /**
+     * This relationship is used to connect a generic port(service instances) with an interface
+     */
+    public static final String RELATIONSHIP_MPLSPORTBELONGSTOINTERFACE = "mplsportbelongtointerface";
     /**
      * A fixed label to indicate a given node doesn't have a name set
      */
@@ -124,6 +218,15 @@ public class Constants {
      * Property name
      */
     public static final String PROPERTY_NAME = "name";
+    
+    /**
+     * Property state
+     */
+    public static final String PROPERTY_STATE = "state";
+    /**
+     * Property class name
+     */
+    public static final String PROPERTY_CLASSNAME = "className";
     /**
      * Property display name
      */
@@ -132,6 +235,34 @@ public class Constants {
      * Property description
      */
     public static final String PROPERTY_DESCRIPTION = "description";
+    /**
+     * Property enabled
+     */
+    public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
+    /**
+     * Property script
+     */
+    public static final String PROPERTY_SCRIPT = "script"; //NOI18N
+    /**
+     * Property executionTime
+     */
+    public static final String PROPERTY_EXECUTION_TYPE = "executionType"; //NOI18N
+    /**
+     * Property everyXMinutes
+     */
+    public static final String PROPERTY_EVERY_X_MINUTES = "everyXMinutes"; //NOI18N
+    /**
+     * Property start time
+     */
+    public static final String PROPERTY_START_TIME = "startTime"; //NOI18N
+    /**
+     * Property Notification Type
+     */
+    public static final String PROPERTY_NOTIFICATION_TYPE = "notificationType"; //NOI18N
+    /**
+     * Property email
+     */
+    public static final String PROPERTY_EMAIL = "email"; //NOI18N
     /**
      * Property abstract
      */
@@ -205,6 +336,27 @@ public class Constants {
      */
     public static final String PROPERTY_POSITION = "position";
     /**
+     * Property network IP  in a subnet
+     */
+    public static final String PROPERTY_NETWORKIP = "networkIp";
+    /**
+     * Property broadcast IP in a subnet
+     */
+    public static final String PROPERTY_BROADCASTIP = "broadcastIp";
+    /**
+     * Property maximum number of hosts in a subnet
+     */
+    public static final String PROPERTY_HOSTS = "hosts";
+    /**
+     * List type class for operational state
+     */
+    public static final String LIST_TYPE_OPERATIONAL_STATE = "OperationalState";
+    /**
+     * Physical connection classes
+     */
+    public static final String CLASS_IP_ADDRESS = "IPAddress";
+    
+    /**
      * Generic classes
      */
     public static final String CLASS_GENERICCONNECTION="GenericConnection";
@@ -241,6 +393,8 @@ public class Constants {
 
     /**
      * Returns the connection type class for a given connection class
+     * @param connectionClass The connection to be used
+     * @return The type of connection corresponding to that connection class
      */
     public static String getConnectionType(String connectionClass){
         if (connectionClass.equals(CLASS_ELECTRICALLINK))

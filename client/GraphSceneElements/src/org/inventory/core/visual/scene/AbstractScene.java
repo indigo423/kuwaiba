@@ -1,5 +1,5 @@
 /**
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,10 +27,7 @@ import java.util.Set;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
-import org.inventory.core.visual.export.ExportableScene;
-import org.inventory.core.visual.export.Layer;
-import org.inventory.navigation.applicationnodes.objectnodes.ObjectNode;
-import org.netbeans.api.visual.action.PopupMenuProvider;
+import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.graph.GraphScene;
 import org.netbeans.api.visual.model.ObjectSceneEvent;
 import org.netbeans.api.visual.model.ObjectSceneEventType;
@@ -38,20 +35,19 @@ import org.netbeans.api.visual.model.ObjectSceneListener;
 import org.netbeans.api.visual.model.ObjectState;
 import org.netbeans.api.visual.widget.ImageWidget;
 import org.netbeans.api.visual.widget.LayerWidget;
-import org.netbeans.api.visual.widget.Scene;
 import org.netbeans.api.visual.widget.Widget;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
-import org.openide.util.lookup.Lookups;
 import org.openide.util.lookup.ProxyLookup;
 
 /**
  * Root class to all GraphScenes
  * TODO: This should inherit from ObjectScene
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
+ * @param <N> The class of the business object behind the nodes
+ * @param <E> The class of the business object behind the edges
  */
-public abstract class AbstractScene <N, E> extends GraphScene<N, E> 
-        implements ExportableScene {
+public abstract class AbstractScene<N, E> extends GraphScene<N, E> {
     /**
      * Constant to represent the selection tool
      */
@@ -95,29 +91,26 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
     /**
      * Used to hold the nodes
      */
-    protected LayerWidget nodesLayer;
+    protected LayerWidget nodeLayer;
     /**
      * Used to hold the connections
      */
-    protected LayerWidget edgesLayer;
+    protected LayerWidget edgeLayer;
     /**
      * Used to hold misc messages
      */
     protected LayerWidget labelsLayer;
     /**
-     * Shared popup menu for widgets
-     */
-    protected PopupMenuProvider defaultPopupMenuProvider;
-    /**
      * Scene lookup
      */
-    private SceneLookup lookup = new SceneLookup(Lookup.EMPTY);
+    private SceneLookup lookup;
     /**
      * Change listeners
      */
-    private ArrayList<ActionListener> changeListeners = new ArrayList<ActionListener>();
+    protected ArrayList<ActionListener> changeListeners = new ArrayList<>();
 
     public AbstractScene() {
+        this.lookup = new SceneLookup();
         setActiveTool(ACTION_SELECT);
     }
     
@@ -126,17 +119,7 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
         if (getView() != null)
             getView().repaint();
     }
-       
-    @Override
-    public Scene getExportable(){
-        return this;
-    }
-    
-    @Override
-    public Layer[] getLayers(){
-        return null;
-    }
-    
+           
     public void initSelectionListener(){
         addObjectSceneListener(new ObjectSceneListener() {
             @Override
@@ -147,8 +130,10 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
             public void objectStateChanged(ObjectSceneEvent event, Object changedObject, ObjectState previousState, ObjectState newState) {}
             @Override
             public void selectionChanged(ObjectSceneEvent event, Set<Object> previousSelection, Set<Object> newSelection) {
-                if (newSelection.size() == 1)
-                    lookup.updateLookup((LocalObjectLight)newSelection.iterator().next());
+                if (newSelection.size() == 1) {
+                    Widget theWidget = findWidget(newSelection.iterator().next());
+                    lookup.updateLookup(theWidget);
+                }
             }
             @Override
             public void highlightingChanged(ObjectSceneEvent event, Set<Object> previousHighlighting, Set<Object> newHighlighting) {}
@@ -227,6 +212,7 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
         if (labelsLayer != null)
             labelsLayer.removeChildren();
         validate();
+        repaint();
     }
     
     @Override
@@ -272,11 +258,26 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
      * @return XML document as a byte arrays
      */
     public abstract byte[] getAsXML();
+    
+    /**
+     * Renders a view. That is, reads its structure and renders its content
+     * @param structure The XML structure as an byte array (which is actually a dump of the stored xml file)
+     * @throws IllegalArgumentException If the XML has an unexpected format or value
+     */
+    public abstract void render(byte[] structure) throws IllegalArgumentException;
+    
+    /**
+     * Calculates the connection color. This calculation depends on the implementor, and it's usually based on the class of the connection object
+     * @param theConnection The object representing the connection
+     * @return The color corresponding on the connection. Black should be the default value
+     */
+    public abstract Color getConnectionColor (LocalObjectLight theConnection);
+    
     /**
      * Get the active connect provider. Null if supportsConnections returns false.
      * @return 
      */
-    public abstract PhysicalConnectionProvider getConnectProvider();
+    public abstract ConnectProvider getConnectProvider();
     /**
      * Does this view support connections
      * @return 
@@ -290,19 +291,12 @@ public abstract class AbstractScene <N, E> extends GraphScene<N, E>
     
     
     /**
-     * Helper class to let us launch a lookup event every time a widget is selected
+     * This lookup lets us launch a lookup event every time a widget is selected
      */
-    private class SceneLookup extends ProxyLookup {
+    public class SceneLookup extends ProxyLookup {
 
-        public SceneLookup(Lookup aLookup) {
-            super(aLookup);
-        }
-        public SceneLookup(LocalObjectLight object) {
-            updateLookup(object);
-        }
-
-        public final void updateLookup(LocalObjectLight object){
-            setLookups(Lookups.singleton(new ObjectNode(object)));
+        public final void updateLookup(Widget aWidget){
+            this.setLookups(aWidget.getLookup());
         }
     }
 }

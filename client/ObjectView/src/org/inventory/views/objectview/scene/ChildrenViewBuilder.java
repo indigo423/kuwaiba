@@ -1,5 +1,5 @@
 /*
- *  Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ *  Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -91,15 +90,14 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
             List<LocalObject> myConnections = com.getChildrenOfClass(object.getOid(),object.getClassName(), Constants.CLASS_GENERICCONNECTION);
 
             if(views.isEmpty()){ //There are no saved views
-                
                 buildDefaultView(myChildren, myConnections);
                 currentView = null;
-            }else{
+            } else {
                 currentView = com.getObjectRelatedView(object.getOid(),object.getClassName(), views.get(0).getId());
                 
                 /*Comment this out for debugging purposes
                 try{
-                    FileOutputStream fos = new FileOutputStream("/home/zim/oview_"+currentView.getId()+".xml");
+                    FileOutputStream fos = new FileOutputStream(System.getProperty("user.home") + "/oview_"+currentView.getId()+".xml");
                     fos.write(currentView.getStructure());
                     fos.close();
                 }catch(Exception e){}*/
@@ -136,11 +134,12 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
                             }
                             else
                                 currentView.setDirty(true);
-                        }else{
+                        }else {
                             if (reader.getName().equals(qEdge)){
                                 long objectId = Long.valueOf(reader.getAttributeValue(null,"id"));
-                                long aSide = Long.valueOf(reader.getAttributeValue(null,"aside"));
-                                long bSide = Long.valueOf(reader.getAttributeValue(null,"bside"));
+                                
+                                long aSide = Long.valueOf(reader.getAttributeValue(null, "aside"));
+                                long bSide = Long.valueOf(reader.getAttributeValue(null, "bside"));
 
                                 String className = reader.getAttributeValue(null,"class");
                                 LocalObjectLight container = com.getObjectInfoLight(className, objectId);
@@ -159,7 +158,7 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
                                         newEdge.setLineColor(Utils.getConnectionColor(container.getClassName()));
                                         newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
                                         newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
-                                        List<Point> localControlPoints = new ArrayList<Point>();
+                                        List<Point> localControlPoints = new ArrayList<>();
                                         while(true){
                                             reader.nextTag();
 
@@ -233,27 +232,29 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
             widget.setBackground(com.getMetaForClass(node.getClassName(), false).getColor());
 
             lastX += X_OFFSET;
+            scene.validate();
         }
 
         //TODO: This algorithm to find the endpoints for a connection could be improved in many ways
         for (LocalObject container : myPhysicalConnections){
 
-            LocalObjectLight[] aSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointA");
+            List<LocalObjectLight> aSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointA");
             if (aSide == null)
                 return;
 
-            Widget aSideWidget = scene.findWidget(aSide[0]);
+            Widget aSideWidget = scene.findWidget(aSide.get(0));
 
-            LocalObjectLight[] bSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointB");
+            List<LocalObjectLight> bSide = com.getSpecialAttribute(container.getClassName(), container.getOid(),"endpointB");
             if (bSide == null)
                 return;
 
-            Widget bSideWidget = scene.findWidget(bSide[0]);
+            Widget bSideWidget = scene.findWidget(bSide.get(0));
 
             ConnectionWidget newEdge = (ConnectionWidget)scene.addEdge(container);
             newEdge.setLineColor(Utils.getConnectionColor(container.getClassName()));
             newEdge.setSourceAnchor(AnchorFactory.createCenterAnchor(aSideWidget));
             newEdge.setTargetAnchor(AnchorFactory.createCenterAnchor(bSideWidget));
+            scene.validate();
         }
     }
 
@@ -288,9 +289,9 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
         byte[] viewStructure = scene.getAsXML();
         if (currentView == null){
             long viewId = com.createObjectRelatedView(service.getCurrentObject().getOid(),
-                    service.getCurrentObject().getClassName(), null, null,0, viewStructure, scene.getBackgroundImage());
+                    service.getCurrentObject().getClassName(), null, null, "PlainChildrenView", viewStructure, scene.getBackgroundImage()); //NOI18N
             if (viewId != -1) //Success
-                currentView = new LocalObjectView(viewId, null, null, 0, viewStructure, scene.getBackgroundImage());
+                currentView = new LocalObjectView(viewId, "ObjectViewModule", null, null, viewStructure, scene.getBackgroundImage());
             else{
                 service.getComponent().getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
             }
@@ -299,8 +300,10 @@ public class ChildrenViewBuilder implements AbstractViewBuilder {
                      service.getCurrentObject().getClassName(), currentView.getId(),
                     null, null,viewStructure, scene.getBackgroundImage()))
                 service.getComponent().getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
-            else
+            else {
                 service.getComponent().setHtmlDisplayName(service.getComponent().getDisplayName());
+                NotificationUtil.getInstance().showSimplePopup("Information", NotificationUtil.INFO_MESSAGE, "The view was saved successfully");
+            }
         }
     }
 }

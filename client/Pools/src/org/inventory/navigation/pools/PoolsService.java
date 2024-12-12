@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 Neotropic SAS <contact@neotropic.co>.
+ * Copyright 2010-2016 Neotropic SAS <contact@neotropic.co>.
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -15,9 +15,10 @@
  */
 package org.inventory.navigation.pools;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.inventory.communications.CommunicationsStub;
-import org.inventory.communications.core.LocalObjectLight;
+import org.inventory.communications.core.LocalPool;
 import org.inventory.core.services.api.notifications.NotificationUtil;
 
 /**
@@ -37,13 +38,13 @@ public class PoolsService {
         com = CommunicationsStub.getInstance();
     }
     
-    public LocalObjectLight[] getRootChildren(){
-        List<LocalObjectLight> rootChildren = com.getPools(null);
+    public List<LocalPool> getRootChildren(){
+        List<LocalPool> rootChildren = com.getRootPools(null, LocalPool.POOL_TYPE_GENERAL_PURPOSE, false);
         if(rootChildren != null)
-            return rootChildren.toArray(new LocalObjectLight[0]);
-        else{
+            return rootChildren;
+        else {
             pstc.getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
-            return new LocalObjectLight[0];
+            return new ArrayList<>();
         }
     }
 }
