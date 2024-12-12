@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import static javax.swing.Action.NAME;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
@@ -31,22 +32,25 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalReportLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
-import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.SubMenuDialog;
 import org.inventory.core.services.utils.SubMenuItem;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.openide.util.ImageUtilities;
 import org.openide.util.Utilities;
+import org.openide.util.actions.Presenter;
 
 /**
  * Shows the class reports available for the selected node (if any) and run any of them
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class ExecuteClassLevelReportAction extends GenericInventoryAction implements ComposedAction {
+public class ExecuteClassLevelReportAction extends GenericObjectNodeAction implements ComposedAction, Presenter.Popup {
     private static ExecuteClassLevelReportAction instance;
     
     private ExecuteClassLevelReportAction() {
         putValue(NAME, "Reports...");
+        putValue(SMALL_ICON, ImageUtilities.loadImageIcon("org/inventory/navigation/navigationtree/res/show_reports.png", false));
     }
     
     public static ExecuteClassLevelReportAction getInstance() {
@@ -65,7 +69,7 @@ public class ExecuteClassLevelReportAction extends GenericInventoryAction implem
                     NotificationUtil.WARNING_MESSAGE, CommunicationsStub.getInstance().getError());
             } else {
                 if (!reportDescriptors.isEmpty()) {
-                    List<SubMenuItem> subMenuItems = new ArrayList();
+                    List<SubMenuItem> subMenuItems = new ArrayList<>();
                     for (LocalReportLight reportDescriptor : reportDescriptors) {
                         SubMenuItem subMenuItem = new SubMenuItem(reportDescriptor.getName());
                         subMenuItem.setToolTipText(reportDescriptor.getDescription());
@@ -96,11 +100,14 @@ public class ExecuteClassLevelReportAction extends GenericInventoryAction implem
                     faos.write(theReport);
                     faos.flush();
                 }
-                if(Desktop.isDesktopSupported()) 
-                try {
-                    Desktop.getDesktop().browse(Utilities.toURI(tempFile));
-                } catch (IOException ex) {
-                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                if(Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)){ 
+                    try {
+                        Desktop.getDesktop().browse(Utilities.toURI(tempFile));
+                    } catch (IOException | UnsupportedOperationException ex) {
+                        NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                    }
+                } else {
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, String.format("asda %s", Utilities.toURI(tempFile)) );
                 }
                 
             } catch (IOException ex) {
@@ -129,5 +136,25 @@ public class ExecuteClassLevelReportAction extends GenericInventoryAction implem
 
             actionPerformed(theObject, reportId);
         }
+    }
+
+    @Override
+    public JMenuItem getPopupPresenter() {
+        return new JMenuItem(this);
+    }
+
+    @Override
+    public String[] getValidators() {
+        return null;
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return null;
+    }
+
+    @Override
+    public int numberOfNodes() {
+        return 1;
     }
 }

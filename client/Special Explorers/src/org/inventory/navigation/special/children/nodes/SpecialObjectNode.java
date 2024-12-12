@@ -19,10 +19,12 @@ import java.util.ArrayList;
 import javax.swing.Action;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionGroupActionsFactory;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.navigation.special.children.nodes.actions.CreateSpecialBusinessObjectAction;
 import org.inventory.navigation.navigationtree.nodes.actions.EditObjectAction;
-import org.inventory.navigation.navigationtree.nodes.actions.RefreshObjectAction;
+import org.inventory.navigation.navigationtree.nodes.actions.UpdateNodeAction;
 import org.inventory.navigation.navigationtree.nodes.actions.ShowMoreInformationAction;
 import org.inventory.navigation.special.children.nodes.actions.CreateMultipleSpecialBusinessObjectAction;
 import org.inventory.navigation.special.children.nodes.actions.CreateSpecialBusinessObjectFromTemplateAction;
@@ -47,18 +49,38 @@ public class SpecialObjectNode extends ObjectNode {
         actions.add(CreateSpecialBusinessObjectAction.getInstance()); //This changes from ObjectNode       
         actions.add(CreateMultipleSpecialBusinessObjectAction.getInstance()); //This changes from ObjectNode
         actions.add(CreateSpecialBusinessObjectFromTemplateAction.getInstance()); //This changes from ObjectNode
-        actions.add(RefreshObjectAction.getInstance(this));
+        actions.add(UpdateNodeAction.getInstance(this));
         actions.add(EditObjectAction.getInstance(this));
         actions.add(explorerAction);
         actions.add(null); //Separator
         for (GenericObjectNodeAction action : Lookup.getDefault().lookupAll(GenericObjectNodeAction.class)){
-            if (action.getValidator() == null){
-                actions.add(action);
-            }else{
-                if (com.getMetaForClass(getObject().getClassName(), false).getValidator(action.getValidator()) == 1)
+            if (action.getClass().getAnnotation(ActionsGroupType.class) != null)
+                continue;
+            
+            if (action.appliesTo() != null) {
+                for (String className : action.appliesTo()) {
+                    if (com.isSubclassOf(getObject().getClassName(), className)) {
+                        actions.add(action);
+                        break;
+                    }
+                }
+            } else {
+                if (action.getValidators() != null) {
+                    for (String validator : action.getValidators()) {
+                        if (com.getMetaForClass(getObject().getClassName(), false).getValidator(validator) == 1) {
+                            actions.add(action);
+                            break;
+                        }
+                    }                                                
+                } else {
                     actions.add(action);
+                }                
             }
         }
+        actions.add(ActionGroupActionsFactory.getInstanceOfOpenViewGroupActions());
+        actions.add(ActionGroupActionsFactory.getInstanceOfRelateToGroupActions());
+        actions.add(ActionGroupActionsFactory.getInstanceOfReleaseFromGroupActions());
+        
         actions.add(null); //Separator
         actions.add(ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName()));
         

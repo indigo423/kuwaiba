@@ -74,12 +74,16 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
     @Override
     public Action[] getActions(boolean context) {
         return new Action[] {TemplateActionsFactory.getCreateTemplateElementAction(), 
+                             TemplateActionsFactory.getCreateMultipleTemplateElementAction(),
                              TemplateActionsFactory.getCreateTemplateElementSpecialAction(),
-                             null, 
-                             TemplateActionsFactory.getDeleteTemplateElementAction(),
+                             TemplateActionsFactory.getCreateMultipleSpecialTemplateElementAction(),
+                             TemplateActionsFactory.getEditLayoutAction(),
                              null,
                              CopyAction.get(CopyAction.class),
-                             PasteAction.get(PasteAction.class)};
+                             PasteAction.get(PasteAction.class),
+                             null, 
+                             TemplateActionsFactory.getDeleteTemplateElementAction() };
+                             
     }
     
     @Override
@@ -333,7 +337,7 @@ public class TemplateElementNode extends AbstractNode implements PropertyChangeL
                 NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                 setKeys(Collections.EMPTY_SET);
             } else {                
-                List<LocalObjectLight> children = new ArrayList();
+                List<LocalObjectLight> children = new ArrayList<>();
                 children.addAll(templateElementChildren);
                 children.addAll(templateElementSpecialChildren);
                 Collections.sort(children);

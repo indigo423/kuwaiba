@@ -1,4 +1,4 @@
-/**
+/*
  *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
@@ -23,7 +23,9 @@ import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.util.Constants;
 
 /**
@@ -116,8 +118,9 @@ public class LocalObjectLight implements Transferable, Comparable<LocalObjectLig
 
     public void firePropertyChangeEvent(String property, Object oldValue, Object newValue) {
         synchronized(propertyChangeListeners) {
-            for (PropertyChangeListener listener : propertyChangeListeners)
-                listener.propertyChange(new PropertyChangeEvent(this, property, oldValue, newValue));
+            Iterator<PropertyChangeListener> listenersIterator = propertyChangeListeners.iterator();
+            while (listenersIterator.hasNext())
+                listenersIterator.next().propertyChange(new PropertyChangeEvent(this, property, oldValue, newValue));
         }
     }
 
@@ -157,8 +160,9 @@ public class LocalObjectLight implements Transferable, Comparable<LocalObjectLig
     }
 
     @Override
-    public String toString(){
-        return (getName() == null ? Constants.LABEL_NONAME : getName()) + " [" + getClassName() + "]"; //NOI18N
+    public String toString() {
+        LocalClassMetadata classMetadata = CommunicationsStub.getInstance().getMetaForClass(className, false); //This info is usually cached already
+        return (getName() == null ? Constants.LABEL_NONAME : getName()) + " [" + (classMetadata == null ? className : classMetadata) + "]"; //NOI18N
     }
 
     @Override

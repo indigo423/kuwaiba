@@ -27,12 +27,14 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.AttributesForm;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.inventory.navigation.navigationtree.nodes.RootObjectNode;
 import org.openide.nodes.AbstractNode;
+import org.openide.util.Utilities;
 import org.openide.util.actions.Presenter;
 
 /**
@@ -68,7 +70,7 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
         if(mandatoryObjectAttributes.length > 0){
             AttributesForm mandatoryAttributeForm = new AttributesForm(mandatoryObjectAttributes);
             attributes = mandatoryAttributeForm.createNewObjectForm();
-            if(!attributes.isEmpty()) //the createNewObject form is closed, and the ok button is never clicked 
+            if(!attributes.isEmpty()) //the createNewObject form is closed, but the ok button is never clicked 
                 createObject(objectClass, attributes);
         } 
         else
@@ -77,7 +79,15 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
     
     @Override
     public JMenuItem getPopupPresenter() {
-        JMenu mnuPossibleChildren = new JMenu((String) getValue(NAME));
+        JMenu mnuPossibleChildren = new JMenu("New");
+        
+        //Since this action is not only available for ObjectNodes, but also for RootObjectNode instances, we can't just use setEnable(isEnabled())
+        //All object creation methods will behave the same way
+        if (Utilities.actionsGlobalContext().lookupResult(AbstractNode.class).allInstances().size() > 1) {
+            mnuPossibleChildren.setEnabled(false);
+            return mnuPossibleChildren;
+        }
+        
         List<LocalClassMetadataLight> items;
         if (node instanceof RootObjectNode) //For the root node
             items = com.getPossibleChildren(Constants.DUMMYROOT, false);
@@ -85,7 +95,7 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
             items = com.getPossibleChildren(((ObjectNode)node).getObject().getClassName(), false);
 
         if (items == null) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE,
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE,
                 com.getError());
             mnuPossibleChildren.setEnabled(false);
         }
@@ -102,6 +112,7 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
             }
             MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
         }
+
         return mnuPossibleChildren;
     }
     
@@ -117,22 +128,32 @@ public final class CreateBusinessObjectAction extends GenericObjectNodeAction im
                         node instanceof RootObjectNode? -1 : ((ObjectNode)node).getObject().getOid(), attributes, -1);
 
         if (myLol == null)
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
         else {
             if (node.getChildren() instanceof AbstractChildren) //Some nodes are created on the fly and does not have children. For those cases, let's avoid refreshing their children lists
                 ((AbstractChildren)node.getChildren()).addNotify();
 
-            NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Element created successfully");
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, "Element created successfully");
         }
     }
 
     @Override
-    public String getValidator() {
-        return null;
+    public String[] getValidators() {
+        return null; //Enable this action for any object
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_NAVIGATION_TREE, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return null; //Enable this action for any object
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
     }
 }

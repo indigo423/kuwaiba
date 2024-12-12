@@ -64,8 +64,10 @@ public class PersistenceService {
         if (state == EXECUTION_STATE.RUNNING)
             throw new IllegalStateException("Persistence Service can not be started because is already running");
         
-        if (System.getSecurityManager() == null && Boolean.valueOf(configuration.getProperty("enableSecurityManager", "false")))
+        if (System.getSecurityManager() == null && (boolean)configuration.get("enableSecurityManager")) {
             System.setSecurityManager(new SecurityManager());
+            System.out.println(String.format("[KUWAIBA] [%s] Security Manager enabled", Calendar.getInstance().getTime()));
+        }
         try {
             System.out.println(String.format("[KUWAIBA] [%s] Starting Persistence Service version %s", Calendar.getInstance().getTime(), Constants.PERSISTENCE_SERVICE_VERSION));
             PersistenceLayerFactory plf = new PersistenceLayerFactory();
@@ -77,16 +79,18 @@ public class PersistenceService {
             connectionManager.openConnection();
             System.out.println(String.format("[KUWAIBA] [%s] Connection established", Calendar.getInstance().getTime()));
             System.out.println(String.format("[KUWAIBA] [%s] %s", Calendar.getInstance().getTime(), connectionManager.getConnectionDetails()));
-            aem = plf.createApplicationEntityManager(connectionManager);
-            Properties applicationConfiguration = new Properties();
-            applicationConfiguration.put("backgroundsPath", configuration.getProperty("backgroundsPath"));
-            applicationConfiguration.put("corporateLogo", configuration.getProperty("corporateLogo"));
-            aem.setConfiguration(applicationConfiguration);
             mem = plf.createMetadataEntityManager(connectionManager);
+            aem = plf.createApplicationEntityManager(connectionManager, mem);           
             bem = plf.createBusinessEntityManager(connectionManager, aem, mem);
+            
+            Properties applicationConfiguration = new Properties();
+            applicationConfiguration.put("backgroundsPath", configuration.get("backgroundsPath"));
+            applicationConfiguration.put("corporateLogo", configuration.get("corporateLogo"));
+            applicationConfiguration.put("enforceBusinessRules", configuration.get("enforceBusinessRules"));
+            applicationConfiguration.put("maxRoutes", configuration.get("maxRoutes"));
+            aem.setConfiguration(applicationConfiguration);
+            
             dataModelLoader = new DataModelLoader(connectionManager, mem);
-            //dataIntegrityService = new DataIntegrityService(connectionManager);
-            //dataIntegrityService.checkIntegrity();
             System.out.println(String.format("[KUWAIBA] [%s] Detecting advanced modules...", Calendar.getInstance().getTime()));
             //Place here some fancy OSGi stuff instead of this horrid hardcoded list
             aem.registerCommercialModule(new IPAMModule());

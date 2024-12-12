@@ -17,6 +17,8 @@
 package org.kuwaiba.apis.persistence.application;
 
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
+import com.neotropic.kuwaiba.sync.model.SyncDataSourceConfiguration;
+import com.neotropic.kuwaiba.sync.model.SynchronizationGroup;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +34,6 @@ import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
 import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
 import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
-import org.kuwaiba.apis.persistence.exceptions.UnsupportedPropertyException;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.util.ChangeDescriptor;
 import org.kuwaiba.ws.todeserialize.StringPair;
@@ -280,7 +281,92 @@ public interface ApplicationEntityManager {
      */
     public List<ClassMetadataLight> getInstanceableListTypes()
             throws ApplicationObjectNotFoundException;
-
+    
+    /**
+     * Creates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClassName list type item class name
+     * @param name view name
+     * @param description view description
+     * @param viewClassName view class name
+     * @param structure XML document with the view structure
+     * @param background background image
+     * @return The id of the new view.
+     * @throws MetadataObjectNotFoundException if the list type item class can not be found
+     * @throws InvalidArgumentException if the view type is not supported
+     */
+    public long createListTypeItemRelatedView(long listTypeItemId, String listTypeItemClassName, String viewClassName, String name, String description, byte [] structure, byte [] background) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Gets a view related to an list type item, such as the default, rack or equipment views
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId view id
+     * @return The associated view (there should be only one of each type). Null if there's none yet
+     * @throws ObjectNotFoundException if the list type item or the view can not be found
+     * @throws MetadataObjectNotFoundException if the corresponding class metadata can not be found
+     * @throws InvalidArgumentException if the provided view type is not supported
+     */    
+    public ViewObject getListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException;
+    
+    /**
+     * Updates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId viewId
+     * @param name view name
+     * @param description view description
+     * @param structure XML document with the view structure
+     * @param background Background image. If null, the previous will be removed, if 0-sized array, it will remain unchanged
+     * @return The summary of the changes
+     * @throws ObjectNotFoundException if the list type item can not be found
+     * @throws MetadataObjectNotFoundException if the list type item class can not be found
+     * @throws InvalidArgumentException if the view type is not supported
+     */
+    public ChangeDescriptor updateListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId, 
+        String name, String description, byte[] structure, byte[] background) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException;
+    
+    /**
+     * Gets the views related to a list type item, such as the default, rack or equipment views
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @param limit max number of results
+     * @return The associated views
+     * @throws MetadataObjectNotFoundException if the corresponding class metadata can not be found
+     * @throws InvalidArgumentException if the provided view type is not supported
+     */
+    public List<ViewObjectLight> getListTypeItemRelatedViews(long listTypeItemId, String listTypeItemClass, int limit) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Deletes a list type item related view
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @param viewId related view id
+     * @throws MetadataObjectNotFoundException if the list type item class can not be found
+     * @throws InvalidArgumentException if the list type item can no be found using the id
+     * @throws ObjectNotFoundException if the view can not be found
+     */
+    public void deleteListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException;
+    
+    /**
+     * Gets the list of template elements with a device layout
+     * @return the list of template elements with a device layout
+     */
+    public List<RemoteBusinessObjectLight> getDeviceLayouts();
+    
+    /**
+     * Gets the device layout structure
+     * @param oid object id
+     * @param className object class
+     * @return the structure of the device layout
+     */
+    public byte[] getDeviceLayoutStructure(long oid, String className);
+        
     /**
      * Get a view related to an object, such as the default, rack or equipment views
      * @param oid object's id
@@ -525,6 +611,16 @@ public interface ApplicationEntityManager {
     public ChangeDescriptor setPoolProperties(long poolId, String name, String description);
     
     /**
+     * Gets the name Of a special parent by scale up the SPECIAL_OF_CHILD hierarchy
+     * Use case: Use in reports to get the costumer of a service
+     * @param className className
+     * @param id node id
+     * @param targetLevel number of levels to scale up
+     * @return the name of the parent
+     */
+    public String getNameOfSpecialParentByScaleUp(String className, long id, int targetLevel);
+    
+    /**
      * Retrieves the pools that don't have any parent and are normally intended to be managed by the Pool Manager
      * @param className The class name used to filter the results. Only the pools with a className attribute matching the provided value will be returned. Use null if you want to get all
      * @param type The type of pools that should be retrieved. Root pools can be for general purpose, or as roots in models
@@ -739,13 +835,14 @@ public interface ApplicationEntityManager {
      * @param name Task name
      * @param description Task description
      * @param enabled Is the task enabled?
+     * @param commitOnExecute Should this task commit the changes made (if any) after executing it?
      * @param script The script to be executed
      * @param parameters The parameters for the script
      * @param schedule When the task should be executed
      * @param notificationType How the result of the task should be notified to the associated users 
      * @return The id of the newly created task
      */
-    public long createTask(String name, String description, boolean enabled, String script, List<StringPair> parameters, TaskScheduleDescriptor schedule, TaskNotificationDescriptor notificationType);
+    public long createTask(String name, String description, boolean enabled, boolean commitOnExecute, String script, List<StringPair> parameters, TaskScheduleDescriptor schedule, TaskNotificationDescriptor notificationType);
     /**
      * Updates any of these properties from a task: name, description, enabled and script
      * @param taskId Task id
@@ -875,6 +972,38 @@ public interface ApplicationEntityManager {
      */
     public long createTemplateSpecialElement(String tsElementClass, String tsElementParentClassName, long tsElementParentId, String tsElementName) 
         throws OperationNotPermittedException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException;
+    
+    /**
+     * Creates multiple template elements using a given name pattern
+     * @param templateElementClassName The class name of the new set of template elements
+     * @param templateElementParentClassName The parent class name of the new set of template elements
+     * @param templateElementParentId The parent id of the new set of template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param templateElementNamePattern Name pattern of the new set of template elements
+     * @return An array of ids for the new template elements
+     * @throws MetadataObjectNotFoundException If the parent class name or the template element class name cannot be found
+     * @throws OperationNotPermittedException If the given template element class cannot be a child of the given parent
+     * @throws ApplicationObjectNotFoundException If the parent class name cannot be found
+     * @throws InvalidArgumentException If the given pattern to generate the name has less possibilities that the number of template elements to be created
+     */
+    public long[] createBulkTemplateElement(String templateElementClassName, String templateElementParentClassName, long templateElementParentId, int numberOfTemplateElements, String templateElementNamePattern)
+        throws MetadataObjectNotFoundException, OperationNotPermittedException, ApplicationObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Creates multiple special template elements using a given name pattern
+     * @param stElementClass The class name of the new set of special template elements
+     * @param stElementParentClassName The parent class name of the new set of special template elements
+     * @param stElementParentId The parent id of the new set of special template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param stElementNamePattern Name pattern of the new set of special template elements
+     * @return An array if ids for the new special template elements
+     * @throws OperationNotPermittedException If the parent class name or the special template element class name cannot be found
+     * @throws MetadataObjectNotFoundException If the given special template element class cannot be a child of the given parent
+     * @throws ApplicationObjectNotFoundException If the parent class name cannot be found
+     * @throws InvalidArgumentException If the given pattern to generate the name has less possibilities that the number of special template elements to be created
+     */
+    public long[] createBulkSpecialTemplateElement(String stElementClass, String stElementParentClassName, long stElementParentId, int numberOfTemplateElements, String stElementNamePattern) 
+        throws OperationNotPermittedException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException;
     /**
      * Updates the value of an attribute of a template element.
      * @param templateElementClass Class of the element you want to update.
@@ -1054,10 +1183,10 @@ public interface ApplicationEntityManager {
      * @param userId User Id
      * @param favoritesFolderName favorites folder name
      * @throws ApplicationObjectNotFoundException If the favorites folder can not be found
-     * @throws IllegalArgumentException If the name of the favorites folder is null or empty
+     * @throws InvalidArgumentException If the name of the favorites folder is null or empty
      */
     public void updateFavoritesFolder(long favoritesFolderId, long userId, String favoritesFolderName) 
-        throws ApplicationObjectNotFoundException, IllegalArgumentException;
+        throws ApplicationObjectNotFoundException, InvalidArgumentException;
     
     /**
      * Creates a business rule given a set of constraints
@@ -1098,4 +1227,101 @@ public interface ApplicationEntityManager {
      */
     public void checkRelationshipByAttributeValueBusinessRules(String sourceObjectClassName, long sourceObjectId ,
             String targetObjectClassName, long targetObjectId) throws BusinessRuleException, InvalidArgumentException;
+    
+    /**
+     * Fetches a synchronization group. From the conceptual point of view, a sync group is a set of Synchronization Data Sources.
+     * @param syncGroupId The id of the sync group
+     * @return The sync group
+     * @throws org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException If the sync group could not be found
+     * @throws org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException If the sync data group information is somehow malformed in the database
+     */
+    public SynchronizationGroup getSyncGroup(long syncGroupId) throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Gets the list of available sync groups 
+     * @return The list of available sync groups
+     * @throws InvalidArgumentException If any of the sync groups is malformed in the database
+     */
+    public List<SynchronizationGroup> getSyncGroups() throws InvalidArgumentException;
+    /**
+     * Gets the data source configurations associated to a sync group. A data source configuration is a set of parameters to access a sync data source
+     * @param syncGroupId The sync group the requested configurations belong to
+     * @return A list of data source configurations
+     * @throws ApplicationObjectNotFoundException If the sync group could not be found
+     * @throws InvalidArgumentException If any of the configurations is malformed in the database
+     */
+    public List<SyncDataSourceConfiguration> getSyncDataSourceConfigurations(long syncGroupId) throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Creates a synchronization group
+     * @param name The name of the new group
+     * @param syncProvider The FQN of the synchronization provider (that is, the name of the class and the package)
+     * @return The id of the newly created group
+     * @throws InvalidArgumentException If any of the parameters is invalid
+     * @throws ApplicationObjectNotFoundException If the sync provider could not be found
+     */
+    public long createSyncGroup(String name, String syncProvider) throws InvalidArgumentException, ApplicationObjectNotFoundException;
+    /**
+     * Updates the data source configurations associated to a given sync group
+     * @param syncGroupId The Id of the sync group to be updated
+     * @param syncGroupProperties The list of synchronization group properties
+     * @throws ApplicationObjectNotFoundException If the sync group could not be found
+     * @throws InvalidArgumentException If any of the provided data source configurations is invalid
+     */
+    public void updateSyncGroup(long syncGroupId, List<StringPair> syncGroupProperties)throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Deletes a sync group
+     * @param syncGroupId The id of the sync group
+     * @throws ApplicationObjectNotFoundException If the sync group can no be found
+     */
+    public void deleteSynchronizationGroup(long syncGroupId) throws ApplicationObjectNotFoundException;
+    /**
+     * Creates a data source configuration and associates it to a sync group
+     * @param syncGroupId The id of the sync group the data source configuration will be related to
+     * @param name The name of the configuration
+     * @param parameters The list of parameters that will be part of the new configuration. A sync data source configuration is a set of parameters that allow the synchronization provider to access a sync data source
+     * @return The id of the newly created data source
+     * @throws ApplicationObjectNotFoundException If the sync group could not be found
+     * @throws InvalidArgumentException  If any of the parameters is not valid
+     */
+    public long createSyncDataSourceConfig(long syncGroupId, String name, List<StringPair> parameters)throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Updates a synchronization data source
+     * @param syncDataSourceConfigId The id of an synchronization data source
+     * @param parameters the list of parameters to update
+     * @throws ApplicationObjectNotFoundException If the sync data source cannot be found
+     */
+    public void updateSyncDataSourceConfig(long syncDataSourceConfigId, List<StringPair> parameters) throws ApplicationObjectNotFoundException;
+
+    /**
+     * Deletes a synchronization data source
+     * @param syncDataSourceConfigId The id of an synchronization data source
+     * @throws ApplicationObjectNotFoundException If the sync data source cannot be found
+     */
+    public void deleteSynchronizationDataSourceConfig(long syncDataSourceConfigId) throws ApplicationObjectNotFoundException ;
+    
+    /**
+     * Copy a set of sync group
+     * @param syncGroupIds The array of sync groups ids to copy
+     * @return A list of new sync groups
+     * @throws ApplicationObjectNotFoundException If some of the sync group cannot be found or If the provider of the sync group cannot be found
+     * @throws InvalidArgumentException If the sync group is malformed
+     */
+    public List<SynchronizationGroup> copySyncGroup(long[] syncGroupIds) throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Copy a set of sync data source configuration into a given sync group
+     * @param syncGroupId The Sync Group Id target
+     * @param syncDataSourceConfigurationIds Set of sync data source configuration ids
+     * @return A list of new sync data source configuration
+     * @throws ApplicationObjectNotFoundException If the sync group cannot be found, or some sync data source configuration cannot be found
+     * @throws InvalidArgumentException If the sync group cannot be found, or some sync data source configuration cannot be found
+     */
+    public List<SyncDataSourceConfiguration> copySyncDataSourceConfiguration(long syncGroupId, long[] syncDataSourceConfigurationIds) throws ApplicationObjectNotFoundException, InvalidArgumentException;
+    /**
+     * Moves a sync data source configuration from a sync group to another sync group
+     * @param syncGroupId The Sync Group Id target
+     * @param syncDataSourceConfigurationIds Set of sync data source configuration ids
+     * @throws ApplicationObjectNotFoundException If the sync group cannot be found, or some sync data source configuration cannot be found
+     * @throws InvalidArgumentException If the sync group is malformed, or some sync data source configuration is malformed
+     */
+    public void moveSyncDataSourceConfiguration(long syncGroupId, long[] syncDataSourceConfigurationIds) throws ApplicationObjectNotFoundException, InvalidArgumentException;
 }

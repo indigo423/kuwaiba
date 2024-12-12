@@ -47,6 +47,7 @@ public class LocalPrivilege {
     public static final String PRIVILEGE_AUDIT_TRAIL = "audit-trail";
     public static final String PRIVILEGE_QUERY_MANAGER = "query-manager";
     public static final String PRIVILEGE_TASK_MANAGER = "task-manager";
+    public static final String PRIVILEGE_SYNC = "sync";
     
     /**
      * For now, these privileges will be hard-coded, however in the near future, every module will provide its own set of tokens
@@ -76,7 +77,8 @@ public class LocalPrivilege {
                                                 PRIVILEGE_AUDIT_TRAIL, "Audit Trail",
                                                 PRIVILEGE_QUERY_MANAGER, "Query Manager",
                                                 PRIVILEGE_TASK_MANAGER, "Task Manager",
-                                                PRIVILEGE_FAVORITES, "Bookmarks"
+                                                PRIVILEGE_FAVORITES, "Favorites",
+                                                PRIVILEGE_SYNC, "Inventory Synchronization"
                                                };
     /**
      * Not an actual privilege. Use this to indicate that an existing privilege should be removed

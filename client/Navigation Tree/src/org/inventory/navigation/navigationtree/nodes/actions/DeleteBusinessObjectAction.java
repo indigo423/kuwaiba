@@ -25,6 +25,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.core.services.utils.ImageIconResource;
 import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.openide.nodes.Node;
@@ -39,15 +41,16 @@ import org.openide.util.actions.CallbackSystemAction;
 public final class DeleteBusinessObjectAction extends CallbackSystemAction {
    
     public static String ACTION_MAP_KEY = "DeleteBusinessObject"; //NOI18N
-    private JMenuItem popupPresenter;
+    private final JMenuItem popupPresenter;
 
     public DeleteBusinessObjectAction() {
-        popupPresenter = new JMenuItem(getName(), new ImageIcon(DeleteBusinessObjectAction.class.getResource("/org/inventory/navigation/navigationtree/res/warning.png")));
+        popupPresenter = new JMenuItem(getName(), ImageIconResource.WARNING_ICON);
         popupPresenter.addActionListener(this);
     }
     
     @Override
-    public JMenuItem getPopupPresenter() { super.getPopupPresenter();
+    public JMenuItem getPopupPresenter() { 
+        super.getPopupPresenter();
         return popupPresenter;
     }
        
@@ -55,8 +58,8 @@ public final class DeleteBusinessObjectAction extends CallbackSystemAction {
     @Override
     public void actionPerformed(ActionEvent ev) {
 
-        if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this object? (all children will be removed as well)",
-                "Warning", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION){
+        if(JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this object? (all children will be removed as well)", 
+                I18N.gm("warning"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
 
             Iterator selectedNodes = Utilities.actionsGlobalContext().lookupResult(ObjectNode.class).allInstances().iterator();
             
@@ -82,17 +85,17 @@ public final class DeleteBusinessObjectAction extends CallbackSystemAction {
                         ((AbstractChildren)parent.getChildren()).addNotify();
                 }
                 
-                NotificationUtil.getInstance().showSimplePopup("Success", 
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), 
                         NotificationUtil.INFO_MESSAGE, "The element was deleted successfully");
             }
             else
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         }
     }
 
     @Override
     public String getName() {
-        return "Delete"; //NOI18N
+        return I18N.gm("delete"); //NOI18N
     }
 
     @Override

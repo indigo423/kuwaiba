@@ -25,13 +25,17 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;
+import javax.xml.ws.AsyncHandler;
 import javax.xml.ws.BindingProvider;
+import javax.xml.ws.Response;
 import javax.xml.ws.handler.MessageContext;
 import javax.xml.ws.soap.SOAPFaultException;
 import org.inventory.communications.core.LocalApplicationLogEntry;
 import org.inventory.communications.core.LocalAttributeMetadata;
+import org.inventory.communications.core.LocalBackgroundJob;
 import org.inventory.communications.core.LocalBusinessRule;
 import org.inventory.communications.core.LocalFavoritesFolder;
 import org.inventory.communications.core.LocalClassMetadata;
@@ -45,6 +49,10 @@ import org.inventory.communications.core.LocalPool;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.core.LocalReport;
 import org.inventory.communications.core.LocalReportLight;
+import org.inventory.communications.core.LocalSyncDataSourceConfiguration;
+import org.inventory.communications.core.LocalSyncFinding;
+import org.inventory.communications.core.LocalSyncGroup;
+import org.inventory.communications.core.LocalSyncResult;
 import org.inventory.communications.core.LocalTaskResultMessage;
 import org.inventory.communications.core.LocalTask;
 import org.inventory.communications.core.LocalTaskNotificationDescriptor;
@@ -60,27 +68,37 @@ import org.inventory.communications.core.queries.LocalResultRecord;
 import org.inventory.communications.core.queries.LocalTransientQuery;
 import org.inventory.communications.core.views.LocalObjectView;
 import org.inventory.communications.core.views.LocalObjectViewLight;
+import org.inventory.communications.runnable.AbstractSyncRunnable;
+import org.inventory.communications.util.Constants;
 import org.inventory.communications.wsclient.ApplicationLogEntry;
 import org.inventory.communications.wsclient.AttributeInfo;
 import org.inventory.communications.wsclient.ClassInfo;
 import org.inventory.communications.wsclient.ClassInfoLight;
+import org.inventory.communications.wsclient.GetClassResponse;
+import org.inventory.communications.wsclient.GetObjectChildrenResponse;
+import org.inventory.communications.wsclient.GetObjectResponse;
+import org.inventory.communications.wsclient.GetSpecialAttributesResponse;
 import org.inventory.communications.wsclient.GroupInfo;
 import org.inventory.communications.wsclient.KuwaibaService;
 import org.inventory.communications.wsclient.KuwaibaService_Service;
+import org.inventory.communications.wsclient.LaunchSupervisedSynchronizationTaskResponse;
 import org.inventory.communications.wsclient.PrivilegeInfo;
+import org.inventory.communications.wsclient.RemoteBackgroundJob;
 import org.inventory.communications.wsclient.RemoteFavoritesFolder;
 import org.inventory.communications.wsclient.RemoteBusinessObjectLight;
 import org.inventory.communications.wsclient.RemoteBusinessObjectLightList;
 import org.inventory.communications.wsclient.RemoteBusinessRule;
 import org.inventory.communications.wsclient.RemoteObject;
 import org.inventory.communications.wsclient.RemoteObjectLight;
-import org.inventory.communications.wsclient.RemoteObjectLightArray;
+import org.inventory.communications.wsclient.RemoteObjectLightList;
 import org.inventory.communications.wsclient.RemoteObjectSpecialRelationships;
 import org.inventory.communications.wsclient.RemotePool;
 import org.inventory.communications.wsclient.RemoteQueryLight;
 import org.inventory.communications.wsclient.RemoteReport;
 import org.inventory.communications.wsclient.RemoteReportLight;
 import org.inventory.communications.wsclient.RemoteResultMessage;
+import org.inventory.communications.wsclient.RemoteSynchronizationConfiguration;
+import org.inventory.communications.wsclient.RemoteSynchronizationGroup;
 import org.inventory.communications.wsclient.RemoteTask;
 import org.inventory.communications.wsclient.RemoteTaskResult;
 import org.inventory.communications.wsclient.ResultRecord;
@@ -89,6 +107,8 @@ import org.inventory.communications.wsclient.SdhPosition;
 import org.inventory.communications.wsclient.ServerSideException_Exception;
 import org.inventory.communications.wsclient.StringArray;
 import org.inventory.communications.wsclient.StringPair;
+import org.inventory.communications.wsclient.SyncFinding;
+import org.inventory.communications.wsclient.SyncResult;
 import org.inventory.communications.wsclient.TaskNotificationDescriptor;
 import org.inventory.communications.wsclient.TaskScheduleDescriptor;
 import org.inventory.communications.wsclient.TransientQuery;
@@ -112,7 +132,8 @@ public class CommunicationsStub {
     private LocalSession session;
     
     private static String[] classesWithCustomDeleteActions = new String[] {"ElectricalLink", "RadioLink", "OpticalLink", "MPLSLink",
-                                                                    "VC4", "VC4-04", "VC4-16", "VC4TributaryLink", "VC12TributaryLink", "VC3TributaryLink",
+                                                                    "VC4", "VC4-04", "VC4-16", "VC4-07", "VC4-64", "VC4TributaryLink", "VC12TributaryLink", "VC3TributaryLink",
+                                                                    "VC4-07TributaryLink", "VC4-64TributaryLink",
                                                                     "STM1", "STM4", "STM16", "STM64", "STM256",
                                                                     "WireContainer", "WirelessContainer",
                                                                     "CorporateCustomer", "TelecomOperator", "Provider", "HomeCustomer",
@@ -128,7 +149,7 @@ public class CommunicationsStub {
                 instance = new CommunicationsStub();
             return instance;
     }
-
+    
     /**
      * Resets the singleton instance to null so it has to be created again
      */
@@ -207,7 +228,7 @@ public class CommunicationsStub {
      * Retrieves an object children providing the object class id
      * @param oid object's id
      * @param objectClassId object's class id
-     * @return an array of local objects representing the object's children. Null in a problem occurs during the execution
+     * @return an array of local objects representing the object's children. Null if a problem occurs during the execution
      */
     public List<LocalObjectLight> getObjectChildren(long oid, long objectClassId){
         try{
@@ -223,6 +244,28 @@ public class CommunicationsStub {
             }
             return res;
         }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    public List<LocalObjectLight> getObjectChildrenAsync(long oid, String className) {
+        try {
+            Response<GetObjectChildrenResponse> response = service.getObjectChildrenAsync(className, oid, 0, session.getSessionId());
+            while (!response.isDone())
+                Thread.sleep(100);        
+            GetObjectChildrenResponse getObjectChildrenResponse = response.get();
+            
+            List <RemoteObjectLight> children = getObjectChildrenResponse.getReturn();
+            
+            List <LocalObjectLight> res = new ArrayList<>();
+
+            for (RemoteObjectLight rol : children)
+                res.add(new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName()));
+                        
+            return res;
+            
+        } catch (InterruptedException | ExecutionException ex) {
             this.error =  ex.getMessage();
             return null;
         }
@@ -290,6 +333,50 @@ public class CommunicationsStub {
         }
     }
     
+    /**
+     * Returns the special children of a given object as RemoteBusinessObjectLight instances. This method is not recursive.
+     * @param parentOid The id of the parent object
+     * @param parentClass The class name of the parent object
+     * @param classToFilter The superclass/class to be used to filter the results. You can also use abstract superclasses.
+     * @return The list of special children of the given object, filtered using classToFilter. Null if  the parent class name provided could not be found or if the parent object could not be found
+     */
+    public List<LocalObjectLight> getSpecialChildrenOfClassLight(String parentClass, long parentOid, String classToFilter) {
+        try {
+            List <RemoteObjectLight> children = service.getSpecialChildrenOfClassLight(parentOid, parentClass, classToFilter, -1, session.getSessionId());
+            List <LocalObjectLight> res = new ArrayList<>();
+
+            for (RemoteObjectLight rol : children)
+                res.add(new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName()));
+
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets recursively all children of an object of a given class
+     * @param oid Parent whose children are requested
+     * @param parentClassName Class name of the element we want the children from
+     * @param childrenClassName The type of children we want to retrieve
+     * @return An array with the children objects
+     */
+    public List<LocalObjectLight> getChildrenOfClassLightRecursive(long oid, String parentClassName, String childrenClassName) {
+        try {
+            List <RemoteObjectLight> children = service.getChildrenOfClassLightRecursive(oid, parentClassName, childrenClassName, -1, session.getSessionId());
+            List <LocalObjectLight> res = new ArrayList<>();
+
+            for (RemoteObjectLight rol : children)
+                res.add(new LocalObjectLight(rol.getOid(), rol.getName(), rol.getClassName()));
+
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
     public List<LocalObjectLight> getObjectsOfClassLight(String className){
         try{
             List <RemoteObjectLight> instances = service.getObjectsOfClassLight(className, 0, this.session.getSessionId());
@@ -347,7 +434,7 @@ public class CommunicationsStub {
      * @param oid object id
      * @return The local representation of the object
      */
-    public LocalObject getObjectInfo(String objectClass, long oid){
+    public LocalObject getObjectInfo(String objectClass, long oid) {
         try {
             LocalClassMetadata lcmd = getMetaForClass(objectClass, false);
             RemoteObject myObject = service.getObject(objectClass, oid,this.session.getSessionId());
@@ -356,7 +443,29 @@ public class CommunicationsStub {
                 values.add(value.getItem());
             return new LocalObject(myObject.getClassName(), myObject.getOid(), 
                     myObject.getAttributes(), values,lcmd);
-        }catch(Exception ex){
+        } catch(Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public LocalObject getObjectInfoAsync(String objectClass, long oid) {
+        try {
+            LocalClassMetadata lcmd = getMetaForClassAsync(objectClass, false);
+            
+            Response<GetObjectResponse> response = service.getObjectAsync(objectClass, oid,this.session.getSessionId());
+            while (!response.isDone())
+                Thread.sleep(100);
+            GetObjectResponse getObjectResponse = response.get();
+                        
+            RemoteObject myObject = getObjectResponse.getReturn();
+            
+            List<List<String>> values = new ArrayList<>();
+            for (StringArray value : myObject.getValues())
+                values.add(value.getItem());
+            return new LocalObject(myObject.getClassName(), myObject.getOid(), 
+                    myObject.getAttributes(), values,lcmd);
+        } catch(Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -441,6 +550,24 @@ public class CommunicationsStub {
         }
     }
     
+    /**
+     * Gets the first occurrence of a parent with a given class (according to the special and standard containment hierarchy)
+     * (for example "give me the parent of this port until you find the nearest rack")
+     * @param objectClass Class of the object to get the parent from
+     * @param objectId Id of the object to get the parent from
+     * @param objectToMatchClassName Class of the object that will limit the search. It can be a superclass, if you want to match many classes at once
+     * @return The the first occurrence of a parent with a given class. If no instance of that class is found, the child of Dummy Root related in this hierarchy will be returned
+     */
+    public LocalObjectLight getFirstParentOfClass(String objectClass, long objectId, String objectToMatchClassName) {
+        try {
+            RemoteObjectLight parent = service.getFirstParentOfClass(objectClass, objectId, objectToMatchClassName, session.getSessionId());
+            return parent != null ? new LocalObjectLight(parent.getOid(), parent.getName(), parent.getClassName()) : null;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
     public HashMap<String, LocalObjectLight[]> getSpecialAttributes (String objectClass, long objectId) {
         try{
             RemoteObjectSpecialRelationships remoteRelationships = service.getSpecialAttributes(objectClass, objectId, session.getSessionId());
@@ -448,10 +575,41 @@ public class CommunicationsStub {
             
             for (int i = 0; i < remoteRelationships.getRelationships().size(); i++){
                 
-                RemoteObjectLightArray relatedRemoteObjects = remoteRelationships.getRelatedObjects().get(i);
-                LocalObjectLight[] relatedLocalObjects = new LocalObjectLight[relatedRemoteObjects.getItem().size()];
+                RemoteObjectLightList relatedRemoteObjects = remoteRelationships.getRelatedObjects().get(i);
+                LocalObjectLight[] relatedLocalObjects = new LocalObjectLight[relatedRemoteObjects.getList().size()];
                 int j = 0;
-                for (RemoteObjectLight relatedRemoteObject : relatedRemoteObjects.getItem()) {
+                for (RemoteObjectLight relatedRemoteObject : relatedRemoteObjects.getList()) {
+                    relatedLocalObjects[j] = new LocalObjectLight(relatedRemoteObject.getOid(), 
+                                                    relatedRemoteObject.getName(), 
+                                                    relatedRemoteObject.getClassName());
+                    j++;
+                }
+                res.put(remoteRelationships.getRelationships().get(i), relatedLocalObjects);
+            }
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    public HashMap<String, LocalObjectLight[]> getSpecialAttributesAsync (String objectClass, long objectId) {
+        try{
+            Response<GetSpecialAttributesResponse> response = service.getSpecialAttributesAsync(objectClass, objectId, session.getSessionId());
+            while (!response.isDone())
+                Thread.sleep(100);
+        
+            GetSpecialAttributesResponse getSpecialAttributesResponse = response.get();
+            RemoteObjectSpecialRelationships remoteRelationships = getSpecialAttributesResponse.getReturn();
+                        
+            HashMap<String, LocalObjectLight[]> res = new HashMap<>();
+            
+            for (int i = 0; i < remoteRelationships.getRelationships().size(); i++){
+                
+                RemoteObjectLightList relatedRemoteObjects = remoteRelationships.getRelatedObjects().get(i);
+                LocalObjectLight[] relatedLocalObjects = new LocalObjectLight[relatedRemoteObjects.getList().size()];
+                int j = 0;
+                for (RemoteObjectLight relatedRemoteObject : relatedRemoteObjects.getList()) {
                     relatedLocalObjects[j] = new LocalObjectLight(relatedRemoteObject.getOid(), 
                                                     relatedRemoteObject.getName(), 
                                                     relatedRemoteObject.getClassName());
@@ -585,7 +743,7 @@ public class CommunicationsStub {
      * @return allPosible children
      */
     public List<LocalClassMetadataLight> getPossibleChildren(String className, boolean ignoreCache) {
-        try{
+        try{            
             List<LocalClassMetadataLight> resAsLocal = null;
             if (!ignoreCache)
                 resAsLocal = cache.getPossibleChildrenCached(className);
@@ -905,7 +1063,7 @@ public class CommunicationsStub {
      * @return the metadata information
      */
     public LocalClassMetadata getMetaForClass(String className, boolean ignoreCache) {
-        try{
+        try {
             LocalClassMetadata res;
             if (!ignoreCache){
                 res = cache.getMetaForClass(className);
@@ -941,22 +1099,60 @@ public class CommunicationsStub {
             return null;
         }
     }
+    
+    public LocalClassMetadata getMetaForClassAsync(String className, boolean ignoreCache) {
+        try {
+            LocalClassMetadata res;
+            if (!ignoreCache){
+                res = cache.getMetaForClass(className);
+                if (res != null)
+                    return res;
+            }
+            
+            Response<GetClassResponse> response = service.getClassAsync(className,this.session.getSessionId());
+            while (!response.isDone())
+                Thread.sleep(100);
+            GetClassResponse getClassResponse = response.get();
+            
+            ClassInfo cm = getClassResponse.getReturn();
+            
+            HashMap<String, Integer> validators = new HashMap<>();
+            for (Validator validator : cm.getValidators())
+                validators.put(validator.getLabel(), validator.getValue());
+
+            res = new LocalClassMetadata(cm.getId(),
+                                            cm.getClassName(),
+                                            cm.getDisplayName(),
+                                            cm.getParentClassName(),
+                                            cm.isAbstract(),cm.isViewable(), cm.isListType(),
+                                            cm.isCustom(), cm.isInDesign(),
+                                            cm.getSmallIcon(), cm.getColor(), validators, cm.getIcon(),
+                                            cm.getDescription(), 
+                    cm.getAttributesIds(),                         
+                    cm.getAttributesNames().toArray(new String[0]),
+                    cm.getAttributesTypes().toArray(new String[0]),
+                    cm.getAttributesDisplayNames().toArray(new String[0]),
+                    cm.getAttributesMandatories(),
+                    cm.getAttributesUniques(),
+                    cm.getAttributesVisibles(), 
+                    cm.getAttributesDescriptions().toArray(new String[0]));
+            cache.addMeta(new LocalClassMetadata[]{res});
+            return res;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
 
     /**
-     * Retrieves the metadata for a given class
+     * Retrieves the metadata for a given class. This information is never cached, 
+     * as this method is intended to be used in situations where we need the fresh data from the server
      * @param classId classmetadata id
-     * @param ignoreCache
      * @return the metadata information
      */
-    public LocalClassMetadata getMetaForClass(long classId, boolean ignoreCache) {
+    public LocalClassMetadata getMetaForClass(long classId) {
         try{
             LocalClassMetadata res;
-//            if (!ignoreCache){
-//                res = cache.getMetaForClass(classId);
-//                if (res != null){
-//                    return res;
-//                }
-//            }
             ClassInfo cm = service.getClassWithId(classId,this.session.getSessionId());
             HashMap<String, Integer> validators = new HashMap<>();
             for (Validator validator : cm.getValidators())
@@ -982,42 +1178,51 @@ public class CommunicationsStub {
             return null;
         }
     }
-
+    
     /**
-     * Retrieves the metadata for a given class
-     * @param className the object class
-     * @return the metadata information
+     * Checks if a class has a attribute with a given name
+     * @param className Class name
+     * @param attributeName Attribute name
+     * @return True if the given class has the attribute
      */
-    /*public LocalClassMetadataLight getLightMetaForClass(String className, boolean ignoreCache){
-        try{
-            LocalClassMetadataLight res;
-            if (!ignoreCache){
-                res = cache.getLightMetaForClass(className);
-                if (res != null)
-                    return res;
-            }
-
-            ClassInfo cm = service.getClass(className,this.session.getSessionId());
-
-            res = new LocalClassMetadataLight(cm);
-            cache.addLightMeta(new LocalClassMetadataLight[]{res});
-            return res;
-        }catch(Exception ex){
+    public boolean hasAttribute(String className, String attributeName) {
+        if (className == null || attributeName == null)
+            return false;
+        
+        try {
+            return service.hasAttribute(className, attributeName, session.getSessionId());
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    public LocalAttributeMetadata getAttribute(String className, String attributeName) {
+        try {
+            AttributeInfo attrInfo = service.getAttribute(className, attributeName, session.getSessionId());
+            
+            LocalAttributeMetadata lam = new LocalAttributeMetadata(
+                attrInfo.getId(), attrInfo.getName(), attrInfo.getType(), 
+                attrInfo.getDisplayName(), attrInfo.isVisible(), attrInfo.isMandatory(), 
+                attrInfo.isUnique(), attrInfo.getDescription());
+            
+            return lam;
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
-    }*/
+    }
     
     /**
-     * Retrieves the metadata for a given class providing its ide
-     * @param className the object class
-     * @return the metadata information
+     * Gets the class hierarchy tree
+     * @param showAll Return all classes
+     * @return A byte array with an XML document representing the class hierarchy tree
      */
     public byte[] getClassHierarchy(boolean showAll) {
         try{
             return service.getClassHierarchy(showAll, session.getSessionId());
         }catch(Exception ex){
-            this.error = (ex instanceof SOAPFaultException)? ex.getMessage() : ex.getClass().getSimpleName()+": "+ ex.getMessage();
+            this.error = (ex instanceof SOAPFaultException)? ex.getMessage() : ex.getClass().getSimpleName() + ": " + ex.getMessage();
             return null;
         }
     }
@@ -1127,19 +1332,85 @@ public class CommunicationsStub {
         }
     }// </editor-fold>
     
+    public LocalObjectListItem getCustomShape(long customShapeId, boolean ignoreCache) {        
+        if (!ignoreCache) {
+            for (LocalObjectListItem customShape : cache.getCustomShapes()) {
+                if (customShape.getId() == customShapeId)
+                    return customShape;
+            }
+        }
+        getCustomShapes(false);
+        
+        for (LocalObjectListItem customShape : cache.getCustomShapes()) {
+            if (customShape.getId() == customShapeId)
+                return customShape;
+        }
+        return null;
+    }
+    
+    public LocalObjectView getCustomShapeLayout(long customShapeId, boolean ignoreCache) {
+        LocalObjectListItem customShape = getCustomShape(customShapeId, false);
+        
+        if (customShape != null) {
+            if (!ignoreCache) {
+                
+                LocalObjectView layout = cache.getCustomShapeLayout(customShape);
+
+                if (layout != null)
+                    return layout;
+            }
+            List<LocalObjectViewLight> views = getListTypeItemRelatedViews(customShape.getId(), Constants.CLASS_CUSTOMSHAPE);
+
+            if (views != null) {
+
+                if (!views.isEmpty()) {
+
+                    LocalObjectView view = getListTypeItemRelatedView(customShape.getId(), Constants.CLASS_CUSTOMSHAPE, views.get(0).getId());
+
+                    if (view != null) {
+                        cache.setCustomShapeLayout(customShape, view);
+                        return view;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    public List<LocalObjectListItem> getCustomShapes(boolean ignoreCache) {
+        List<LocalObjectListItem> customShapes = null;
+        if (!ignoreCache) {
+            customShapes = new ArrayList();
+            
+            for (LocalObjectListItem customShape : cache.getCustomShapes())
+                customShapes.add(customShape);
+            
+            if (!customShapes.isEmpty())
+                return customShapes;
+        }
+        customShapes = getList(Constants.CLASS_CUSTOMSHAPE, false, ignoreCache);
+        
+        if (customShapes != null) {
+            for (LocalObjectListItem customShape : customShapes)
+                cache.setCustomShapeLayout(customShape, null);
+        }
+        return customShapes;    
+    }
+    
     //<editor-fold defaultstate="collapsed" desc="Tasks">
     /**
      * Creates a task
      * @param name Task name
      * @param description Task description
      * @param enabled Is the task enabled?
+     * @param commitOnExecute Should the changes made in this task (if any) be committed to the database after its execution?
      * @param script Task script
      * @param parameters Task parameters as pairs param name/param value
      * @param schedule Schedule descriptor
      * @param notificationType Notification type descriptor
      * @return A local representation of the task if the operation was successful, null otherwise
      */
-    public LocalTask createTask(String name, String description, boolean enabled, 
+    public LocalTask createTask(String name, String description, boolean enabled, boolean commitOnExecute,
             String script, HashMap<String, String> parameters, LocalTaskScheduleDescriptor schedule, LocalTaskNotificationDescriptor notificationType) {
         try {
             TaskScheduleDescriptor atsd = null;
@@ -1168,10 +1439,10 @@ public class CommunicationsStub {
                 }
             }
                 
-            long taskId = service.createTask(name, description, enabled, script, 
+            long taskId = service.createTask(name, description, enabled, commitOnExecute, script, 
                    remoteParameters, atsd, tnd, session.getSessionId());
             
-            return new LocalTask(taskId, name, description, enabled, script, 
+            return new LocalTask(taskId, name, description, enabled, commitOnExecute, script, 
                     null, schedule, notificationType, new ArrayList<LocalUserObjectLight>());
         }catch(Exception ex){
             this.error = ex.getMessage();
@@ -1306,7 +1577,7 @@ public class CommunicationsStub {
                                         user.getFirstName(), user.getLastName(), user.isEnabled(), user.getType()));
                 
                 localTasks.add(new LocalTask(remoteTask.getId(), remoteTask.getName(), 
-                        remoteTask.getDescription(), remoteTask.isEnabled(), remoteTask.getScript(), 
+                        remoteTask.getDescription(), remoteTask.isEnabled(), remoteTask.isCommitOnExecute(), remoteTask.getScript(), 
                         remoteParameters, ltsd, tnd, users));
             }
             
@@ -1393,7 +1664,7 @@ public class CommunicationsStub {
     
     // <editor-fold defaultstate="collapsed" desc="Object methods. Click on the + sign on the left to edit the code.">
     /**
-     * 
+     * Create an Inventory Object
      * @param objectClass
      * @param parentClass
      * @param parentOid
@@ -1472,7 +1743,7 @@ public class CommunicationsStub {
      */
     public boolean addPossibleChildren(long parentClassId, long[] possibleChildren){
         try{
-            List<Long> pChildren = new ArrayList<Long>();
+            List<Long> pChildren = new ArrayList<>();
             for (long pChild : possibleChildren){
                 pChildren.add(pChild);
             }
@@ -1593,7 +1864,7 @@ public class CommunicationsStub {
         }
     }
     
-    public boolean moveObjects(String targetClass, long targetOid, LocalObjectLight[] objects) {
+    public boolean moveObjects(String targetClass, long targetOid, List<LocalObjectLight> objects) {
         try{
             List<Long> objectOids = new ArrayList<>();
             List<String> objectClasses = new ArrayList<>();
@@ -1606,6 +1877,40 @@ public class CommunicationsStub {
             return true;
         }catch(Exception ex){
             this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean moveSpecialObjects(String targetClass, long targetOid, List<LocalObjectLight> objects) {
+        try{
+            List<Long> objectOids = new ArrayList<>();
+            List<String> objectClasses = new ArrayList<>();
+
+            for (LocalObjectLight lol : objects){
+                objectOids.add(lol.getOid());
+                objectClasses.add(lol.getClassName());
+            }
+            service.moveSpecialObjects(targetClass, targetOid, objectClasses, objectOids,this.session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Move a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @return True if the pool item was moved
+     */
+    public boolean movePoolItem(long poolId, String poolItemClassName, long poolItemId) {
+        try {
+            service.movePoolItemToPool(poolId, poolItemClassName, poolItemId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            error = ex.getMessage();
             return false;
         }
     }
@@ -1636,6 +1941,50 @@ public class CommunicationsStub {
         }
     }
     
+    public LocalObjectLight[] copySpecialObjects(String targetClass, long targetOid, LocalObjectLight[] objects){
+        try{
+            List<Long> objectOids = new ArrayList<>();
+            List<String> objectClasses = new ArrayList<>();
+
+            for (LocalObjectLight lol : objects){
+                objectOids.add(lol.getOid());
+                objectClasses.add(lol.getClassName());
+            }
+
+            //Let's do the copy recursive by default
+            List<Long> objs = service.copySpecialObjects(targetClass, targetOid, objectClasses, objectOids, true, this.session.getSessionId());
+
+            LocalObjectLight[] res = new LocalObjectLight[objs.size()];
+            for (int i = 0; i < res.length ; i++){
+                res[i] = new LocalObjectLight(objs.get(i), objects[i].getName(), objects[i].getClassName());
+                i++;
+            }
+            return res;
+
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Copy a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @param recursive If this operation should also copy the children objects recursively
+     * @return True if the pool item was moved
+     */
+    public boolean copyPoolItem(long poolId, String poolItemClassName, long poolItemId, boolean recursive) {
+        try {
+            service.copyPoolItemToPool(poolId, poolItemClassName, poolItemId, recursive, session.getSessionId());
+            return true ;
+        } catch (Exception ex) {
+            error = ex.getMessage();
+            return false;
+        }
+    }
+    
     public LocalAttributeMetadata[] getMandatoryAttributesInClass(String className){
         try {
             List<AttributeInfo> mandatoryObjectAttributesInfo = service.getMandatoryAttributesInClass(className, session.getSessionId());
@@ -1653,14 +2002,6 @@ public class CommunicationsStub {
         }catch(Exception ex){
             this.error = ex.getMessage();
             return null;
-        }
-    }
-    
-    public void objectHasValuesInMandatoryAttributes(String className, long objId){
-        try{
-            service.objectHasValuesInMandatoryAttributes(className, objId, session.getSessionId());
-        }catch(Exception ex){
-            this.error = ex.getMessage();
         }
     }
     
@@ -1716,7 +2057,8 @@ public class CommunicationsStub {
         }
     }
         
-    public boolean connectMirrorPort (String aObjectClass, long aObjectId, String bObjectClass, long bObjectId) {
+    public boolean connectMirrorPort (List<String> aObjectClass, 
+            List<Long> aObjectId, List<String> bObjectClass, List<Long> bObjectId) {
         try{
             service.connectMirrorPort(aObjectClass, aObjectId, bObjectClass, bObjectId, session.getSessionId());
             return true;
@@ -1800,6 +2142,52 @@ public class CommunicationsStub {
                 res[i] = new LocalObjectLight(element.getOid(), element.getName(), element.getClassName());
                 i++;
             }
+            
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Retrieves the existing containers between two given nodes. . 
+     * Only the ports with connections (physicalPath.size > 1) are returned
+     * @param objectAClass The class of the object A.
+     * @param objectAId The id of the object A.
+     * @param objectBClass The class of the object B. (end point B class)
+     * @param objectBId The id of the object B (end point B id).
+     * @param containerClass The class of the containers to be return.
+     * @return The list of physical paths of the connected ports inside the given objects or null in case of error.
+     */
+    public List<LocalObjectLight> getContainersBetweenObjects(String objectAClass, long objectAId,
+            String objectBClass, long objectBId, String containerClass){
+        try{
+            List<RemoteObjectLight> existingContainers = service.getContainersBetweenObjects(objectAClass, objectAId, objectBClass, objectBId, containerClass, session.getSessionId());
+            List<LocalObjectLight> res = new ArrayList<>();
+            for (RemoteObjectLight container : existingContainers) 
+                res.add(new LocalObjectLight(container.getOid(), container.getName(), container.getClassName()));
+            
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Loops through all instances of GenericCommunicationsPort at any level inside the given object and gets the physical path. 
+     * Only the ports with connections (physicalPath.size > 1) are returned
+     * @param objectClass The object class
+     * @param objectId The object id
+     * @return The list of physical paths of the connected ports inside the given objects or null in case of error.
+     */
+    public List<LocalObjectLightList> getPhysicalConnectionsInObject(String objectClass, long objectId){
+        try{
+            List<RemoteObjectLightList> paths = service.getPhysicalConnectionsInObject(objectClass, objectId, session.getSessionId());
+            List<LocalObjectLightList> res = new ArrayList<>();
+            for (RemoteObjectLightList route : paths) 
+                res.add(new LocalObjectLightList(route));
             
             return res;
         }catch(Exception ex){
@@ -1932,7 +2320,7 @@ public class CommunicationsStub {
             //The first record is used to store the table headers
             res[0] = new LocalResultRecord(null, myResult.get(0).getExtraColumns());
             for (int i = 1; i < res.length ; i++){
-                HashMap<String, Integer> validators = new HashMap<String, Integer>();
+                HashMap<String, Integer> validators = new HashMap<>();
                 for (Validator validator : myResult.get(i).getObject().getValidators())
                     validators.put(validator.getLabel(), validator.getValue());
                 
@@ -2195,6 +2583,40 @@ public class CommunicationsStub {
             return false;
         }
         return true;
+    }
+    
+    /**
+     * Retrieves all the list types of a class
+     * @param className the given class name of the list type
+     * @param id the given list type id
+     * @return an array with all possible list types of a given class
+     */
+    public LocalObjectListItem getListTypeItem(String className, long id) {
+       try{
+            LocalObjectListItem res = new LocalObjectListItem();
+            List<LocalObjectListItem> cachedLists = new ArrayList<>();
+            List<RemoteObjectLight> remoteList = service.getListTypeItems(className,this.session.getSessionId());
+
+            for (RemoteObjectLight r : remoteList) {
+                if(r.getOid() == id){
+                    res.setId(r.getOid());
+                    res.setName(r.getName());
+                    res.setDisplayName(r.getName());
+                }
+                LocalObjectListItem localObjectListItem = new LocalObjectListItem();
+                localObjectListItem.setId(r.getOid());
+                localObjectListItem.setName(r.getName());
+                localObjectListItem.setDisplayName(r.getName());
+                cachedLists.add(localObjectListItem);
+            }
+            cache.addListCached(className, cachedLists);
+
+            return res; 
+            
+        }catch(Exception ex){
+            this.error = ex.getMessage();
+            return null;
+        }
     }
     
     /**
@@ -2481,6 +2903,8 @@ public class CommunicationsStub {
 
     /**
      * Creates a new group
+     * @param groupName Group's name
+     * @param groupDescription Group's description
      * @return The newly created group or null in case of error
      */
     public LocalUserGroupObject createGroup(String groupName, String groupDescription){
@@ -2528,6 +2952,139 @@ public class CommunicationsStub {
     }// </editor-fold>
     
     // <editor-fold defaultstate="collapsed" desc="Views methods. Click on the + sign on the left to edit the code.">
+    /**
+     * Creates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClassName list type item class name
+     * @param viewClassName view class name
+     * @param name view name
+     * @param description view description
+     * @param structure XML document with the view structure
+     * @param background background image
+     * @return The id of the new view.
+     */
+    public long createListTypeItemRelatedView(long listTypeItemId, String listTypeItemClassName, String viewClassName, 
+        String name, String description, byte [] structure, byte [] background) {
+        
+        try{
+            return service.createListTypeItemRelatedView(listTypeItemId, listTypeItemClassName, viewClassName, name, description, structure, background, session.getSessionId());
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return -1;
+        }
+    }
+    
+    /**
+     * Updates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId viewId
+     * @param name view name
+     * @param description view description
+     * @param structure XML document with the view structure
+     * @param background Background image. If null, the previous will be removed, if 0-sized array, it will remain unchanged
+     * @return true if the related view was updated
+     */
+    public boolean updateListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId, 
+        String name, String description, byte[] structure, byte[] background) {
+        
+        try{
+            service.updateListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, name, description, structure, background, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Gets a view related to an list type item, such as the default, rack or equipment views
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId view id
+     * @return The associated view (there should be only one of each type). Null if there's none yet
+     */
+    public LocalObjectView getListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) {
+        try{
+            ViewInfo view = service.getListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, session.getSessionId());
+            return new LocalObjectView(view.getId(), view.getClassName(), view.getName(), view.getDescription(), view.getStructure(), view.getBackground());
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the views related to a list type item, such as the default, rack or equipment views
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @return The associated views
+     */
+    public List<LocalObjectViewLight> getListTypeItemRelatedViews(long listTypeItemId, String listTypeItemClass) {
+        try{
+            List<ViewInfoLight> views = service.getListTypeItemRelatedViews(listTypeItemId, listTypeItemClass, -1, session.getSessionId());
+            List<LocalObjectViewLight> res = new ArrayList<>();
+            
+            for (ViewInfoLight view : views)
+                res.add(new LocalObjectViewLight(view.getId(), view.getName(), view.getDescription(), view.getClassName()));
+            return res;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the views related to a list type item, such as the default, rack or equipment views
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @param viewId Related view id
+     * @return true if the related view was deleted
+     */
+    public boolean deleteListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) {
+        try{
+            service.deleteListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, session.getSessionId());
+            return true;
+        }catch(Exception ex){
+            this.error =  ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the list of template elements with a device layout
+     * @return the list of template elements with a device layout
+     */
+    public List<LocalObjectLight> getDeviceLayouts() {
+        try {
+            List<RemoteObjectLight> remoteTemplateElements = service.getDeviceLayouts(session.getSessionId());
+            
+            List<LocalObjectLight> templateElements = new ArrayList();
+            
+            for (RemoteObjectLight remoteTemplateElement : remoteTemplateElements)
+                templateElements.add(new LocalObjectLight(remoteTemplateElement.getOid(), remoteTemplateElement.getName(), remoteTemplateElement.getClassName()));
+            
+            return templateElements;
+        } catch (Exception ex) {
+            error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the device layout structure
+     * @param oid object id
+     * @param className class of object
+     * @return the structure of the device layout
+     */
+    public byte[] getDeviceLayoutStructure(long oid, String className) {
+        try {
+            return service.getDeviceLayoutStructure(oid, className, session.getSessionId());
+        } catch (Exception ex) {
+            error = ex.getMessage();
+            return null;
+        }
+    }
 
     /**
      * Get a view related to an object, such as the default, rack or equipment views
@@ -2641,10 +3198,12 @@ public class CommunicationsStub {
      * Create a view for a given object. If there's already a view of the provided view type, it will be overwritten
      * @param oid object's oid
      * @param objectClass object class
+     * @param viewId
      * @param name view name
      * @param description view description
      * @param structure XML document with the view structure (see http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_Save_Object_Views for details about the supported format)
      * @param background Background image. If null, the previous will be removed, if 0-sized array, it will remain unchanged
+     * @return 
      */
     public boolean updateObjectRelatedView(long oid, String objectClass, long viewId, String name, String description, byte[] structure, byte[] background){
         try{
@@ -2658,11 +3217,12 @@ public class CommunicationsStub {
 
     /**
      * Saves a view not related to a particular object. The view type can not be changed
-     * @param view id
+     * @param oid
      * @param name view name. Null to leave unchanged
      * @param description view description. Null to leave unchanged
      * @param structure XML document specifying the view structure (nodes, edges, control points). Null to leave unchanged
      * @param background Background image. If null, the previous will be removed, if 0-sized array, it will remain unchanged
+     * @return 
      */
     public boolean updateGeneralView(long oid, String name, String description, byte[] structure, byte[] background){
         try{
@@ -2678,7 +3238,7 @@ public class CommunicationsStub {
     /**
      * Deletes a list of general views
      * @param ids view ids
-     * @throws ObjectNotFoundException if the view can't be found
+     * @return 
      */
     public boolean deleteGeneralViews(long [] ids) {
          try{
@@ -3199,9 +3759,71 @@ public class CommunicationsStub {
      * @return The id of the new special object.
      */
     public LocalObjectLight createTemplateSpecialElement(String tsElementClass, String tsElementParentClassName, long tsElementParentId, String tsElementName) {
-            try {
+        try {
             return new LocalObjectLight(service.createTemplateSpecialElement(tsElementClass, tsElementParentClassName, 
                     tsElementParentId, tsElementName, session.getSessionId()), tsElementName, tsElementClass);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Creates multiple template elements using a given name pattern
+     * @param templateElementClassName The class name of the new set of template elements
+     * @param templateElementParentClassName The parent class name of the new set of template elements
+     * @param templateElementParentId The parent id of the new set of template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param templateElementNamePattern Name pattern of the new set of template elements
+     * @return A list of new template elements or null 
+     *         If the parent class name or the template element class name cannot be found
+     *         If the given template element class cannot be a child of the given parent
+     *         If the parent class name cannot be found
+     *         If the given pattern to generate the name has less possibilities that the number of template elements to be created
+     */
+    public List<LocalObjectLight> createBulkTemplateElement(String templateElementClassName, String templateElementParentClassName, long templateElementParentId, int numberOfTemplateElements, String templateElementNamePattern) {
+        try {
+            List<LocalObjectLight> result = new ArrayList();
+            List<Long> ids = service.createBulkTemplateElement(templateElementClassName, templateElementParentClassName, templateElementParentId, numberOfTemplateElements, templateElementNamePattern, session.getSessionId());
+            
+            for (Long id : ids) {
+                LocalObject templateElement = getTemplateElement(templateElementClassName, id);
+                if (templateElement == null)
+                    throw new Exception();
+                
+                result.add(templateElement);
+            }
+            return result;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    /**
+     * Creates multiple special template elements using a given name pattern
+     * @param stElementClass The class name of the new set of special template elements
+     * @param stElementParentClassName The parent class name of the new set of special template elements
+     * @param stElementParentId The parent id of the new set of special template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param stElementNamePattern Name pattern of the new set of special template elements
+     * @return A list of new special template elements or null
+     *         If the parent class name or the special template element class name cannot be found
+     *         If the given special template element class cannot be a child of the given parent
+     *         If the parent class name cannot be found
+     *         If the given pattern to generate the name has less possibilities that the number of special template elements to be created
+     */
+    public List<LocalObjectLight> createBulkSpecialTemplateElement(String stElementClass, String stElementParentClassName, long stElementParentId, int numberOfTemplateElements, String stElementNamePattern) {
+        try {
+            List<LocalObjectLight> result = new ArrayList();
+            List<Long> ids = service.createBulkSpecialTemplateElement(stElementClass, stElementParentClassName, stElementParentId, numberOfTemplateElements, stElementNamePattern, session.getSessionId());
+            
+            for (Long id : ids) {
+                LocalObject specialTemplateElement = getTemplateElement(stElementClass, id);
+                if (specialTemplateElement == null)
+                    throw new Exception();
+                
+                result.add(specialTemplateElement);
+            }
+            return result;
         } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
@@ -3412,7 +4034,7 @@ public class CommunicationsStub {
             long newObjectId = service.createSDHTransportLink(endpointA.getClassName(),
                     endpointA.getOid(), endpointB.getClassName(), endpointB.getOid(), transportLinkType, defaultName, session.getSessionId());
             return new LocalObjectLight(newObjectId, defaultName, transportLinkType);
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3436,7 +4058,7 @@ public class CommunicationsStub {
                     equipmentA.getOid(), equipmentB.getClassName(), equipmentB.getOid(), 
                     containerLinkType, remotepositions, defaultName, session.getSessionId());
             return new LocalObjectLight(newObjectId, defaultName, containerLinkType);
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3460,7 +4082,7 @@ public class CommunicationsStub {
                     equipmentA.getOid(), equipmentB.getClassName(), equipmentB.getOid(), 
                     containerLinkType, remotepositions, defaultName, session.getSessionId());
             return new LocalObjectLight(newObjectId, defaultName, containerLinkType);
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3474,7 +4096,7 @@ public class CommunicationsStub {
                 res.add(new LocalObjectLightList(route));
             
             return res;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3488,7 +4110,7 @@ public class CommunicationsStub {
                 res.add(new LocalObjectLightList(route));
             
             return res;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3512,7 +4134,7 @@ public class CommunicationsStub {
                 res.add(aLocalContainerDefinition);
             }            
             return res;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3535,7 +4157,7 @@ public class CommunicationsStub {
                 res.add(aLocalContainerDefinition);
             }            
             return res;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3660,7 +4282,7 @@ public class CommunicationsStub {
         try {
             service.deleteSDHTransportLink(transportLinkClass, transportLinkId, true, session.getSessionId());
             return true;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return false;
         }
@@ -3670,7 +4292,7 @@ public class CommunicationsStub {
         try {
             service.deleteSDHContainerLink(containerLinkClass, containerLinkId, true, session.getSessionId());
             return true;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return false;
         }
@@ -3680,7 +4302,7 @@ public class CommunicationsStub {
         try {
             service.deleteSDHTributaryLink(tributaryLinkClass, tributaryLinkId, true, session.getSessionId());
             return true;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return false;
         }
@@ -3843,7 +4465,7 @@ public class CommunicationsStub {
             long newObjectId = service.createMPLSLink(endpointA.getClassName(),
                     endpointA.getOid(), endpointB.getClassName(), endpointB.getOid(), transportLinkType, defaultName, session.getSessionId());
             return new LocalObjectLight(newObjectId, defaultName, transportLinkType);
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return null;
         }
@@ -3853,7 +4475,7 @@ public class CommunicationsStub {
         try {
             service.deleteMPLSLink(linkClass, linkId, true, session.getSessionId());
             return true;
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             this.error = ex.getMessage();
             return false;
         }
@@ -4123,7 +4745,7 @@ public class CommunicationsStub {
         try {
             long projId = service.createProjectPool(name, description, instanceOfClass, session.getSessionId());
             return getPoolInfo(projId);
-        } catch (ServerSideException_Exception ex) {
+        } catch (Exception ex) {
             error = ex.getMessage();
             return null;
         }
@@ -4315,6 +4937,361 @@ public class CommunicationsStub {
         }
     }
     //</editor-fold>
+    
+    // <editor-fold defaultstate="collapsed" desc="Synchronization methods. Click on the + sign on the left to edit the code.">
+    /**
+     * Create a Sync Group
+     * @param syncGroupName The name of the Sync group
+     * @param providerName the name of the provider that will e use i.e. SNMPProvider
+     * @return The local representation of the Favorites folder
+     */        
+    public LocalSyncGroup createSyncGroup(String syncGroupName, String providerName) {
+        try {
+            long id = service.createSynchronizationGroup(syncGroupName, providerName, session.getSessionId());
+            return new LocalSyncGroup(id, syncGroupName, providerName);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+     /**
+     * Updates a Sync Group
+     * @param syncGroupId The id of the Sync group
+     * @param syncGroupProperties The properties of the Sync group
+     * @return The local representation of the Favorites folder
+     */        
+    public boolean updateSyncGroup(long syncGroupId, HashMap<String, String> syncGroupProperties) {
+        try {
+            List<StringPair> remoteProperties = new ArrayList<>();
+            
+            for (String paramName : syncGroupProperties.keySet()) {
+                StringPair remoteParameter = new StringPair();
+                remoteParameter.setKey(paramName);
+                remoteParameter.setValue(syncGroupProperties.get(paramName));
+                remoteProperties.add(remoteParameter);
+            }
+            service.updateSynchronizationGroup(syncGroupId, remoteProperties, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Deletes a Sync Group
+     * @param syncGroupId the synchronization group id
+     * @return True if was deleted successfully
+     */
+    public boolean deleteSyncGroup(long syncGroupId) {
+        try {
+            service.deleteSynchronizationGroup(syncGroupId, session.getSessionId());
+            return true;        
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+    
+    /**
+     * Create a Sync Data Source Configuration
+     * @param syncGroupId The name of the sync group id
+     * @param syncDataSourceConfigName name of the data source configuration
+     * @param parameters the parameters associated to the configuration
+     * @return The local representation of the sync configuration
+     */        
+    public LocalSyncDataSourceConfiguration createSyncDataSourceConfiguration(long syncGroupId, String syncDataSourceConfigName, HashMap<String, String> parameters) {
+        try {
+            List<StringPair> remoteParameters = new ArrayList<>();
+            
+            for (String paramName : parameters.keySet()) {
+                StringPair remoteParameter = new StringPair();
+                remoteParameter.setKey(paramName);
+                remoteParameter.setValue(parameters.get(paramName));
+                remoteParameters.add(remoteParameter);
+            }
+            
+            long id = service.createSynchronizationDataSourceConfig(syncDataSourceConfigName, remoteParameters, syncGroupId, session.getSessionId());
+            return new LocalSyncDataSourceConfiguration(id, syncDataSourceConfigName, parameters);
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Create a Sync Data Source Configuration
+     * @param syncDataSourceConfigId The id of the sync data source configuration
+     * @param parameters the parameters need it to make the sync id, name, className, IP address, port, community
+     * @return The local representation of the Favorites folder
+     */        
+    public boolean updateSyncDataSourceConfiguration(long syncDataSourceConfigId, HashMap<String, String> parameters) {
+        try {
+            List<StringPair> remoteParameters = new ArrayList<>();
+            
+            for (String parameterName : parameters.keySet()) {
+                StringPair remoteParameter = new StringPair();
+                remoteParameter.setKey(parameterName);
+                remoteParameter.setValue(parameters.get(parameterName));
+                
+                remoteParameters.add(remoteParameter);
+            }
+            service.updateSyncDataSourceConfiguration(syncDataSourceConfigId, remoteParameters, session.getSessionId());
+            
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Deletes a Synchronization data source configuration
+     * @param syncDataSourceConfigId sync data source id
+     * @return True if was deleted successfully
+     */
+    public boolean deleteSyncDataSourceConfiguration(long syncDataSourceConfigId) {
+        try {
+            service.deleteSynchronizationDataSourceConfig(syncDataSourceConfigId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Copy a sync group
+     * @param syncGroups The list of sync groups to copy
+     * @return A list with the new sync groups
+     */
+    public List<LocalSyncGroup> copySyncGroup(LocalSyncGroup[] syncGroups) {
+        try {
+            List<Long> syncGroupsIds = new ArrayList<>();
+            for (LocalSyncGroup syncGroup : syncGroups)
+                syncGroupsIds.add(syncGroup.getId());
+            List<RemoteSynchronizationGroup> remoteSyncGroups = service.copySyncGroup(syncGroupsIds, session.getSessionId());
+            
+            List<LocalSyncGroup> localSyncGroups = new ArrayList<>();
+            for (RemoteSynchronizationGroup remoteSyncGroup : remoteSyncGroups) {
+                localSyncGroups.add(new LocalSyncGroup(remoteSyncGroup.getId(), 
+                    remoteSyncGroup.getName(), 
+                    remoteSyncGroup.getProvider().getName()));
+            }
+            return localSyncGroups;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Copy a set of sync data source configuration into a given sync group
+     * @param syncGroupId The Sync Group Id target
+     * @param syncDataSourceConfiguration Set of sync data source configuration ids
+     * @return The list of copied sync data source configuration
+     */
+    public List<LocalSyncDataSourceConfiguration> copySyncDataSourceConfiguration(long syncGroupId, LocalSyncDataSourceConfiguration[] syncDataSourceConfiguration) {
+        try {
+            List<Long> syncDataSrcConfigIds = new ArrayList<>();
+            for (LocalSyncDataSourceConfiguration syncDataSrcConfig : syncDataSourceConfiguration)
+                syncDataSrcConfigIds.add(syncDataSrcConfig.getId());
+                            
+            List<RemoteSynchronizationConfiguration> lstRemoteSyncDataSrcConfig = service.copySyncDataSourceConfiguration(syncGroupId, syncDataSrcConfigIds, session.getSessionId());
+            
+            List<LocalSyncDataSourceConfiguration> lstLocalSyncDataSrcConfig = new ArrayList<>();
+            
+            for (RemoteSynchronizationConfiguration remoteSyncDataSrcConfig : lstRemoteSyncDataSrcConfig) {
+                HashMap<String, String> parameters = new HashMap<>();
+                for (StringPair parameter : remoteSyncDataSrcConfig.getParameters())
+                    parameters.put(parameter.getKey(), parameter.getValue());
+                
+                lstLocalSyncDataSrcConfig.add(new LocalSyncDataSourceConfiguration(
+                    remoteSyncDataSrcConfig.getId(), 
+                    remoteSyncDataSrcConfig.getName(), 
+                    parameters));
+                                
+            }
+            return lstLocalSyncDataSrcConfig;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Moves a sync data source configuration from a sync group to another sync group
+     * @param syncGroupId The Sync Group Id target
+     * @param syncDataSourceConfiguration Set of sync data source configuration ids
+     * @return True if the sync data source configuration was moved
+     */
+    public boolean moveSyncDataSourceConfiguration(long syncGroupId, LocalSyncDataSourceConfiguration[] syncDataSourceConfiguration) {
+        try {
+            List<Long> syncDataSrcConfigIds = new ArrayList<>();
+            for (LocalSyncDataSourceConfiguration syncDataSrcConfig : syncDataSourceConfiguration)
+                syncDataSrcConfigIds.add(syncDataSrcConfig.getId());
+            
+            service.moveSyncDataSourceConfiguration(syncGroupId, syncDataSrcConfigIds, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the current jobs which are executing
+     * @return The list of the current jobs which are executing
+     */
+    public List<LocalBackgroundJob> getCurrentJobs() {
+        try {
+            List<RemoteBackgroundJob> remoteJobs = service.getCurrentJobs(session.getSessionId());
+            
+            List<LocalBackgroundJob> result = new ArrayList();
+            
+            for (RemoteBackgroundJob remoteJob : remoteJobs) {
+                result.add(new LocalBackgroundJob(remoteJob.getId(), remoteJob.getJobTag(), remoteJob.getProgress(), remoteJob.isAllowConcurrence(), remoteJob.getStatus(), remoteJob.getStartTime(), remoteJob.getEndTime()));
+            }
+            return result;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Kills a job given its id
+     * @param jobId id of job to kill
+     * @return True if the job was killed
+     */
+    public boolean killJob(long jobId) {
+        try {
+            service.killJob(jobId, session.getSessionId());
+            return true;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return false;
+        }
+    }
+        
+    /**
+     * Gets the available sync groups
+     * @return The list of available sync groups. Null otherwise
+     */
+    public List<LocalSyncGroup> getSyncGroups(){
+        try {
+            List<LocalSyncGroup> localSyncGroup = new ArrayList<>();
+                    
+            List<RemoteSynchronizationGroup> synchronizationGroups = service.getSynchronizationGroups(session.getSessionId());
+            for (RemoteSynchronizationGroup synchronizationGroup : synchronizationGroups) {
+                localSyncGroup.add(new LocalSyncGroup(synchronizationGroup.getId(), 
+                        synchronizationGroup.getName(),
+                        synchronizationGroup.getProvider().getName()));
+            }
+            return localSyncGroup;
+            
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Returns the list of data source configurations that belongs to a sync group
+     * @param syncGroupId the synchronization group id
+     * @return a list of the data source configurations
+     */
+    public List<LocalSyncDataSourceConfiguration> getSyncDataSourceConfigurations(long syncGroupId) {
+        try {
+            List<LocalSyncDataSourceConfiguration> res = new ArrayList<>();
+            List<RemoteSynchronizationConfiguration> syncDataSourceConfigurations = 
+                    service.getSyncDataSourceConfigurations(syncGroupId, session.getSessionId());
+            
+            for (RemoteSynchronizationConfiguration remoteConfiguration : syncDataSourceConfigurations) {
+                HashMap<String, String> parameters = new HashMap<>();
+                for (StringPair parameter : remoteConfiguration.getParameters())
+                    parameters.put(parameter.getKey(), parameter.getValue());
+                
+                res.add(new LocalSyncDataSourceConfiguration(remoteConfiguration.getId(), remoteConfiguration.getName(), parameters));
+            }
+                        
+            return res;
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    }
+    
+    /**
+     * Launches a synchronization that requires a user to review the actions to 
+     * be taken upon finding differences  between what's on he sync data sources 
+     * and the inventory system.
+     * @param syncGroup The sync group associated to the requested task
+     * @param progress a handler that waits until the synchronization task ends and send the results
+     */
+    public void launchSupervisedSynchronizationTask(final LocalSyncGroup syncGroup, final AbstractSyncRunnable progress) {
+        try {
+            service.launchSupervisedSynchronizationTaskAsync(syncGroup.getId(), session.getSessionId(), 
+            new AsyncHandler<LaunchSupervisedSynchronizationTaskResponse>(){
+                @Override
+                public void handleResponse(Response<LaunchSupervisedSynchronizationTaskResponse> res) {
+                    try {
+                        LaunchSupervisedSynchronizationTaskResponse get = res.get();
+                        
+                        List<LocalSyncFinding> syncFindings = new ArrayList<>();
+                        for (SyncFinding syncFinding : get.getReturn())
+                            syncFindings.add(new LocalSyncFinding(syncFinding.getType(), syncFinding.getDescription(), syncFinding.getExtraInformation()));
+                        
+                        progress.setLocalSyncGroup(syncGroup);
+                        progress.setFindings(syncFindings);
+                        progress.getProgressHandle().finish();
+                        progress.runSync();                        
+                    } catch (InterruptedException | ExecutionException ex) {
+                        String message = ex.getMessage();
+                        int idxOfSpace = message.indexOf(": ");
+                        String kindMessage = message.substring(idxOfSpace + 1);
+                        
+                        CommunicationsStub.this.error = kindMessage;
+                        progress.setFindings(null);
+                        progress.getProgressHandle().finish();                        
+                        progress.runSync();
+                    }
+                }
+            });
+            progress.getProgressHandle().start();
+        } catch (Exception ex) {
+            this.error = ex.getMessage();
+            
+        }
+    }
+    
+     /**
+     * Executes the actions that the user has chosen after synchronization findings
+     * @param localFindings the findings
+     * @return The list of results after executes the actions
+     */
+    public List<LocalSyncResult> executeSyncActions(List<LocalSyncFinding> localFindings){
+        try {
+            List<SyncFinding> remoteFindings = new ArrayList<>();
+            for (LocalSyncFinding locaFinding : localFindings) {
+                SyncFinding finding = new SyncFinding();
+                finding.setDescription(locaFinding.getDescription());
+                finding.setExtraInformation(locaFinding.getExtraInformation());
+                finding.setType(locaFinding.getType());
+                remoteFindings.add(finding);
+            }
+            List<SyncResult> results = service.executeSyncActions(remoteFindings, session.getSessionId());
+            
+            List<LocalSyncResult> localResults = new ArrayList<>();
+            for(SyncResult result : results)
+                localResults.add(new LocalSyncResult(result.getType(), result.getActionDescription(), result.getResult()));
+            return localResults;
+            
+        } catch (ServerSideException_Exception ex) {
+            this.error = ex.getMessage();
+            return null;
+        }
+    } 
     
     //<editor-fold desc="Business Rules" defaultstate="collapsed">
     /**

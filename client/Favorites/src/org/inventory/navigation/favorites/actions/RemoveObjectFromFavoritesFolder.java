@@ -19,7 +19,6 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ResourceBundle;
 import javax.swing.JOptionPane;
 import org.inventory.navigation.favorites.nodes.FavoritesFolderNode;
 import org.inventory.navigation.favorites.nodes.FavoritesFolderNode.FavoritesFolderChildren;
@@ -30,9 +29,11 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.SubMenuDialog;
 import org.inventory.core.services.utils.SubMenuItem;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.Utilities;
 import org.openide.util.lookup.ServiceProvider;
@@ -41,15 +42,16 @@ import org.openide.util.lookup.ServiceProvider;
  * Action to remove an associated object to a favoritesFolder
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class RemoveObjectFromFavoritesFolder extends GenericObjectNodeAction implements ComposedAction {
     
     public RemoveObjectFromFavoritesFolder() {
-        putValue(NAME, ResourceBundle.getBundle("org/inventory/navigation/favorites/Bundle").getString("LBL_REMOVE_FAVORITE"));
+        putValue(NAME, I18N.gm("remove_from_favorites_folder"));
     }
     
     @Override
-    public String getValidator() {
+    public String[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -61,7 +63,7 @@ public class RemoveObjectFromFavoritesFolder extends GenericObjectNodeAction imp
         
         if (favoritesFolder!= null) {
             if (!favoritesFolder.isEmpty()) {
-                List<SubMenuItem> subMenuItems = new ArrayList();
+                List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalFavoritesFolder favoriteFolder : favoritesFolder) {
                     SubMenuItem subMenuItem = new SubMenuItem(favoriteFolder.toString());
                     subMenuItem.addProperty(Constants.PROPERTY_ID, favoriteFolder.getId());
@@ -69,11 +71,11 @@ public class RemoveObjectFromFavoritesFolder extends GenericObjectNodeAction imp
                 }
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
             } else {
-                JOptionPane.showMessageDialog(null, "There are not favorites folders related to the selected object", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, I18N.gm("no_favorites_folder_related_to_selected_object"), 
+                    I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
             }
         } else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
     }
         
     @Override
@@ -85,13 +87,13 @@ public class RemoveObjectFromFavoritesFolder extends GenericObjectNodeAction imp
     public void finalActionPerformed(ActionEvent e) {
         if (e != null && e.getSource() instanceof SubMenuDialog) {
             if (JOptionPane.showConfirmDialog(null, 
-                    "Are you sure you want remove this object from the favorites folder?", "Warning", 
+                    I18N.gm("want_to_remove_from_favorites_folder"), I18N.gm("warning"), 
                     JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
 
                 Iterator<? extends ObjectNode> selectedNodes = Utilities.actionsGlobalContext().lookupResult(ObjectNode.class).allInstances().iterator();
 
-                List<String> objClass = new ArrayList();
-                List<Long> objId = new ArrayList();
+                List<String> objClass = new ArrayList<>();
+                List<Long> objId = new ArrayList<>();
 
                 boolean success = true;
                 while (selectedNodes.hasNext()) {
@@ -111,13 +113,23 @@ public class RemoveObjectFromFavoritesFolder extends GenericObjectNodeAction imp
 
                     } else {
                         success = false;
-                        NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+                        NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
                     }
                 }
 
                 if (success)
-                    NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "The selected objects were removed from the favorites folder");
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, I18N.gm("removed_from_favorites_folder"));
             }
         }
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return null; //Enable this action for any object
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
     }
 }

@@ -18,10 +18,11 @@ package org.kuwaiba.management.services.nodes.actions;
 
 import java.awt.event.ActionEvent;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.util.Constants;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
-import org.kuwaiba.management.services.nodes.actions.endtoend.EndToEndViewDetailedScene;
-import org.kuwaiba.management.services.nodes.actions.endtoend.EndToEndViewTopComponent;
-import org.openide.util.lookup.ServiceProvider;
+import org.kuwaiba.management.services.views.endtoend.EndToEndViewDetailedScene;
+import org.kuwaiba.management.services.views.endtoend.EndToEndViewTopComponent;
 import org.openide.windows.TopComponent;
 
 /**
@@ -29,7 +30,8 @@ import org.openide.windows.TopComponent;
  * logical circuits directly associated to the selected instance
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-@ServiceProvider(service = GenericObjectNodeAction.class)
+@ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
+//@ServiceProvider(service = GenericObjectNodeAction.class)
 public class ShowEndToEndDetailedViewAction extends GenericObjectNodeAction {
 
     public ShowEndToEndDetailedViewAction() {
@@ -44,8 +46,8 @@ public class ShowEndToEndDetailedViewAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String getValidator() {
-        return "service"; //NOI18N
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
@@ -53,4 +55,13 @@ public class ShowEndToEndDetailedViewAction extends GenericObjectNodeAction {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_SERVICE_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ);
     }
 
+    @Override
+    public String[] appliesTo() {
+        return new String[] {Constants.CLASS_GENERICSERVICE};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
+    }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  * 
  *   Licensed under the EPL License, Version 1.0 (the "License");
@@ -19,6 +19,7 @@ import java.util.ResourceBundle;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.views.rackview.RackViewTopComponent;
 import org.openide.util.lookup.ServiceProvider;
@@ -28,6 +29,7 @@ import org.openide.windows.WindowManager;
  * Action to show the rack view of a rack
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ShowRackViewAction extends GenericObjectNodeAction {
     
@@ -36,7 +38,7 @@ public class ShowRackViewAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public void actionPerformed(ActionEvent e) {
+    public void actionPerformed(ActionEvent e) {        
         for (LocalObjectLight rack : selectedObjects) {
             RackViewTopComponent rackView = ((RackViewTopComponent) WindowManager.
                 getDefault().findTopComponent("RackViewTopComponent_" + rack.getOid()));
@@ -58,13 +60,23 @@ public class ShowRackViewAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String getValidator() {
-        return Constants.VALIDATOR_RACK;
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_PHYSICAL_VIEW, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return new String[] { Constants.CLASS_RACK };
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
     }
     
 }

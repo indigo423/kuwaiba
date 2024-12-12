@@ -27,6 +27,7 @@ import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.communications.util.Utils;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.customization.classhierarchy.nodes.properties.ClassAttributeMetadataProperty;
 import org.inventory.customization.classhierarchy.nodes.actions.CreateAttributeAction;
 import org.inventory.customization.classhierarchy.nodes.actions.CreateClassAction;
@@ -53,8 +54,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
     protected CreateAttributeAction createAttributeAction;
     protected DeleteAttributeAction deleteAttributeAction;
     protected Sheet sheet;
-    private final Image defaultIcon = Utils.createRectangleIcon(Utils.DEFAULT_CLASS_ICON_COLOR, 
-            Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT);
+    private Image defaultIcon;
 
     public ClassMetadataNode(LocalClassMetadataLight lcml) {
         super(new ClassMetadataChildren(), Lookups.singleton(lcml));
@@ -65,6 +65,8 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
         deleteAction = new DeleteClassAction(this);
         createAttributeAction = new CreateAttributeAction(this);
         deleteAttributeAction = new DeleteAttributeAction(this);
+        defaultIcon = Utils.createRectangleIcon(lcml.getColor(), 
+            Utils.DEFAULT_ICON_WIDTH, Utils.DEFAULT_ICON_HEIGHT); 
     }
     
     public LocalClassMetadataLight getClassMetadata() {
@@ -107,16 +109,16 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
             classMetadata.setClassName(newName);
             refresh();
         }else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
     }
     
     public void refresh(){
         LocalClassMetadataLight classMetadataRefresh;
         
-        classMetadataRefresh = com.getMetaForClass(classMetadata.getOid(), true);
+        classMetadataRefresh = com.getMetaForClass(classMetadata.getOid());
         
         if(classMetadataRefresh == null)
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
         else{
             classMetadata = classMetadataRefresh;
             if (this.sheet != null)
@@ -133,37 +135,29 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
         
         LocalClassMetadata lcm = com.getMetaForClass(classMetadata.getClassName(), true);
         if (lcm == null){
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             return sheet;
         }
         ClassMetadataProperty nameProp = new ClassMetadataProperty(Constants.PROPERTY_NAME, 
-                                                                           String.class, lcm.getClassName(), "Name", "", this);
+                String.class, lcm.getClassName(), I18N.gm("name"), "", this);
         ClassMetadataProperty displayNameProp = new ClassMetadataProperty(Constants.PROPERTY_DISPLAYNAME, 
-                                                                           String.class, lcm.getDisplayName(), 
-                                                                           "Display Name", "", this);
+                String.class, lcm.getDisplayName(), I18N.gm("display_name"), "", this);
         ClassMetadataProperty descProp = new ClassMetadataProperty(Constants.PROPERTY_DESCRIPTION, 
-                                                                           String.class, lcm.getDescription(), 
-                                                                           "Description", "", this);
-        ClassMetadataProperty abstractProp = new ClassMetadataProperty(Constants.PROPERTY_ABSTRACT, 
-                                                                           Boolean.class, lcm.isAbstract(), 
-                                                                           "Abstract", "", this);
-        ClassMetadataProperty inDesignProp = new ClassMetadataProperty(Constants.PROPERTY_INDESIGN, 
-                                                                           Boolean.class, lcm.isInDesign(), 
-                                                                           "In Design Stage", "", this);
+                String.class, lcm.getDescription(), I18N.gm("description"), "", this);
+        ClassMetadataProperty abstractProp = new ClassMetadataProperty(Constants.PROPERTY_ABSTRACT,
+                Boolean.class, lcm.isAbstract(), I18N.gm("abstract"), "", this);
+        ClassMetadataProperty inDesignProp = new ClassMetadataProperty(Constants.PROPERTY_INDESIGN,
+                Boolean.class, lcm.isInDesign(), I18N.gm("in_design"), "", this);
         ClassMetadataProperty countableProp = new ClassMetadataProperty(Constants.PROPERTY_COUNTABLE, 
-                                                                           Boolean.class, lcm.isCountable(), 
-                                                                           "Countable", "", this);
-        ClassMetadataProperty colorProp = new ClassMetadataProperty(Constants.PROPERTY_COLOR, 
-                                                                           Color.class, lcm.getColor(), 
-                                                                           "Color", "", this);
+                Boolean.class, lcm.isCountable(), I18N.gm("countable"), "", this);
+        ClassMetadataProperty colorProp = new ClassMetadataProperty(Constants.PROPERTY_COLOR,
+                Color.class, lcm.getColor(), I18N.gm("color"), "", this);
         ClassMetadataProperty smallIconProp = new ClassMetadataProperty(Constants.PROPERTY_SMALLICON, 
-                                                                             Byte.class, null, 
-                                                                           "Small Icon", "", this);
-        ClassMetadataProperty iconProp = new ClassMetadataProperty(Constants.PROPERTY_ICON, 
-                                                                           Byte.class, null, 
-                                                                           "Icon", "", this);
+                Byte.class, null, I18N.gm("small_icon"), "", this);
+        ClassMetadataProperty iconProp = new ClassMetadataProperty(Constants.PROPERTY_ICON,
+                Byte.class, null, I18N.gm("icon"), "", this);
         generalPropertySet.setName("1");
-        generalPropertySet.setDisplayName("General Attributes");
+        generalPropertySet.setDisplayName(I18N.gm("general_attributes"));
         generalPropertySet.put(nameProp);
         generalPropertySet.put(displayNameProp);
         generalPropertySet.put(descProp);
@@ -175,7 +169,7 @@ public class ClassMetadataNode extends AbstractNode implements PropertyChangeLis
         generalPropertySet.put(iconProp);
         
         attributePropertySet.setName("2");
-        attributePropertySet.setDisplayName("Class Attributes");
+        attributePropertySet.setDisplayName(I18N.gm("class_attributes"));
         attributePropertySet.setExpert(true);
         LocalAttributeMetadata[] attributes = lcm.getAttributes();
         

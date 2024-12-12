@@ -30,9 +30,8 @@ import org.openide.nodes.Node;
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
 public class TemplatesService  {
-    private static TemplatesService instance;
-    private TemplatesTopComponent topComponent;
-    private CommunicationsStub com = CommunicationsStub.getInstance();
+    private final TemplatesTopComponent topComponent;
+    private final CommunicationsStub com = CommunicationsStub.getInstance();
     
     public TemplatesService(TemplatesTopComponent topComponent) {
         this.topComponent = topComponent;
@@ -41,14 +40,15 @@ public class TemplatesService  {
     public void setRoot() {
         final List<LocalClassMetadataLight> allClasses = com.getLightSubclasses(Constants.CLASS_INVENTORYOBJECT, false, false);
         topComponent.getExplorerManager().setRootContext(new AbstractNode(new Children.Keys<LocalClassMetadataLight>() {
-                    {
-                        setKeys(allClasses);
-                    }
-                    @Override
-                    protected Node[] createNodes(LocalClassMetadataLight t) {
-                        return new Node[] {new TemplatesModuleClassNode(t)};
-                    }
-                }));
+            
+            {
+                setKeys(allClasses);
+            }
+                        
+            @Override
+            protected Node[] createNodes(LocalClassMetadataLight t) {
+                return new Node[] {new TemplatesModuleClassNode(t)};
+            }
+        }));
     }
-
 }

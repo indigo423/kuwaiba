@@ -1,13 +1,13 @@
 /*
  * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  * 
-* Licensed under the EPL License, Version 1.0 (the "License"); you may not use
+ * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at
  * 
-* http://www.eclipse.org/legal/epl-v10.html
+ * http://www.eclipse.org/legal/epl-v10.html
  * 
-* Unless required by applicable law or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations under
@@ -22,6 +22,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import javax.swing.Action;
@@ -35,13 +36,16 @@ import org.inventory.communications.core.LocalObjectListItem;
 import org.inventory.communications.util.Constants;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionGroupActionsFactory;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.CreateBusinessObjectAction;
 import org.inventory.navigation.navigationtree.nodes.actions.CreateBusinessObjectFromTemplateAction;
 import org.inventory.navigation.navigationtree.nodes.actions.CreateMultipleBusinessObjectAction;
 import org.inventory.navigation.navigationtree.nodes.actions.DeleteBusinessObjectAction;
 import org.inventory.navigation.navigationtree.nodes.actions.EditObjectAction;
 import org.inventory.navigation.navigationtree.nodes.actions.ExecuteClassLevelReportAction;
-import org.inventory.navigation.navigationtree.nodes.actions.RefreshObjectAction;
+import org.inventory.navigation.navigationtree.nodes.actions.UpdateNodeAction;
 import org.inventory.navigation.navigationtree.nodes.actions.ShowMoreInformationAction;
 import org.inventory.navigation.navigationtree.nodes.properties.DateTypeProperty;
 import org.inventory.navigation.navigationtree.nodes.properties.ListTypeProperty;
@@ -83,7 +87,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         if (lol.getClassName() != null) {
             lol.addPropertyChangeListener(WeakListeners.propertyChange(this, lol));
             icon = com.getMetaForClass(lol.getClassName(), false).getSmallIcon();
-            explorerAction.putValue(OpenLocalExplorerAction.NAME, "Open a Explorer from Here");
+            explorerAction.putValue(OpenLocalExplorerAction.NAME, "Open an Explorer from Here");
         }
     }
 
@@ -91,7 +95,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         super(Children.LEAF, Lookups.singleton(lol));
         lol.addPropertyChangeListener(WeakListeners.propertyChange(this, lol));
         icon = com.getMetaForClass(lol.getClassName(), false).getSmallIcon();
-        explorerAction.putValue(OpenLocalExplorerAction.NAME, "Open a Explorer from Here");
+        explorerAction.putValue(OpenLocalExplorerAction.NAME, "Open an Explorer from Here");
     }
 
     /**
@@ -118,14 +122,14 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         
         LocalClassMetadata meta = com.getMetaForClass(object.getClassName(), false);
         if (meta == null) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             return sheet;
         }
         
         LocalObject lo = com.getObjectInfo(object.getClassName(), object.getOid());
         
         if (lo == null) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             return sheet;
         }
         
@@ -136,6 +140,8 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                 PropertySupport.ReadWrite property = null;
                 int mapping = lam.getMapping();
                 switch (mapping) {
+                    case Constants.MAPPING_BINARY: //TODO: to do the mapping for binaries
+                        continue;
                     case Constants.MAPPING_TIMESTAMP:
                     case Constants.MAPPING_DATE:
                         property = new DateTypeProperty((Date)lo.getAttribute(lam.getName()) , 
@@ -143,8 +149,6 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                 lam.getDescription(), this);
                         break;
                     case Constants.MAPPING_PRIMITIVE:
-                    //Those attributes that are not multiple, but reference another object
-                    //like endpointX in physicalConnections should be ignored, at least by now
                         if (!lam.getType().equals(LocalObjectLight.class)) {
                             property = new NativeTypeProperty(
                                     lam.getName(),
@@ -157,7 +161,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                         //If so, this can be a reference to an object list item or a 1:1 to any other RootObject subclass
                         List<LocalObjectListItem> list = com.getList(lam.getListAttributeClassName(), true, false);
                         if (list == null) {
-                            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
                             return sheet;
                         }
                         LocalObjectListItem val = null;
@@ -180,7 +184,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                 val);
                         break;
                     default:
-                        NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, "Mapping not supported");
+                        NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, "Mapping not supported");
                         return sheet;
                 }
                 
@@ -247,11 +251,20 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         actions.add(CreateMultipleBusinessObjectAction.getInstance());
         actions.add(CreateBusinessObjectFromTemplateAction.getInstance());
         if (getParentNode() != null) {
-            actions.add(SystemAction.get(CopyAction.class));
-            actions.add(SystemAction.get(CutAction.class));
-            actions.add(SystemAction.get(PasteAction.class));
+            Action copyAction = SystemAction.get(CopyAction.class);
+            copyAction.putValue(Action.NAME, I18N.gm("lbl_copy_action"));
+                        
+            Action cutAction = SystemAction.get(CutAction.class);
+            cutAction.putValue(Action.NAME, I18N.gm("lbl_cut_action"));
+                                    
+            Action pasteAction = SystemAction.get(PasteAction.class);
+            pasteAction.putValue(Action.NAME, I18N.gm("lbl_paste_action"));
+            
+            actions.add(copyAction);
+            actions.add(cutAction);
+            actions.add(pasteAction);
         }        
-        actions.add(RefreshObjectAction.getInstance(this));
+        actions.add(UpdateNodeAction.getInstance(this));
         actions.add(EditObjectAction.getInstance(this));
         
         actions.add(null); //Separator
@@ -262,16 +275,41 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
         }
         
         actions.add(ExecuteClassLevelReportAction.getInstance());
-        
+                        
         for (GenericObjectNodeAction action : Lookup.getDefault().lookupAll(GenericObjectNodeAction.class)) {
-            if (action.getValidator() == null) {
-                actions.add(action);
-            } else {
-                if (com.getMetaForClass(object.getClassName(), false).getValidator(action.getValidator()) == 1) {
-                    actions.add(action);
+            if (action.getClass().getAnnotation(ActionsGroupType.class) != null)
+                continue;
+                        
+            if (action.appliesTo() != null) {
+                for (String className : action.appliesTo()) {
+                    if (CommunicationsStub.getInstance().isSubclassOf(object.getClassName(), className)) {
+                        System.out.println("Nom is" + action.getClass().getName());
+                        actions.add(action);
+                        break;
+                    }
                 }
-            }
-        }        
+            } else
+                actions.add(action);                
+// Not used for now
+//                else {
+//                if (action.getValidators() != null) {
+//                    for (String validator : action.getValidators()) {
+//                        if (CommunicationsStub.getInstance().getMetaForClass(object.getClassName(), false).getValidator(validator) == 1) {
+//                            actions.add(action);
+//                            break;
+//                        }
+//                    }                                                
+//                } else {
+//                    actions.add(action);
+//                }                
+//            }
+        }
+        actions.add(ActionGroupActionsFactory.getInstanceOfOpenViewGroupActions());
+        actions.add(ActionGroupActionsFactory.getInstanceOfRelateToGroupActions());
+        actions.add(ActionGroupActionsFactory.getInstanceOfReleaseFromGroupActions());
+        actions.add(ActionGroupActionsFactory.getInstanceMirrorPortActions());
+        actions.add(ActionGroupActionsFactory.getInstanceDiagnosticActions());
+        
         actions.add(null); //Separator
         actions.add(explorerAction);
         actions.add(ShowMoreInformationAction.getInstance(getObject().getOid(), getObject().getClassName()));
@@ -340,10 +378,10 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                 if (getChildren() instanceof AbstractChildren)
                                     ((AbstractChildren)getChildren()).addNotify();
                             } else 
-                                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
                         } else {
                             if (action == DnDConstants.ACTION_MOVE) {
-                                if (com.moveObjects(getObject().getClassName(), getObject().getOid(), new LocalObjectLight[]{obj})) {
+                                if (com.moveObjects(getObject().getClassName(), getObject().getOid(), Arrays.asList(obj))) {
                                     //Refreshes the old parent node
                                     if (dropNode.getParentNode().getChildren() instanceof AbstractChildren)
                                         ((AbstractChildren)dropNode.getParentNode().getChildren()).addNotify();
@@ -352,14 +390,14 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                                     if (getChildren() instanceof AbstractChildren)
                                         ((AbstractChildren)getChildren()).addNotify();
                                 } else
-                                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
                             }
                         }
                     } else 
-                        NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE,
+                        NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE,
                                 String.format("An instance of %s can't be moved into an instance of %s", obj.getClassName(), getObject().getClassName()));
                 } catch (Exception ex) {
-                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, ex.getMessage());
                 }
                 return null;
             }
@@ -405,7 +443,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
                 setSheet(createSheet());
         }
         else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());      
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());      
     }
 
     @Override
@@ -430,7 +468,7 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ObjectNode) {
-            return ((ObjectNode) obj).getObject().equals(this.getObject());
+                return ((ObjectNode) obj).getObject().equals(this.getObject());
         } else
             return false;
     }
@@ -439,5 +477,4 @@ public class ObjectNode extends AbstractNode implements PropertyChangeListener {
     public int hashCode() {
         return super.hashCode();
     }
-
 }

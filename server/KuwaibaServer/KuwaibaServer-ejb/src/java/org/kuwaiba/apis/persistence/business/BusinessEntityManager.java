@@ -141,7 +141,7 @@ public interface BusinessEntityManager {
      */
     public long[] createBulkSpecialObjects(String className, String parentClassName, long parentId, int numberOfSpecialObjects, String namePattern) 
         throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException, InvalidArgumentException;
-        
+    
     /**
      * Gets the detailed information about an object
      * @param className Object class name
@@ -186,6 +186,29 @@ public interface BusinessEntityManager {
      */
     public RemoteBusinessObjectLight getObjectLight(String className, long oid)
             throws MetadataObjectNotFoundException, ObjectNotFoundException;
+    
+    /**
+     * Retrieves a list of instances of a given class
+     * @param className Class name. This method only works with non-abstract classes for now
+     * @param filterName The attribute to be used as filter. This will work <b>only</b> with String-type attributes. Example: serialNumber
+     * @param filterValue The value to be use to match the instances. Example "Serial-12345"
+     * @return The list of instances that meet the filterName/filterValue criteria
+     * @throws MetadataObjectNotFoundException If the class provided could not be found
+     */
+    public List<RemoteBusinessObjectLight> getObjectsWithFilterLight (String className, 
+            String filterName, String filterValue) throws MetadataObjectNotFoundException;
+    
+    /**
+     * Same as <code>getObjectsWithFilterLight</code>, but returns the full information about the objects involved
+     * @param className Class name. This method only works with non-abstract classes for now
+     * @param filterName The attribute to be used as filter. This will work <b>only</b> with String-type attributes. Example: serialNumber
+     * @param filterValue The value to be use to match the instances. Example "Serial-12345"
+     * @return The list of instances that meet the filterName/filterValue criteria
+     * @throws MetadataObjectNotFoundException If the class provided could not be found
+     * @throws InvalidArgumentException If it's not possible to construct the RemoteBusinessObjects from the information in the database
+     */
+    public List<RemoteBusinessObject> getObjectsWithFilter (String className, 
+            String filterName, String filterValue) throws MetadataObjectNotFoundException, InvalidArgumentException;
     
     /**
      * Gets the common parent between an a object and b object
@@ -233,9 +256,24 @@ public interface BusinessEntityManager {
      * @return The list of parents until an instance of objectToMatchClassName is found. If no instance of that class is found, all parents until the Dummy Root will be returned
      * @throws ObjectNotFoundException If the object to evaluate can not be found
      * @throws MetadataObjectNotFoundException If any of the classes provided could not be found
+     * @throws ApplicationObjectNotFoundException If the object provided is not in the standard containment hierarchy
      */
     public List<RemoteBusinessObjectLight> getParentsUntilFirstOfClass(String objectClassName, long oid, String objectToMatchClassName)
-        throws ObjectNotFoundException, MetadataObjectNotFoundException;
+        throws ObjectNotFoundException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException;
+
+    /**
+     * Gets the first occurrence of a parent with a given class (according to the special and standard containment hierarchy)
+     * (for example "give me the parent of this port until you find the nearest rack")
+     * @param objectClassName Class of the object to get the parent from
+     * @param oid Id of the object to get the parent from
+     * @param objectToMatchClassName Class of the object that will limit the search. It can be a superclass, if you want to match many classes at once
+     * @return The the first occurrence of a parent with a given class. If no instance of that class is found, the child of Dummy Root related in this hierarchy will be returned
+     * @throws ObjectNotFoundException If the object to evaluate can not be found
+     * @throws MetadataObjectNotFoundException If any of the classes provided could not be found
+     * @throws ApplicationObjectNotFoundException If the object provided is not in the standard containment hierarchy
+     */
+    public RemoteBusinessObjectLight getFirstParentOfClass(String objectClassName, long oid, String objectToMatchClassName)
+        throws ObjectNotFoundException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException;
 
     /**
      * Gets the first parent of an object which matches the given class in the containment hierarchy
@@ -328,6 +366,32 @@ public interface BusinessEntityManager {
     public void moveObjects(String targetClassName, long targetOid, HashMap<String,long[]> objects)
             throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
 
+     /**
+     * Move a list of objects to a new parent(taking into account the special
+     * hierarchy containment): this methods ignores those who can't be moved and raises an 
+     * OperationNotPermittedException, however, it will move those which can be moved
+     * @param objects Map using the object class name as keys and the respective objects oids as values
+     * @param targetClassName Parent's class name
+     * @param targetOid Parent's oid
+     * @throws MetadataObjectNotFoundException If the object's or new parent's class can't be found
+     * @throws ObjectNotFoundException If the object or its new parent can't be found
+     * @throws OperationNotPermittedException If the update can't be performed due to a business rule
+     */
+    public void moveSpecialObjects(String targetClassName, long targetOid, HashMap<String,long[]> objects)
+            throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
+    /**
+     * Move a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @throws ApplicationObjectNotFoundException If the pool node can not be found
+     * @throws InvalidArgumentException If the pool item can not be move to the selected pool
+     * @throws ObjectNotFoundException If the pool item can not be found
+     * @throws MetadataObjectNotFoundException If the pool item class name can no be found
+     */
+    public void movePoolItem(long poolId, String poolItemClassName, long poolItemId) throws 
+        ApplicationObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException, 
+        MetadataObjectNotFoundException;
     /**
      * Copy a set of objects
      * @param objects Hashmap with the objects class names as keys and their oids as values
@@ -343,10 +407,39 @@ public interface BusinessEntityManager {
             throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
 
     /**
+     * Copy a set of special objects (this is used to copy objects when they are containment are set in the special containment hierarchy)
+     * use case: to move physical links into a wire Container
+     * @param objects Hashmap with the objects class names as keys and their oids as values
+     * @param targetClassName Target parent's class name
+     * @param targetOid Target parent's oid
+     * @param recursive If this operation should also copy the children objects recursively
+     * @return A list containing the newly created object ids
+     * @throws MetadataObjectNotFoundException If any of the provided classes couldn't be found
+     * @throws ObjectNotFoundException If any of the template objects couldn't be found
+     * @throws OperationNotPermittedException If the target parent can't contain any of the new instances
+     */
+    public long[] copySpecialObjects(String targetClassName, long targetOid, HashMap<String, long[]> objects, boolean recursive)
+            throws MetadataObjectNotFoundException, ObjectNotFoundException, OperationNotPermittedException;
+    /**
+     * Copy a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @param recursive If this operation should also copy the children objects recursively
+     * @return The newly created object id
+     * @throws ApplicationObjectNotFoundException If the pool node can not be found
+     * @throws InvalidArgumentException If the pool item can not be move to the selected pool
+     * @throws ObjectNotFoundException If the pool item can not be found
+     * @throws MetadataObjectNotFoundException If the pool item class name can no be found
+     */
+    public long copyPoolItem(long poolId, String poolItemClassName, long poolItemId, boolean recursive) throws 
+        ApplicationObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException, 
+        MetadataObjectNotFoundException;
+    /**
      * Gets the children of a given object
      * @param className Object's class name
      * @param oid Object's oid
-     * @param maxResults max number of children to be returned
+     * @param maxResults max number of children to be returned, -1 to return all
      * @return The list of children
      * @throws MetadataObjectNotFoundException If the object's can't be found
      * @throws ObjectNotFoundException If the object or its new parent can't be found
@@ -381,7 +474,22 @@ public interface BusinessEntityManager {
             throws MetadataObjectNotFoundException, ObjectNotFoundException, InvalidArgumentException;
     
     /**
-     * Gets all children of a given class to filter in a hierarchy with root in the given parent
+     * Returns the special children of a given object as RemoteBusinessObjectLight instances. This method is not recursive.
+     * @param parentOid The id of the parent object
+     * @param parentClass The class name of the parent object
+     * @param classToFilter The superclass/class to be used to filter the results. You can also use abstract superclasses.
+     * @param maxResults The max number of results to fetch. Use -1 to retrieve all
+     * @return The list of special children of the given object, filtered using classToFilter
+     * @throws MetadataObjectNotFoundException If the parent class name provided could not be found
+     * @throws ObjectNotFoundException If the parent object could not be found
+     */
+    public List<RemoteBusinessObjectLight> getSpecialChildrenOfClassLight(long parentOid, String parentClass, String classToFilter, int maxResults)
+            throws MetadataObjectNotFoundException, ObjectNotFoundException;
+    
+    /**
+     * Gets all class and abstract class children of a given class to filter in 
+     * a hierarchy with root in the given parent.
+     * Use case: used in some class level and inventory level reports script 
      * @param parentOid Object id of the root parent of the hierarchy
      * @param parentClass Class name of the root parent of the hierarchy
      * @param classToFilter Class name of the expected children
@@ -393,7 +501,9 @@ public interface BusinessEntityManager {
     public List<RemoteBusinessObjectLight> getChildrenOfClassLightRecursive(long parentOid, String parentClass, String classToFilter, int maxResults) 
         throws MetadataObjectNotFoundException, ObjectNotFoundException;
     /**
-     * Gets all special children of a given class to filter in a hierarchy with root in the given parent
+     * Gets all class and abstract class special children of a given class to filter 
+     * in a hierarchy with root in the given parent.
+     * Use case: used in some class level and inventory level reports script 
      * @param parentOid Object id of the root parent of the hierarchy
      * @param parentClass Class name of the root parent of the hierarchy
      * @param classToFilter Class name of the expected children
@@ -590,19 +700,7 @@ public interface BusinessEntityManager {
      */
     public List<AttributeMetadata> getMandatoryAttributesInClass(String className) throws 
             MetadataObjectNotFoundException;
-             
-    /**
-     * Retrieves if an object has values in its attributes marked as mandatory
-     * @param className the object's class name
-     * @param objId object given id
-     * @throws ObjectNotFoundException if the object doesn't exist
-     * @throws MetadataObjectNotFoundException if the class doesn't exist
-     * @throws InvalidArgumentException if the mandatory attribute has no value
-     */         
-    public void objectHasValuesInMandatoryAttributes(String className, 
-            long objId) throws ObjectNotFoundException, 
-            MetadataObjectNotFoundException, InvalidArgumentException;
-    
+   
     /**
      * Finds the physical path from one port to another
      * @param objectClass The source port class.

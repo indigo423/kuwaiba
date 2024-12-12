@@ -15,8 +15,14 @@
  */
 package org.kuwaiba.management.services;
 
+import java.awt.event.KeyEvent;
+import javax.swing.InputMap;
+import static javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW;
+import javax.swing.KeyStroke;
+import javax.swing.text.DefaultEditorKit;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.navigation.navigationtree.nodes.actions.DeleteBusinessObjectAction;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
@@ -26,6 +32,7 @@ import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
 import org.openide.util.Lookup;
 import org.openide.util.NbBundle.Messages;
+import org.openide.util.actions.SystemAction;
 import org.openide.windows.Mode;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -39,15 +46,15 @@ import org.openide.windows.WindowManager;
 autostore = false)
 @TopComponent.Description(
     preferredID = "ServiceManagerTopComponent",
-iconBase = "org/kuwaiba/management/services/res/icon.png",
-persistenceType = TopComponent.PERSISTENCE_ALWAYS)
+    iconBase = "org/kuwaiba/management/services/res/icon.png",
+    persistenceType = TopComponent.PERSISTENCE_ALWAYS)
 @TopComponent.Registration(mode = "explorer", openAtStartup = false)
 @ActionID(category = "Window", id = "org.kuwaiba.management.services.ServiceManagerTopComponent")
 @ActionReferences(value = {@ActionReference(path = "Menu/Tools/Advanced", position = 1),
     @ActionReference(path = "Toolbars/10_Advanced", position = 1)})
 @TopComponent.OpenActionRegistration(
     displayName = "#CTL_ServiceManagerAction",
-preferredID = "ServiceManagerTopComponent")
+    preferredID = "ServiceManagerTopComponent")
 @Messages({
     "CTL_ServiceManagerAction=Service Manager",
     "CTL_ServiceManagerTopComponent=Service Manager",
@@ -63,16 +70,32 @@ public final class ServiceManagerTopComponent extends TopComponent
     
     public ServiceManagerTopComponent() {
         initComponents();
+        initCustomComponents();
         setName(Bundle.CTL_ServiceManagerTopComponent());
         setToolTipText(Bundle.HINT_ServiceManagerTopComponent());
-        em = new ExplorerManager();
-        associateLookup(ExplorerUtils.createLookup(em, getActionMap()));
+        
         nu = Lookup.getDefault().lookup(NotificationUtil.class);
         sms = new ServiceManagerService(this);
         tree = new BeanTreeView();
-        pnlScrollMain.setViewportView(tree);
+        add(tree);
     }
+    
+    public void initCustomComponents() {
+        em = new ExplorerManager();
+        associateLookup(ExplorerUtils.createLookup(em, getActionMap()));
+        
+        getActionMap().put(DefaultEditorKit.copyAction, ExplorerUtils.actionCopy(em));
+        getActionMap().put(DefaultEditorKit.cutAction, ExplorerUtils.actionCut(em));
+        getActionMap().put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
+        getActionMap().put(DeleteBusinessObjectAction.ACTION_MAP_KEY, SystemAction.get(DeleteBusinessObjectAction.class));
 
+        //Now the keystrokes
+        InputMap keys = getInputMap(WHEN_IN_FOCUSED_WINDOW);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.copyAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.cutAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.pasteAction);
+    }
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -81,14 +104,10 @@ public final class ServiceManagerTopComponent extends TopComponent
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        pnlScrollMain = new javax.swing.JScrollPane();
-
         setLayout(new java.awt.BorderLayout());
-        add(pnlScrollMain, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane pnlScrollMain;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {

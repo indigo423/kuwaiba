@@ -19,28 +19,43 @@ import com.neotropic.inventory.modules.contracts.nodes.ContractManagerRootNode;
 import com.neotropic.inventory.modules.contracts.nodes.ContractPoolNode;
 import java.awt.event.ActionEvent;
 import java.util.Iterator;
+import static javax.swing.Action.NAME;
+import static javax.swing.Action.SMALL_ICON;
+import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.core.services.utils.ImageIconResource;
 import org.openide.util.Utilities;
+import org.openide.util.actions.Presenter;
 
 /**
  * Deletes a contract pool
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-public class DeleteContractPoolAction extends GenericInventoryAction {
+public class DeleteContractPoolAction extends GenericInventoryAction implements Presenter.Popup {
+    private final JMenuItem popupPresenter;
 
     public DeleteContractPoolAction() {
-        putValue(NAME, "Delete Contract Pool");
+        putValue(NAME, I18N.gm("delete_contract_pool"));
+        putValue(SMALL_ICON, ImageIconResource.WARNING_ICON);
+                
+        popupPresenter = new JMenuItem();
+        popupPresenter.setName((String) getValue(NAME));
+        popupPresenter.setText((String) getValue(NAME));
+        popupPresenter.setIcon((ImageIcon) getValue(SMALL_ICON));
+        popupPresenter.addActionListener(this);
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         
-        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this pool? All children will be removed as well", 
-                "Warning", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+        if (JOptionPane.showConfirmDialog(null, I18N.gm("want_to_delete_pool"), 
+                I18N.gm("warning"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
         
             Iterator<? extends ContractPoolNode> selectedNodes = Utilities.actionsGlobalContext().lookupResult(ContractPoolNode.class).allInstances().iterator();
 
@@ -50,16 +65,21 @@ public class DeleteContractPoolAction extends GenericInventoryAction {
             ContractPoolNode selectedNode = selectedNodes.next();
 
             if (CommunicationsStub.getInstance().deletePool(selectedNode.getPool().getOid())) {
-                NotificationUtil.getInstance().showSimplePopup("Information", NotificationUtil.INFO_MESSAGE, "The selected pool was deleted");
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, I18N.gm("pool_was_deleted"));
                 ((ContractManagerRootNode.ContractManagerRootChildren)selectedNode.getParentNode().getChildren()).addNotify();
             }
             else
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE, CommunicationsStub.getInstance().getError());
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, CommunicationsStub.getInstance().getError());
         }
     }
     
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_CONTRACT_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public JMenuItem getPopupPresenter() {
+        return popupPresenter;
     }
 }

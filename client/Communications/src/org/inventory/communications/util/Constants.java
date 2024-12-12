@@ -1,5 +1,5 @@
-/**
- *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ public class Constants {
     public static final int DEBUG_LEVEL_INFO = 1;
     public static final int DEBUG_LEVEL_FINE = 2;
     public static int DEBUG_LEVEL = DEBUG_LEVEL_INFO;
+    
+    public static final int DEVICE_LAYOUT_RESIZE_BORDER_SIZE = 4;
     //public static int DEBUG_LEVEL = DEBUG_LEVEL_DISABLED;
      /**
      * IP address type for IPv4
@@ -42,45 +44,21 @@ public class Constants {
      */
     public static final String VALIDATOR_PHYSICAL_CONTAINER = "physicalContainer";
     /**
-     * Name of the validator to indicate if a given class is a link
-     */
-    public static final String VALIDATOR_PHYSICAL_LINK = "physicalLink";
-    /**
      * Name of the validator to indicate if a given class is the endpoint to a connection
      */
     public static final String VALIDATOR_PHYSICAL_NODE = "physicalNode";
     /**
      * Name of the validator to indicate if a given class is the endpoint to a link
      */
-    public static final String VALIDATOR_PHYSICAL_ENDPOINT = "physicalEndpoint";
-    /**
-     * Name of the validator to indicate if a given class is the logical endpoint to a link
-     */
-    public static final String VALIDATOR_LOGICAL_ENDPOINT = "logicalEndpoint";
-    /**
-     * Name of the validator to indicate if a given class is the logical endpoint to a link
-     */
-    public static final String VALIDATOR_LOGICAL_SET = "logicalSet";
-    /**
-     * Name of the validator to indicate if a given class is the endpoint to a link
-     */
     public static final String VALIDATOR_SERVICE_INSTANCE = "serviceInstance";
-    /**
-     * All instances of classes tagged with this validator may be related to a software asset
-     */
-    public static final String VALIDATOR_APPLICATION_ELEMENT = "genericApplicationElement";
     /**
      * All instances of classes tagged with this validator may be related to a subnet
      */
     public static final String VALIDATOR_SUBNET = "subnet";
     /**
-     * All instances of classes tagged with this validator may be related to VLANs
+     * The validator to indicate if a given class is a GenericCommunicationsElement
      */
-    public static final String VALIDATOR_VLAN = "vlanrule";
-    /**
-     * The validator to indicate if a given class is a Rack
-     */
-    public static final String VALIDATOR_RACK = "rack";
+    public static final String VALIDATOR_GENERIC_COMMUNICATIONS_ELEMENT = "communicationsElement";
     /**
      * DummyRoot constant. It's a pseudo class
      */
@@ -124,7 +102,27 @@ public class Constants {
     /**
      * Root class of all communications equipment (GenericDataLinkLayerElement, GenericNetworkElement, etc)
      */
-    public static final String CLASS_GENERICCOMMUNICATIONSELEMENT = "GenericCommunicationsElement";
+    public static final String CLASS_GENERICCOMMUNICATIONSELEMENT = "GenericCommunicationsElement";    
+    /**
+     * Root class of all network element
+     */
+    public static final String CLASS_GENERICNETWORKELEMENT = "GenericNetworkElement";
+    /**
+     * Root class of all generic distribution frame (DDF, ODF, etc)
+     */
+    public static final String CLASS_GENERICDISTRIBUTIONFRAME = "GenericDistributionFrame";
+    /**
+     * Root class of all application list type (CustomShape)
+     */
+    public static final String CLASS_GENERICAPPLICATIONLISTTYPE = "GenericApplicationListType";
+    /**
+     * Class CustomShape
+     */
+    public static final String CLASS_CUSTOMSHAPE = "CustomShape";
+    /**
+     * Root class of all logical connections
+     */
+    public static final String CLASS_GENERICLOGICALCONNECTION = "GenericLogicalConnection";
     /**
      * Class Rack
      */
@@ -167,7 +165,20 @@ public class Constants {
      * Name for class GenericActivity
      */
     public static final String CLASS_GENERICACTIVITY = "GenericActivity";
+    /**
+     * Name for class GenericSDHTransportLink
+     */
+    public static final String CLASS_GENERICSDHTRANSPORTLINK = "GenericSDHTransportLink";
+    /**
+     * Name for class GenericSDHContainerLink
+     */
+    public static final String CLASS_GENERICSDHCONTAINERLINK = "GenericSDHContainerLink";
+    /**
+     * Name for class GenericSDHTributaryLink
+     */
+    public static final String CLASS_GENERICSDHTRIBUTARYLINK = "GenericSDHTributaryLink";
     
+    public static final String CLASS_GENERICAPPLICATIONELEMENT = "GenericApplicationElement";
     /**
      * Not an actual class, but yet used by the service manager to identify a pool mapped to a LocalObjectLight
      */
@@ -188,6 +199,14 @@ public class Constants {
      * Class FrameRelay
      */
     public static final String CLASS_FRAMERELAYCIRCUIT = "FrameRelayCircuit";
+    /**
+     * Class WireContainer
+     */
+    public static final String CLASS_WIRECONTAINER = "WireContainer";
+    /**
+     * Class MPLSLink
+     */
+    public static final String CLASS_MPLSLINK = "MPLSLink";
     /**
      * Default type for a new attribute
      */
@@ -240,10 +259,12 @@ public class Constants {
     /**
      * Possible attributes types
      */
-    public static final String [] ATTRIBUTE_TYPES = new String[]{"String", "Integer", "Long", "Float", "Boolean", "Date", "Timestamp"};
+    public static final String [] ATTRIBUTE_TYPES = new String[]{"String", "Integer", "Long", "Float", "Boolean", "Date", "Timestamp", 
+        /*"Binary" //TODO: This attribute type will be supported in a future release. The current use of this attribute type are in the CustomShape class*/};
+    public static final String ATTRIBUTE_MODEL = "model";
     /**
      * Property name
-     */
+     */    
     public static final String PROPERTY_NAME = "name";
     
     /**
@@ -266,6 +287,10 @@ public class Constants {
      * Property enabled
      */
     public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
+    /**
+     * Property commit on execute
+     */
+    public static final String PROPERTY_COMMIT_ON_EXECUTE = "commitOnExecute"; //NOI18N
     /**
      * Property script
      */
@@ -387,6 +412,42 @@ public class Constants {
      */
     public static final String PROPERTY_HOSTS = "hosts";
     /**
+     * Property version
+     */
+    public static final String PROPERTY_VERSION = "version";
+    /**
+     * SNMP version 2c property community
+     */
+    public static final String PROPERTY_COMMUNITY = "community";
+    /**
+     * SNMP version 3 property authentication protocol
+     */
+    public static final String PROPERTY_AUTH_PROTOCOL = "authProtocol";
+    /**
+     * SNMP version 3 property authentication protocol pass phrase
+     */
+    public static final String PROPERTY_AUTH_PASS = "authPass";    
+    /**
+     * SNMP version 3 property security Level
+     */
+    public static final String PROPERTY_SECURITY_LEVEL = "securityLevel";
+    /**
+     * SNMP version 3 property context Name
+     */
+    public static final String PROPERTY_CONTEXT_NAME = "contextName";
+    /**
+     * SNMP version 3 property security name
+     */
+    public static final String PROPERTY_SECURITY_NAME = "securityName";
+    /**
+     * SNMP version 3 property privacy Protocol
+     */
+    public static final String PROPERTY_PRIVACY_PROTOCOL = "privacyProtocol";
+    /**
+     * SNMP version 3 property privacy protocol pass phrase
+     */
+    public static final String PROPERTY_PRIVACY_PASS = "privacyPass";
+    /**
      * List type class for operational state
      */
     public static final String LIST_TYPE_OPERATIONAL_STATE = "OperationalState";
@@ -399,6 +460,10 @@ public class Constants {
      * Generic classes
      */
     public static final String CLASS_GENERICCONNECTION="GenericConnection";
+    /**
+     * Generic classes
+     */
+    public static final String CLASS_GENERICPHYSICALCONNECTION="GenericPhysicalConnection";
 
 
     //Misc versions
@@ -406,5 +471,9 @@ public class Constants {
      * Version for the XML document to save views (see http://neotropic.co/kuwaiba/wiki/index.php?title=XML_Documents#To_Save_Object_Views for details)
      */
      public static final String VIEW_FORMAT_VERSION = "1.1";
+     /**
+      * Version of the current Topology View XML document
+      */
+     public static final String TOPOLOGYVIEW_FORMAT_VERSION = "1.2";
     
 }

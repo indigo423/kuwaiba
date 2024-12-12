@@ -143,11 +143,16 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
         newEdge.getActions().addAction(addRemoveControlPointAction);
         newEdge.getActions().addAction(moveControlPointAction);
         newEdge.getActions().addAction(ActionFactory.createPopupMenuAction(moduleActions.createMenuForConnection()));
-        newEdge.setStroke(new BasicStroke(1));
         newEdge.setControlPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setEndPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setRouter(RouterFactory.createFreeRouter());
         newEdge.setToolTipText(edge.toString());
+        LocalClassMetadata connectionClassMetadata = CommunicationsStub.getInstance().getMetaForClass(edge.getClassName(), false);
+        if (connectionClassMetadata == null || connectionClassMetadata.getColor() == null)
+            newEdge.setLineColor(Color.BLACK);
+        else
+            newEdge.setLineColor(connectionClassMetadata.getColor());
+        
         edgeLayer.addChild(newEdge);
         return newEdge;
     }
@@ -283,12 +288,11 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
 
                                 if (aSideWidget == null || bSideWidget == null) {
                                     NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.INFO_MESSAGE, 
-                                            String.format("One or both of the endpoints of connection of class %s and id %s could not be found, so the connection was removed from the view", className, objectId));
+                                            String.format("One or both of the endpoints of the connection of class %s and id %s could not be found. The connection was removed from the view", className, objectId));
                                     fireChangeEvent(new ActionEvent(this, SCENE_CHANGE, "connectionAutomaticallyRemoved")); //NOI18N
                                 }
                                 else {
                                     ConnectionWidget newEdge = (ObjectConnectionWidget)addEdge(container);
-                                    newEdge.setLineColor(getConnectionColor(container));
                                     setEdgeSource(container, aSideObject);
                                     setEdgeTarget(container, bSideObject);
                                     List<Point> localControlPoints = new ArrayList<>();
@@ -338,16 +342,6 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
     public boolean supportsBackgrounds() {
         return false;
     }
-    
-    @Override
-    public Color getConnectionColor(LocalObjectLight theConnection) {
-        
-        LocalClassMetadata connectionClassMetadata = CommunicationsStub.getInstance().getMetaForClass(theConnection.getClassName(), false);
-        if (connectionClassMetadata == null)
-            return Color.BLACK;
-        
-        return connectionClassMetadata.getColor() == null ? Color.BLACK : connectionClassMetadata.getColor();
-    }
 
     @Override
     public void render(LocalObjectLight root) { }
@@ -366,10 +360,9 @@ public class SDHModuleScene extends AbstractScene<LocalObjectLight, LocalObjectL
             if (newConnection != null) {
                 //Only create edges in the scene if the connection is a TransportLink
                 if (CommunicationsStub.getInstance().isSubclassOf(newConnection.getClassName(), "GenericSDHTransportLink")) {
-                    ObjectConnectionWidget newConnectionWidget = (ObjectConnectionWidget)addEdge(newConnection);
+                    addEdge(newConnection);
                     setEdgeSource(newConnection, sourceObject);
                     setEdgeTarget(newConnection, targetObject);
-                    newConnectionWidget.setLineColor(getConnectionColor(newConnection));
                     fireChangeEvent(new ActionEvent(this, SCENE_CHANGE, "attachEdge")); //NOI18N
                 }
             }

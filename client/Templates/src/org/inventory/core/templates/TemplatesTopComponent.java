@@ -21,6 +21,8 @@ import javax.swing.InputMap;
 import javax.swing.KeyStroke;
 import javax.swing.text.DefaultEditorKit;
 import org.inventory.core.services.api.behaviors.Refreshable;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.core.templates.nodes.actions.DeleteTemplateElementAction;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
@@ -54,22 +56,19 @@ import org.openide.util.NbBundle.Messages;
         preferredID = "TemplatesTopComponent"
 )
 @Messages({
-    "CTL_TemplatesAction=Template Manager",
-    "CTL_TemplatesTopComponent=Template Manager",
-    "HINT_TemplatesTopComponent=Manage Object Templates with this module"
+    "CTL_TemplatesAction=Template Manager"
 })
 public final class TemplatesTopComponent extends TopComponent implements ExplorerManager.Provider, Refreshable {
 
     private ExplorerManager em;
     private BeanTreeView treeMain;
     private TemplatesService service;
-    
+        
     public TemplatesTopComponent() {
         initComponents();
         initCustomComponents();
-        setName(Bundle.CTL_TemplatesTopComponent());
-        setToolTipText(Bundle.HINT_TemplatesTopComponent());
-
+        setName(I18N.gm("top_component_name_template"));
+        setToolTipText(I18N.gm("top_component_tool_tip_text_template"));
     }
 
     private void initCustomComponents() {
@@ -80,11 +79,13 @@ public final class TemplatesTopComponent extends TopComponent implements Explore
         ActionMap map = getActionMap();
         map.put(DefaultEditorKit.copyAction, ExplorerUtils.actionCopy(em));
         map.put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
+        map.put(DeleteTemplateElementAction.ACTION_MAP_KEY, DeleteTemplateElementAction.getInstance());
         
         //Now the keystrokes
         InputMap keys = getInputMap(WHEN_IN_FOCUSED_WINDOW);
         keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.copyAction);
         keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.pasteAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), DeleteTemplateElementAction.ACTION_MAP_KEY);
         
         associateLookup(ExplorerUtils.createLookup(em, getActionMap()));
         
@@ -101,10 +102,14 @@ public final class TemplatesTopComponent extends TopComponent implements Explore
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        pnlMain = new javax.swing.JScrollPane();
+
         setLayout(new java.awt.BorderLayout());
+        add(pnlMain, java.awt.BorderLayout.CENTER);
     }// </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JScrollPane pnlMain;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {

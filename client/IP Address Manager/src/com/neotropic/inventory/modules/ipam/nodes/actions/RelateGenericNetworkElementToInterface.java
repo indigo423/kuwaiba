@@ -25,6 +25,8 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -32,11 +34,12 @@ import org.openide.util.lookup.ServiceProvider;
  * Actions to relate a Service Instance to a Bridge Domain Interface
  * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class RelateGenericNetworkElementToInterface extends GenericObjectNodeAction {
 
     public RelateGenericNetworkElementToInterface() {
-        putValue(NAME, "Relate to BDI...");
+        putValue(NAME, I18N.gm("relate_to_bdi"));
     }
     
     @Override
@@ -63,8 +66,8 @@ public class RelateGenericNetworkElementToInterface extends GenericObjectNodeAct
                 interfaces.add(o);
         }
         if (interfaces.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "There are no interfaces created. Create at least one using the Navigation Tree", 
-                "Information", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, I18N.gm("no_interfaces_created_create_at_least_one"), 
+                I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
         } else {
             InterfaceFrame frame = new InterfaceFrame(selectedObjects, interfaces);
             frame.setVisible(true);
@@ -72,12 +75,22 @@ public class RelateGenericNetworkElementToInterface extends GenericObjectNodeAct
     }
     
     @Override
-    public String getValidator() {
-        return Constants.VALIDATOR_LOGICAL_ENDPOINT;
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_IP_ADDRESS_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public String[] appliesTo() {        
+        return new String [] {Constants.CLASS_GENERICNETWORKELEMENT};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return -1;
     }
 }

@@ -27,8 +27,10 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.SubMenuDialog;
 import org.inventory.core.services.utils.SubMenuItem;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -36,6 +38,7 @@ import org.openide.util.lookup.ServiceProvider;
  * Action to release an object associated with a project
  * @author Johny Andres Ortega Ruiz <johny.ortega@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ReleaseFromProject extends GenericObjectNodeAction implements ComposedAction {
     private final ResourceBundle bundle;
@@ -54,7 +57,7 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
         
         if (projects != null) {
             if (!projects.isEmpty()) {
-                List<SubMenuItem> subMenuItems = new ArrayList();
+                List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight project : projects) {
                     SubMenuItem subMenuItem = new SubMenuItem(project.toString());
                     subMenuItem.addProperty(Constants.PROPERTY_CLASSNAME, project.getClassName());
@@ -64,16 +67,16 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
             } else {
                 JOptionPane.showMessageDialog(null, "There are no projects related to the selected object", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                    I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
             }
         } else {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, 
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                 CommunicationsStub.getInstance().getError());
         }
     }
     
     @Override
-    public String getValidator() {
+    public String[] getValidators() {
         return null; //Enable this action for any object
     }
 
@@ -103,5 +106,15 @@ public class ReleaseFromProject extends GenericObjectNodeAction implements Compo
                     CommunicationsStub.getInstance().getError());
             }
         }
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return null; //Enable this action for any object
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return -1;
     }
 }

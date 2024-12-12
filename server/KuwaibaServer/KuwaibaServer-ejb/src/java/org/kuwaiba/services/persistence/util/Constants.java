@@ -32,7 +32,7 @@ public class Constants {
     /**
      * Persistence Service version
      */
-    public static final String PERSISTENCE_SERVICE_VERSION = "1.5";
+    public static final String PERSISTENCE_SERVICE_VERSION = "1.6";
     /**
      * Class type for RootObject
      */
@@ -130,6 +130,10 @@ public class Constants {
      */
     public static final String INDEX_TASKS = "tasks"; //NOI18N
     /**
+     * Name of the index for tasks
+     */
+    public static final String INDEX_SYNCGROUPS = "syncGroups"; //NOI18N
+    /**
      * Name of the index for reports
      */
     public static final String INDEX_REPORTS = "reports"; //NOI18N
@@ -180,6 +184,10 @@ public class Constants {
     public static final String PROPERTY_BACKGROUND = "background"; //NOI18N
     public static final String PROPERTY_PRIVILEGES = "privileges"; //NOI18N
     public static final String PROPERTY_NAME = "name"; //NOI18N
+    /**
+     * the name of the synchronization provider
+     */
+    public static final String PROPERTY_SYNCPROVIDER = "syncProvider"; //NOI18N
     /** 
      * Defines if the attribute of a class is mandatory or not
      */
@@ -205,6 +213,7 @@ public class Constants {
     public static final String PROPERTY_FIRST_NAME = "firstName"; //NOI18N
     public static final String PROPERTY_LAST_NAME = "lastName"; //NOI18N
     public static final String PROPERTY_ENABLED = "enabled"; //NOI18N
+    public static final String PROPERTY_COMMIT_ON_EXECUTE = "commitOnExecute"; //NOI18N
     public static final String PROPERTY_SCRIPT = "script"; //NOI18N
     public static final String PROPERTY_EXECUTION_TYPE = "executionTime"; //NOI18N
     public static final String PROPERTY_EVERY_X_MINUTES = "everyXMinutes"; //NOI18N
@@ -223,6 +232,42 @@ public class Constants {
     public static final String PROPERTY_SCOPE = "scope"; //NOI18N
     public static final String PROPERTY_VERSION = "version"; //NOI18N
     public static final String PROPERTY_APPLIES_TO = "appliesTo"; //NOI18N
+    /**
+     * Property SNMP version
+     */
+    public static final String PROPERTY_SNMP_VERSION = "version";
+    /**
+     * SNMP version 2c property community
+     */
+    public static final String PROPERTY_COMMUNITY = "community";
+    /**
+     * SNMP version 3 property authentication protocol
+     */
+    public static final String PROPERTY_AUTH_PROTOCOL = "authProtocol";
+    /**
+     * SNMP version 3 property authentication protocol pass phrase
+     */
+    public static final String PROPERTY_AUTH_PASS = "authPass";    
+    /**
+     * SNMP version 3 property security Level
+     */
+    public static final String PROPERTY_SECURITY_LEVEL = "securityLevel";
+    /**
+     * SNMP version 3 property context Name
+     */
+    public static final String PROPERTY_CONTEXT_NAME = "contextName";
+    /**
+     * SNMP version 3 property security name
+     */
+    public static final String PROPERTY_SECURITY_NAME = "securityName";
+    /**
+     * SNMP version 3 property privacy Protocol
+     */
+    public static final String PROPERTY_PRIVACY_PROTOCOL = "privacyProtocol";
+    /**
+     * SNMP version 3 property privacy protocol pass phrase
+     */
+    public static final String PROPERTY_PRIVACY_PASS = "privacyPass";
     
     /**
      * Root for all business classes
@@ -256,6 +301,10 @@ public class Constants {
      * Class service provider
      */
     public static final String CLASS_SERVICEPROVIDER = "ServiceProvider"; //NOI18N
+    /**
+     * Class Generic physical connections
+     */
+    public static final String CLASS_PHYSICALCONNECTION= "GenericPhysicalConnection"; //NOI18N
     /**
      * IP Address
      */
@@ -340,6 +389,10 @@ public class Constants {
      * Privileges root node name
      */
     public static final String NODE_PRIVILEGES = "Privilges";
+    /**
+     * Sync root node name
+     */
+    public static final String NODE_SYNCGROUPSROOT = "SyncGroupsRoot"; //NOI18N
     /**
      * Date format for queries
      */

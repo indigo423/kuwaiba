@@ -19,6 +19,8 @@ package org.inventory.views.objectview.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.inventory.views.objectview.ObjectViewTopComponent;
 import org.openide.util.lookup.ServiceProvider;
@@ -28,20 +30,18 @@ import org.openide.windows.WindowManager;
  * This action opens an Object View for the selected node
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
-//@ActionID(category = "Tools", id = "org.inventory.views.objectview.ObjectViewTopComponent")
-//@ActionReferences(value = { @ActionReference(path = "Menu/Tools/Views"),
-//    @ActionReference(path = "Toolbars/02_Views", position = 1 )})
+@ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ShowObjectViewAction extends GenericObjectNodeAction {
 
     public ShowObjectViewAction() {
-        putValue(NAME, "Show Object View");
+        putValue(NAME, "Object View");
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         if (selectedObjects.size() != 1)
-            JOptionPane.showMessageDialog(null, "Select only one object.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Select only one object.", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
         else {
             ObjectViewTopComponent objectViewTC = ((ObjectViewTopComponent)WindowManager.getDefault().
                 findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getOid()));
@@ -61,7 +61,7 @@ public class ShowObjectViewAction extends GenericObjectNodeAction {
     }
 
     @Override
-    public String getValidator() {
+    public String[] getValidators() {
         return null; //Available for any object
     }
 
@@ -70,4 +70,13 @@ public class ShowObjectViewAction extends GenericObjectNodeAction {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_PHYSICAL_VIEW, LocalPrivilege.ACCESS_LEVEL_READ);
     }
 
+    @Override
+    public String[] appliesTo() {
+        return null; //Enable this action for any object
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
+    }
 }

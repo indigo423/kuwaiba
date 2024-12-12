@@ -25,7 +25,6 @@ import org.kuwaiba.apis.persistence.exceptions.DatabaseException;
 import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
 import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
 import org.kuwaiba.apis.persistence.ConnectionManager;
-import org.kuwaiba.apis.persistence.business.BusinessEntityManager;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObject;
 import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
 import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
@@ -65,10 +64,6 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
      */
     private Index<Node> classIndex;
     /**
-     * Instance of Business entity manager
-     */
-     BusinessEntityManager bem;
-    /**
      * Reference to the CacheManager
      */
     private CacheManager cm;
@@ -84,11 +79,10 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
     /**
      * Constructor
      * Get the a database connection and indexes from the connection manager.
-     * @param cmn
+     * @param cmn A reference to the db connection manager
      */
     public MetadataEntityManagerImpl(ConnectionManager cmn) {
         this();
-        //this.bem = bem;
         graphDb = (GraphDatabaseService) cmn.getConnectionHandler();
         this.relationshipDisplayNames = new HashMap<>();
         try(Transaction tx = graphDb.beginTx()) {
@@ -141,10 +135,10 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             if (classDefinition.getAttributes() != null) {
                 for (AttributeMetadata attributeMetadata : classDefinition.getAttributes())
                     //This no longer checks for duplicates since the attributes are now a set
-                    Util.createAttribute(classNode, attributeMetadata);
+                    Util.createAttribute(classNode, attributeMetadata, true);
             }
             
-            //Now we make our class to inherit the atributes from its parent class (except for the root class, RootObject)
+            //Now we make our class to inherit the attributes from its parent class (except for the root class, RootObject)
             if (classDefinition.getParentClassName() == null) { //Is this class the root of all class hierarchy
                 
                 if (classDefinition.getName().equals(Constants.CLASS_ROOTOBJECT))
@@ -208,9 +202,8 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
 
     @Override
     public ChangeDescriptor setClassProperties (ClassMetadata newClassDefinition) 
-            throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException 
-    {
-        String affectedProperties = "", oldValues = "", newValues = "", notes = "";
+            throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException {
+        String affectedProperties = "", oldValues = "", newValues = "";
         
         try (Transaction tx = graphDb.beginTx()) {
             Node classMetadata = classIndex.get(Constants.PROPERTY_ID, newClassDefinition.getId()).getSingle();
@@ -304,7 +297,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 classMetadata.setProperty(Constants.PROPERTY_CUSTOM, newClassDefinition.isCustom());
             }
             
-            if(newClassDefinition.getAttributes() != null ){
+            if(newClassDefinition.getAttributes() != null ) {
                 for (AttributeMetadata attr : newClassDefinition.getAttributes()) {
                     ChangeDescriptor changeDescriptor = setAttributeProperties(newClassDefinition.getId(), attr);
                     
@@ -314,10 +307,12 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 }
             }        
             tx.success();
+            cm.clearClassCache();
             cm.removeClass(formerName);
-            cm.putClass(Util.createClassMetadataFromNode(classMetadata));            
-            notes += String.format("Set class properties and/or attributes to %s class", classMetadata.getProperty(Constants.PROPERTY_NAME));
-            return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), newValues.trim(), notes);
+            cm.putClass(Util.createClassMetadataFromNode(classMetadata));
+
+            return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), 
+                    newValues.trim(), String.format("Set class properties and/or attributes for class %s", classMetadata.getProperty(Constants.PROPERTY_NAME)));
         }
     }
   
@@ -344,7 +339,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                         "Class %s has subclasses and can not be deleted", node.getProperty(Constants.PROPERTY_NAME)));
 
             String className = (String)node.getProperty(Constants.PROPERTY_NAME);
-            if (cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className)) {
+            if (isSubClass(Constants.CLASS_GENERICOBJECTLIST, className)) {
                 //If the class is a list type, let's check if it's used by another class
                 for (Node classNode : classIndex.query(Constants.PROPERTY_ID, "*")) {
                     for (Relationship hasAttributeRelationship : classNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_ATTRIBUTE)) {
@@ -404,7 +399,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 throw new InvalidArgumentException(String.format(
                         "The class with name %s has subclasses and can not be deleted", className));
             
-            if (cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className)) {
+            if (isSubClass(Constants.CLASS_GENERICOBJECTLIST, className)) {
                 //If the class is a list type, let's check if it's used by another class
                 for (Node classNode : classIndex.query(Constants.PROPERTY_ID, "*")) {
                     for (Relationship hasAttributeRelationship : classNode.getRelationships(Direction.OUTGOING, RelTypes.HAS_ATTRIBUTE)) {
@@ -493,9 +488,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
     public List<ClassMetadataLight> getSubClassesLight(String className, boolean includeAbstractClasses, 
             boolean includeSelf) throws MetadataObjectNotFoundException {
         
-        ClassMetadata aClass = cm.getClass(className);
-        if (aClass == null)
-            throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s", className));
+        ClassMetadata aClass = getClass(className);
         
         List<ClassMetadataLight> subclasses = cm.getSubclasses(className);
         
@@ -505,7 +498,6 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             for (ClassMetadataLight subclass : subclasses) {                
                 if (!includeAbstractClasses && subclass.isAbstract())
                     continue;
-                
                 classManagerResultList.add(subclass);
             }
             
@@ -540,7 +532,6 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     
                 classManagerResultList.add(classMetadata);
             }
-            tx.success();
         }
         cm.putSubclasses(className, subclasses);
         
@@ -648,21 +639,24 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
     
     @Override
     public ClassMetadata getClass(String className) throws MetadataObjectNotFoundException {
-        ClassMetadata clmt = null;
-        try (Transaction tx = graphDb.beginTx())
-        {
+        ClassMetadata clmt = cm.getClass(className);
+        
+        if (clmt != null)
+            return clmt;
+        
+        try (Transaction tx = graphDb.beginTx()) {
             Node node = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
             if (node == null)
                 throw new MetadataObjectNotFoundException(String.format(
                         "Can not find a class with name %s", className));
             clmt = Util.createClassMetadataFromNode(node);
-            tx.success();
+            cm.putClass(clmt);
         }
         return clmt;
     }
 
     @Override
-    public void createAttribute(String className, AttributeMetadata attributeDefinition) 
+    public void createAttribute(String className, AttributeMetadata attributeDefinition, boolean recursive) 
             throws MetadataObjectNotFoundException, InvalidArgumentException {
         if (attributeDefinition.getName() == null || attributeDefinition.getName().isEmpty())
             throw new InvalidArgumentException("Attribute name can not be null or an empty string");
@@ -676,7 +670,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             if (classNode == null)
                 throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s", className));
             
-            Util.createAttribute(classNode, attributeDefinition);
+            Util.createAttribute(classNode, attributeDefinition, recursive);
             //Refresh cache for the affected classes
             refreshCacheOn(classNode);
             tx.success();
@@ -693,12 +687,31 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             if (classNode == null)
                 throw new MetadataObjectNotFoundException(String.format("Can not find a class with id %s", classId));
         
-            Util.createAttribute(classNode, attributeDefinition);
+            Util.createAttribute(classNode, attributeDefinition, true);
             //Refresh cache for the affected classes
             refreshCacheOn(classNode);
             tx.success();
             
         } 
+    }
+    
+    @Override
+    public boolean hasAttribute(String className, String attributeName) throws MetadataObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, className).getSingle();
+            
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format(
+                    "Can not find a class with name %s", className));
+            
+            for (Relationship relationship : classNode.getRelationships(RelTypes.HAS_ATTRIBUTE)) {
+                Node attrNode = relationship.getEndNode();
+                
+                if (String.valueOf(attrNode.getProperty(Constants.PROPERTY_NAME)).equals(attributeName))
+                    return true;
+            }
+            return false;
+        }
     }
 
     @Override
@@ -763,16 +776,14 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
         
         String affectedProperties = "", oldValues = "", newValues = "";
         
-        try(Transaction tx = graphDb.beginTx())
-        {
+        try(Transaction tx = graphDb.beginTx()) {
             Node classNode = classIndex.get(Constants.PROPERTY_ID, classId).getSingle();
             if (classNode == null)
                 throw new MetadataObjectNotFoundException(String.format("Can not find a class with id %s", classId));
 
             for (Relationship relationship : classNode.getRelationships(RelTypes.HAS_ATTRIBUTE)) {
                 Node attrNode = relationship.getEndNode();
-                if (attrNode.getId() == newAttributeDefinition.getId()) 
-                {
+                if (attrNode.getId() == newAttributeDefinition.getId())  {
                     String currentAttributeName = (String)attrNode.getProperty(Constants.PROPERTY_NAME);
 
                     if (currentAttributeName.equals(Constants.PROPERTY_CREATION_DATE))
@@ -844,12 +855,12 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                         oldValues = " ";
                         newValues = newAttributeDefinition.isNoCopy() + " ";
                     }
-                    if(newAttributeDefinition.isUnique() != null){
+                    if(newAttributeDefinition.isUnique() != null) {
                         if(newAttributeDefinition.isUnique()){//checks only if unique changed from false to true
-                            if(canAttributeBeUnique((String)classNode.getProperty(Constants.PROPERTY_NAME), Util.getTypeOfAttribute(classNode, currentAttributeName), currentAttributeName))
+                            if(canAttributeBeUnique(classNode, Util.getTypeOfAttribute(classNode, currentAttributeName), currentAttributeName))
                                 Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_UNIQUE, newAttributeDefinition.isUnique());
                             else
-                                 throw new InvalidArgumentException(String.format("In order to mark Attribute \"%s\" as unique it is necessary to set a unique value for every created object of this class and its subclasses", currentAttributeName));
+                                 throw new InvalidArgumentException(String.format("In order to mark attribute \"%s\" as unique it is necessary to set a unique value for every existing object of this class and its subclasses", currentAttributeName));
                         }
                         else{
                             Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_UNIQUE, newAttributeDefinition.isUnique());
@@ -877,12 +888,12 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     //Refresh cache for the affected classes
                     refreshCacheOn(classNode);
                     tx.success();                    
-                    return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), newValues.trim(), String.format("Set attributes to %s class", classNode.getProperty(Constants.PROPERTY_NAME)));
+                    return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), newValues.trim(), String.format("Update attributes properties in class %s", classNode.getProperty(Constants.PROPERTY_NAME)));
                 }
             }//end for
+            throw new MetadataObjectNotFoundException(String.format(
+                    "Can not find attribute %s in class %s", newAttributeDefinition.getName(), classNode.getProperty(Constants.PROPERTY_NAME)));
         } 
-        throw new MetadataObjectNotFoundException(String.format(
-                    "Can not find attribute %s in the class with id %s", newAttributeDefinition.getName(), classId));
     }
     
     @Override
@@ -973,14 +984,14 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     }
                     if(newAttributeDefinition.isUnique() != null){
                         if(newAttributeDefinition.isUnique()){//checks only if unique changed from false to true
-                            if(canAttributeBeUnique((String)classNode.getProperty(Constants.PROPERTY_NAME), Util.getTypeOfAttribute(classNode, currentAttributeName), currentAttributeName))
+                            if(canAttributeBeUnique(classNode, Util.getTypeOfAttribute(classNode, currentAttributeName), currentAttributeName))
                                 Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_UNIQUE, newAttributeDefinition.isUnique());
                         else
-                             throw new InvalidArgumentException(String.format("In order to mark Attribute \"%s\" as unique it is necessary to set a unique value for every created object with this attribute name", currentAttributeName));
+                             throw new InvalidArgumentException(String.format("In order to mark attribute \"%s\" as unique it is necessary to set a unique value for every existing object with this attribute name", currentAttributeName));
                         }
                         else{
                             Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_UNIQUE, newAttributeDefinition.isUnique());
-                            cm.removeUniqueAtribute((String)classNode.getProperty(Constants.PROPERTY_NAME), currentAttributeName);
+                            cm.removeUniqueAtribute(currentAttributeName, currentAttributeName);
                         }
                         
                         affectedProperties = Constants.PROPERTY_UNIQUE + " ";
@@ -993,7 +1004,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                             if(objectsOfClassHasValueInMandatoryAttribute(className, currentAttributeName))
                                 Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_MANDATORY, newAttributeDefinition.isMandatory());
                             else
-                                throw new InvalidArgumentException(String.format("Before setting an attribute as mandatory, all instances of this class must have valid values for attribute %s", currentAttributeName));
+                                throw new InvalidArgumentException(String.format("Before setting it as mandatory, all instances of this class must have valid values for attribute %s", currentAttributeName));
                         }
                         else
                             Util.changeAttributeProperty(classNode, currentAttributeName, Constants.PROPERTY_MANDATORY, newAttributeDefinition.isMandatory());
@@ -1005,12 +1016,12 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     //Refresh cache for the affected classes
                     refreshCacheOn(classNode);
                     tx.success();
-                    return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), newValues.trim(), String.format("Set attributes to %s class", classNode.getProperty(Constants.PROPERTY_NAME)));
+                    return new ChangeDescriptor(affectedProperties.trim(), oldValues.trim(), newValues.trim(), String.format("Update attributes properties in class %s", classNode.getProperty(Constants.PROPERTY_NAME)));
                 }
             }//end for
-        }
-        throw new MetadataObjectNotFoundException(String.format(
+            throw new MetadataObjectNotFoundException(String.format(
                     "Can not find attribute %s in class %s", newAttributeDefinition.getName(), className));
+        }
     }
     
     @Override
@@ -1018,9 +1029,6 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             throws MetadataObjectNotFoundException, InvalidArgumentException {
         if (attributeName.equals(Constants.PROPERTY_NAME) || attributeName.equals(Constants.PROPERTY_CREATION_DATE))
             throw new InvalidArgumentException(String.format("Attribute \"%s\" can not be deleted", attributeName));
-        
-//        if (attributeName.equals(Constants.PROPERTY_CREATION_DATE))
-//            throw new InvalidArgumentException(String.format("Attribute \"creationDate\" can not be deleted");
         
         try(Transaction tx = graphDb.beginTx()) {
             Node classNode = classIndex.get(Constants.PROPERTY_NAME, attributeName).getSingle();
@@ -1050,9 +1058,6 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
         if (attributeName.equals(Constants.PROPERTY_CREATION_DATE) || attributeName.equals(Constants.PROPERTY_NAME))
             throw new InvalidArgumentException(String.format("Attribute \"%s\" can not be deleted", attributeName));
         
-//        if (attributeName.equals(Constants.PROPERTY_NAME))
-//            throw new InvalidArgumentException("Attribute \"name\" can not be deleted");
-        
         try (Transaction tx = graphDb.beginTx()) {
             Node classNode = classIndex.get(Constants.PROPERTY_ID, classId).getSingle();
 
@@ -1076,55 +1081,28 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
     }
     
     @Override
-    public List<ClassMetadataLight> getPossibleChildren(String parentClassName) 
-            throws MetadataObjectNotFoundException   {
-        
+    public List<ClassMetadataLight> getPossibleChildren(String parentClassName) throws MetadataObjectNotFoundException {
         List<ClassMetadataLight> classMetadataResultList = new ArrayList<>();
-        List<String> cachedPossibleChildren = cm.getPossibleChildren(parentClassName);
         
+        List<String> cachedPossibleChildren = cm.getPossibleChildren(parentClassName);
+                
         if (cachedPossibleChildren != null) {
             for (String cachedPossibleChild : cachedPossibleChildren)
                 classMetadataResultList.add(cm.getClass(cachedPossibleChild));
             return classMetadataResultList;
         }
-        cachedPossibleChildren = new ArrayList<>();
-        String cypherQuery;
-        Map<String, Object> params = new HashMap<>();
-        if (parentClassName == null || parentClassName.equals(Constants.NODE_DUMMYROOT)) {
-            cypherQuery = "MATCH (n:root {name:\"" + Constants.NODE_DUMMYROOT + "\"})-[:POSSIBLE_CHILD]->directChild " +
-                    "OPTIONAL MATCH directChild<-[:EXTENDS*]-subClass " +
-                    "WHERE subClass.abstract = false OR subClass IS NULL " +
-                    "RETURN directChild, subClass " +
-                    "ORDER BY directChild.name,subClass.name ASC ";
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node parentNode;
+            
+            if (parentClassName == null || parentClassName.equals(Constants.NODE_DUMMYROOT))
+                parentNode = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES).get(Constants.PROPERTY_NAME, Constants.NODE_DUMMYROOT).getSingle();
+            else
+                parentNode = classIndex.get(Constants.PROPERTY_NAME, parentClassName).getSingle();
+            
+            tx.success();
+            return refreshPossibleChildren(parentNode);
         }
-        else {
-            cypherQuery = "START parentClassNode=node:classes(name = {className}) " +
-                        "MATCH (parentClassNode:class)-[:POSSIBLE_CHILD]->(directChild) " +
-                        "OPTIONAL MATCH (directChild)<-[:EXTENDS*]-(subClass) " +
-                        "RETURN directChild, subClass "+
-                        "ORDER BY directChild.name,subClass.name ASC";
-            params.put(Constants.PROPERTY_CLASS_NAME, "className:" + parentClassName);//NOI18N
-        }
-        try (Transaction tx = graphDb.beginTx())
-        {
-            Result result = graphDb.execute(cypherQuery, params); //TODO: review the result are empty, see getPossibleSpecialChildren
-            while (result.hasNext()){
-                Map<String,Object> entry = result.next();
-                Node directChildNode =  (Node)entry.get("directChild");
-                Node indirectChildNode =  (Node)entry.get("subClass");
-                if (!(Boolean)directChildNode.getProperty(Constants.PROPERTY_ABSTRACT)){
-                    classMetadataResultList.add(Util.createClassMetadataFromNode(directChildNode));
-                    cachedPossibleChildren.add((String)directChildNode.getProperty(Constants.PROPERTY_NAME));
-                }
-                if (indirectChildNode != null){
-                    classMetadataResultList.add(Util.createClassMetadataFromNode(indirectChildNode));
-                    cachedPossibleChildren.add((String)indirectChildNode.getProperty(Constants.PROPERTY_NAME));
-                }
-            }
-            cm.putPossibleChildren(parentClassName == null ? 
-                    Constants.NODE_DUMMYROOT : parentClassName, cachedPossibleChildren);
-        }
-        return classMetadataResultList;
     }
     
     @Override
@@ -1140,32 +1118,17 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 classMetadataResultList.add(cm.getClass(cachedPossibleChild));
             return classMetadataResultList;
         }
-        cachedPossibleSpecialChildren = new ArrayList();
         try (Transaction tx = graphDb.beginTx()) {
-            Node parentNode;
+            Node parentNode; 
             
             if (parentClassName == null || parentClassName.equals(Constants.NODE_DUMMYROOT))
                 parentNode = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES).get(Constants.PROPERTY_NAME, Constants.NODE_DUMMYROOT).getSingle();
             else
                 parentNode = classIndex.get(Constants.PROPERTY_NAME, parentClassName).getSingle();
-
-            Iterable<Relationship> relationships = parentNode.getRelationships(RelTypes.POSSIBLE_SPECIAL_CHILD, Direction.OUTGOING);
-            for (Relationship relationship : relationships) {
-                if ((Boolean) relationship.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)) {
-                    Iterable<Node> allSubClasses = Util.getAllSubclasses(relationship.getEndNode());
-                    for (Node childNode : allSubClasses) {
-                        if (!(Boolean) childNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
-                            classMetadataResultList.add(Util.createClassMetadataFromNode(childNode));
-                            cachedPossibleSpecialChildren.add((String) childNode.getProperty(Constants.PROPERTY_NAME));
-                        }
-                    }
-                } else {
-                    classMetadataResultList.add(Util.createClassMetadataFromNode(relationship.getEndNode()));
-                    cachedPossibleSpecialChildren.add((String) relationship.getEndNode().getProperty(Constants.PROPERTY_NAME));
-                }
-            }
+            
+            tx.success();
+            return refreshPossibleSpecialChildren(parentNode);
         }
-        return classMetadataResultList;
     }
 
     @Override
@@ -1215,6 +1178,29 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
             return classMetadataListResult;
         }
     }
+    
+    
+    @Override
+    public boolean canBeChild(String allegedParent, String childToBeEvaluated) throws MetadataObjectNotFoundException {
+        List<ClassMetadataLight> possibleChildren = getPossibleChildren(allegedParent);
+
+        for (ClassMetadataLight possibleChild : possibleChildren) {
+            if (possibleChild.getName().equals(childToBeEvaluated))
+                return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean canBeSpecialChild(String allegedParent, String childToBeEvaluated) throws MetadataObjectNotFoundException {
+        List<ClassMetadataLight> possibleSpecialChildren = getPossibleSpecialChildren(allegedParent);
+
+        for (ClassMetadataLight possibleSpecialChild : possibleSpecialChildren) {
+            if (possibleSpecialChild.getName().equals(childToBeEvaluated))
+                return true;
+        }
+        return false;
+    }
 
     @Override
     public void addPossibleChildren(long parentClassId, long[] possibleChildren)
@@ -1226,14 +1212,14 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
 
                 if (parentNode == null)
                     throw new MetadataObjectNotFoundException(String.format(
-                            "Can not find a class with id %1s", parentClassId));
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
+                            "Can not find a class with id %s", parentClassId));
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
             }else
                 parentNode = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES).get(Constants.PROPERTY_NAME, Constants.NODE_DUMMYROOT).getSingle();
 
-            List<ClassMetadataLight> currentPossibleChildren = getPossibleChildren(parentNode);
+            List<ClassMetadataLight> currentPossibleChildren = refreshPossibleChildren(parentNode);
             
             for (long id : possibleChildren) {
                 Node childNode = classIndex.get(Constants.PROPERTY_ID, id).getSingle();
@@ -1242,33 +1228,41 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class with id %s", parentClassId));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
+                String newPossibleChildrenClassName = (String)childNode.getProperty(Constants.PROPERTY_NAME);
+                String parentClassName = (String)parentNode.getProperty(Constants.PROPERTY_NAME);
+                
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, newPossibleChildrenClassName))
                     throw new InvalidArgumentException(
-                            String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)childNode.getProperty(Constants.PROPERTY_NAME)));
+                            String.format("%s is not a business class, thus can not be added to the containment hierarchy", newPossibleChildrenClassName));
                 
                 if ((Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)){
                    for (Node subclassNode : Util.getAllSubclasses(childNode)){
                        for (ClassMetadataLight possibleChild : currentPossibleChildren){
                             if (possibleChild.getId() == subclassNode.getId())
-                                throw new InvalidArgumentException(String.format("A subclass of %s is already a possible child for instances of %s", (String)childNode.getProperty(Constants.PROPERTY_NAME), (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
+                                throw new InvalidArgumentException(String.format("A subclass of %s is already a possible child for instances of %s", 
+                                        newPossibleChildrenClassName, parentClassName));
                        }
                    }
                 }
-                else{
-                    for (ClassMetadataLight possibleChild : currentPossibleChildren){
+                else {
+                    for (ClassMetadataLight possibleChild : currentPossibleChildren) {
                         if (possibleChild.getId() == childNode.getId())
-                            throw new InvalidArgumentException(String.format("Class %s is already a possible child for instances of %s", (String)childNode.getProperty(Constants.PROPERTY_NAME), (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
+                            throw new InvalidArgumentException(String.format("Class %s is already a possible child for instances of %s", 
+                                    newPossibleChildrenClassName, parentClassName));
                     }
                 }
-                parentNode.createRelationshipTo(childNode, RelTypes.POSSIBLE_CHILD);
-                 //Refresh cache
-                if ((Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)){
-                    for(ClassMetadataLight subclass : getSubClassesLight((String)childNode.getProperty(Constants.PROPERTY_NAME), false, false))
-                        cm.putPossibleChild((String)parentNode.getProperty(Constants.PROPERTY_NAME),subclass.getName());
-                }else
-                    cm.putPossibleChild((String)parentNode.getProperty(Constants.PROPERTY_NAME), (String)childNode.getProperty(Constants.PROPERTY_NAME));
-                tx.success();
+                parentNode.createRelationshipTo(childNode, RelTypes.POSSIBLE_CHILD);               
+                
+                //Refresh cache
+                if ((Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
+                    for (Node subClassNode : Util.getAllSubclasses(childNode)) {
+                        if (!(boolean)subClassNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                            cm.putPossibleChild(parentClassName, (String)subClassNode.getProperty(Constants.PROPERTY_NAME));
+                    }
+                } else
+                    cm.putPossibleChild(parentClassName, newPossibleChildrenClassName);
             }
+            tx.success();
         }
     }
     
@@ -1284,13 +1278,13 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 if (parentNode == null)
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find a class with id %s", parentClassId));
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
             } else
                 parentNode = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES).get(Constants.PROPERTY_NAME, Constants.NODE_DUMMYROOT).getSingle();
 
-            List<ClassMetadataLight> currentPossibleSpecialChildren = getPossibleSpecialChildren(parentNode);
+            List<ClassMetadataLight> currentPossibleSpecialChildren = refreshPossibleSpecialChildren(parentNode);
             
             for (long id : possibleSpecialChildren) {
                 Node childNode = classIndex.get(Constants.PROPERTY_ID, id).getSingle();
@@ -1299,7 +1293,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class with id %s", parentClassId));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)childNode.getProperty(Constants.PROPERTY_NAME)));
                 
@@ -1318,11 +1312,13 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     }
                 }
                 parentNode.createRelationshipTo(childNode, RelTypes.POSSIBLE_SPECIAL_CHILD);
-                
+                                
                 //Refresh cache
                 if ((Boolean)childNode.getProperty(Constants.PROPERTY_ABSTRACT)){
-                    for(ClassMetadataLight subclass : getSubClassesLight((String)childNode.getProperty(Constants.PROPERTY_NAME), false, false))
-                        cm.putPossibleSpecialChild((String)parentNode.getProperty(Constants.PROPERTY_NAME),subclass.getName());
+                    for (Node subClassNode : Util.getAllSubclasses(childNode)) {
+                        if (!(boolean)subClassNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                            cm.putPossibleSpecialChild((String) parentNode.getProperty(Constants.PROPERTY_NAME), (String) subClassNode.getProperty(Constants.PROPERTY_NAME));
+                    }
                 } else
                     cm.putPossibleSpecialChild((String)parentNode.getProperty(Constants.PROPERTY_NAME), (String)childNode.getProperty(Constants.PROPERTY_NAME));
                 
@@ -1344,7 +1340,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class %s", parentClassName));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
             } else {
@@ -1353,7 +1349,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 if(!(Constants.NODE_DUMMYROOT).equals((String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                         throw new MetadataObjectNotFoundException("DummyRoot node is corrupted");
             }
-            List<ClassMetadataLight> currentPossibleChildren = getPossibleChildren(parentNode);
+            List<ClassMetadataLight> currentPossibleChildren = refreshPossibleChildren(parentNode);
         
             for (String possibleChildName : possibleChildren) {
                 Node childNode = classIndex.get(Constants.PROPERTY_NAME, possibleChildName).getSingle();
@@ -1361,7 +1357,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class %s", possibleChildName));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)childNode.getProperty(Constants.PROPERTY_NAME)));
                 
@@ -1405,7 +1401,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class %s", parentClassName));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the containment hierarchy", (String)parentNode.getProperty(Constants.PROPERTY_NAME)));
             } else {
@@ -1414,7 +1410,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 if(!(Constants.NODE_DUMMYROOT).equals((String)parentNode.getProperty(Constants.PROPERTY_NAME)))
                         throw new MetadataObjectNotFoundException("DummyRoot node is corrupted");
             }
-            List<ClassMetadataLight> currentPossibleSpecialChildren = getPossibleSpecialChildren(parentNode);
+            List<ClassMetadataLight> currentPossibleSpecialChildren = refreshPossibleSpecialChildren(parentNode);
         
             for (String possibleSpecialChildName : possibleSpecialChildren) {
                 Node childNode = classIndex.get(Constants.PROPERTY_NAME, possibleSpecialChildName).getSingle();
@@ -1422,7 +1418,7 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                     throw new MetadataObjectNotFoundException(String.format(
                             "Can not find class %s", possibleSpecialChildName));
                 
-                if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
+                if (!isSubClass(Constants.CLASS_INVENTORYOBJECT, (String)childNode.getProperty(Constants.PROPERTY_NAME)))
                     throw new InvalidArgumentException(
                             String.format("%s is not a business class, thus can not be added to the special containment hierarchy", (String)childNode.getProperty(Constants.PROPERTY_NAME)));
                 
@@ -1478,19 +1474,11 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
 
                 for (Relationship rel: relationships) {
                     Node possiblechild = rel.getEndNode();
-                    if(childNode.getId() == possiblechild.getId()){
+                    if (childNode.getId() == possiblechild.getId())
                         rel.delete();
-                        String parentClassName = (String)parentNode.getProperty(Constants.PROPERTY_NAME);
-                        if (cm.getClass((String)childNode.getProperty(Constants.PROPERTY_NAME)).isAbstract()){
-                            for(Node subClass : Util.getAllSubclasses(childNode))
-                                cm.removePossibleChild(parentClassName, (String)subClass.getProperty(Constants.PROPERTY_NAME));
-                        }
-                        else
-                            cm.removePossibleChild(parentClassName, (String)childNode.getProperty(Constants.PROPERTY_NAME));
-                        break;
-                    }
                 }//end for
             }//end for
+            refreshPossibleChildren(parentNode);
             tx.success();
         }
     }
@@ -1518,22 +1506,14 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
 
                 for (Relationship rel: relationships) {
                     Node possiblechild = rel.getEndNode();
-                    if(childNode.getId() == possiblechild.getId()){
+                    if (childNode.getId() == possiblechild.getId())
                         rel.delete();
-                        String parentClassName = (String)parentNode.getProperty(Constants.PROPERTY_NAME);
-                        if (cm.getClass((String)childNode.getProperty(Constants.PROPERTY_NAME)).isAbstract()){
-                            for(Node subClass : Util.getAllSubclasses(childNode))
-                                cm.removePossibleSpecialChild(parentClassName, (String)subClass.getProperty(Constants.PROPERTY_NAME));
-                        }
-                        else
-                            cm.removePossibleSpecialChild(parentClassName, (String)childNode.getProperty(Constants.PROPERTY_NAME));
-                        break;
-                    }
                 }//end for
             }//end for
-            
+            refreshPossibleSpecialChildren(parentNode);
             tx.success();
         }
+        
     }
 
     @Override
@@ -1600,8 +1580,22 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
     }
      
     @Override
-    public boolean isSubClass(String allegedParent, String classToBeEvaluated) {
-        return cm.isSubClass(allegedParent, classToBeEvaluated);
+    public boolean isSubClass(String allegedParent, String classToBeEvaluated) throws MetadataObjectNotFoundException {
+        if (classToBeEvaluated == null)
+            return false;
+
+        ClassMetadata currentClass = getClass(classToBeEvaluated);
+
+        if (allegedParent.equals(classToBeEvaluated))
+            return true;
+
+        if (currentClass.getParentClassName() == null)
+            return false;
+
+        if (currentClass.getParentClassName().equals(allegedParent))
+            return true;
+        else
+            return isSubClass(allegedParent, currentClass.getParentClassName());
     }
     
     /**
@@ -1614,48 +1608,14 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
 
         for(Path p : UPDATE_TRAVERSAL.traverse(rootClassNode)){
             cm.removeClass((String)p.endNode().getProperty(Constants.PROPERTY_NAME));
-            cm.putClass(Util.createClassMetadataFromNode(p.endNode()));
+            ClassMetadata rootClassMetadata = Util.createClassMetadataFromNode(p.endNode());
+            cm.putClass(rootClassMetadata);            
+                        
+            refreshPossibleChildren(p.endNode());
+            refreshPossibleSpecialChildren(p.endNode());
         }
     }
-   
-    private List<ClassMetadataLight> getPossibleChildren(Node parentClassNode) {
-        List<ClassMetadataLight> possibleChildren = new ArrayList<>();
-       
-        for (Relationship rel : parentClassNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_CHILD)) {
-            Node possibleChildNode = rel.getEndNode();
-            
-            if (possibleChildNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)possibleChildNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
-                for (Node possibleChildSubNodeClass : Util.getAllSubclasses(possibleChildNode)) {
-                    if (!(Boolean) possibleChildSubNodeClass.getProperty(Constants.PROPERTY_ABSTRACT)) {
-                        possibleChildren.add(Util.createClassMetadataLightFromNode(possibleChildSubNodeClass));
-                    }
-                }
-            } else 
-                possibleChildren.add(Util.createClassMetadataLightFromNode(possibleChildNode));
-       }
-       
-       return possibleChildren;
-   }
-   
-    private List<ClassMetadataLight> getPossibleSpecialChildren(Node parentClassNode) {
-        List<ClassMetadataLight> possibleChildren = new ArrayList<>();
         
-        for (Relationship rel : parentClassNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_SPECIAL_CHILD)) {
-            Node possibleSpecialChildClassNode = rel.getEndNode();
-            if (possibleSpecialChildClassNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)possibleSpecialChildClassNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
-                
-                for (Node possibleSpecialChildSubClassNode : Util.getAllSubclasses(possibleSpecialChildClassNode)) {
-                    if (!(Boolean) possibleSpecialChildSubClassNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
-                        possibleChildren.add(Util.createClassMetadataLightFromNode(possibleSpecialChildSubClassNode));
-                    }
-                }
-            } else
-                possibleChildren.add(Util.createClassMetadataLightFromNode(possibleSpecialChildClassNode));
-       }
-       
-       return possibleChildren;
-   }
-    
    //Callers must handle associated transactions
    private void buildClassCache() throws InvalidArgumentException {
         cm.clearClassCache();
@@ -1663,12 +1623,69 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
         for (Node classNode : classIndex.query(Constants.PROPERTY_ID, "*")) {
              ClassMetadata aClass = Util.createClassMetadataFromNode(classNode);
              cm.putClass(aClass);
-             cm.putPossibleChildren(aClass.getName(), aClass.getPossibleChildren());
-             cm.putPossibleSpecialChildren(aClass.getName(), aClass.getPossibleSpecialChildren());
+             
+             refreshPossibleChildren(classNode);
+             refreshPossibleSpecialChildren(classNode);
         }
-        loadUniqueAttirbutesCache();
+        loadUniqueAttributesCache();
         //Only the DummyRoot is not cached. It will be cached on demand later
    }
+   
+    private List<ClassMetadataLight> refreshPossibleChildren(Node classNode) {
+        String className = (String) classNode.getProperty(Constants.PROPERTY_NAME);
+
+        if (cm.getPossibleChildren(className) != null)
+            cm.getPossibleChildren(className).clear();
+        else
+            cm.putPossibleChildren(className, new ArrayList());
+
+        List<ClassMetadataLight> possibleChildren = new ArrayList();
+
+        for (Relationship relationship : classNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_CHILD)) {
+            if ((Boolean) relationship.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)) {
+                Iterable<Node> allSubclasses = Util.getAllSubclasses(relationship.getEndNode());
+                for (Node childNode : allSubclasses) {
+                    if (!(Boolean) childNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
+                        cm.putPossibleChild(className, (String) childNode.getProperty(Constants.PROPERTY_NAME));
+                        possibleChildren.add(Util.createClassMetadataLightFromNode(childNode));
+                   }
+               }
+            } else {
+                cm.putPossibleChild(className, (String) relationship.getEndNode().getProperty(Constants.PROPERTY_NAME));
+                possibleChildren.add(Util.createClassMetadataLightFromNode(relationship.getEndNode()));
+           }
+       } 
+       return possibleChildren;
+    }
+    
+    private List<ClassMetadataLight> refreshPossibleSpecialChildren(Node classNode) {
+        String className = (String) classNode.getProperty(Constants.PROPERTY_NAME);
+        
+        if (cm.getPossibleSpecialChildren(className) != null)
+            cm.getPossibleSpecialChildren(className).clear();
+        else
+            cm.putPossibleSpecialChildren(className, new ArrayList());
+        
+        List<ClassMetadataLight> possibleSpecialChildren = new ArrayList();
+        
+        for (Relationship relationship : classNode.getRelationships(Direction.OUTGOING, RelTypes.POSSIBLE_SPECIAL_CHILD)) {
+            
+            if ((Boolean) relationship.getEndNode().getProperty(Constants.PROPERTY_ABSTRACT)) {
+                Iterable<Node> allSubclasses = Util.getAllSubclasses(relationship.getEndNode());
+                for (Node childNode : allSubclasses) {
+                    if (!(Boolean) childNode.getProperty(Constants.PROPERTY_ABSTRACT)) {
+                        cm.putPossibleSpecialChild(className, (String) childNode.getProperty(Constants.PROPERTY_NAME));
+                        possibleSpecialChildren.add(Util.createClassMetadataLightFromNode(childNode));
+                    }
+                }
+            } else {
+                cm.putPossibleSpecialChild(className, (String) relationship.getEndNode().getProperty(Constants.PROPERTY_NAME));
+                possibleSpecialChildren.add(Util.createClassMetadataLightFromNode(relationship.getEndNode()));
+            }
+       }
+       return possibleSpecialChildren;
+   }
+   
    
    /**
     * Checks if all the objects of a given class has a value in a given attribute marked as mandatory
@@ -1762,14 +1779,17 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
      * @throws MetadataObjectNotFoundException
      * @throws InvalidArgumentException 
      */
-    private boolean canAttributeBeUnique(String className, String attributeType, String attributeName) 
+    private boolean canAttributeBeUnique(Node classNode, String attributeType, String attributeName) 
             throws MetadataObjectNotFoundException, InvalidArgumentException{
         
         List<String> values =  new ArrayList<>();
         String uniqueAttributeValue = null;
         HashMap<String, List<String>> uniqueValues = new HashMap<>();
+        String className = (String)classNode.getProperty(Constants.PROPERTY_NAME);
         
-        List<ClassMetadataLight> subClassesLight = getSubClassesLight(className, true, true);
+        //List<ClassMetadataLight> subClassesLight = getSubClassesLight(className, false, true);
+        List<ClassMetadataLight> subClassesLight = getSubClassesLight(classNode, false); //Uses this one to avoid the transaction
+        subClassesLight.add(Util.createClassMetadataLightFromNode(classNode)); //Add itself, since getSubClassesLight(Node, boolean) does not do it on its own
         
         for(ClassMetadataLight subClassLight : subClassesLight){
             Node subClassNode = classIndex.get(Constants.PROPERTY_NAME, subClassLight.getName()).getSingle();
@@ -1806,11 +1826,11 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
      * instances of the classes also saves the values of the unique attributes
      * @throws InvalidArgumentException if the attribute name doesn't exists
      */
-    private void loadUniqueAttirbutesCache() throws InvalidArgumentException{
+    private void loadUniqueAttributesCache() throws InvalidArgumentException{
         
         Node inventoryObject = classIndex.get(Constants.PROPERTY_NAME, Constants.CLASS_INVENTORYOBJECT).getSingle();
         
-        TraversalDescription td = new MonoDirectionalTraversalDescription(); //TODO revisar esto!
+        TraversalDescription td = new MonoDirectionalTraversalDescription(); //TODO Check this!
         td = td.breadthFirst();
         td = td.relationships(RelTypes.EXTENDS, Direction.INCOMING);
         org.neo4j.graphdb.traversal.Traverser traverse = td.traverse(inventoryObject);
@@ -1835,5 +1855,23 @@ public class MetadataEntityManagerImpl implements MetadataEntityManager {
                 }
             }
         }//end for 
+    }
+    
+    /**
+     * Fetches recursively all the subclasses of a given class without using a transaction
+     * @param classNode The class node to start the search
+     * @param includeAbstractClasses should abstract classes be included in the result?
+     * @return The list of the recursive subclasses, given the filters <code>includeAbstractClasses</code>
+     */
+    private List<ClassMetadataLight> getSubClassesLight(Node classNode, boolean includeAbstractClasses) {
+        List<ClassMetadataLight> res = new ArrayList<>();
+        for (Relationship inheritanceRelationship : classNode.getRelationships(Direction.INCOMING, RelTypes.EXTENDS)) {
+            Node subClassNode = inheritanceRelationship.getStartNode();
+            if (subClassNode.hasProperty(Constants.PROPERTY_ABSTRACT) && includeAbstractClasses) {
+                res.add(Util.createClassMetadataLightFromNode(subClassNode));
+                res.addAll(getSubClassesLight(subClassNode, includeAbstractClasses));
+            }
+        }
+        return res;
     }
 }    

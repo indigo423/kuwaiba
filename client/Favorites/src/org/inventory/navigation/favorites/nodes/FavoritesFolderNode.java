@@ -34,6 +34,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.navigation.navigationtree.nodes.ObjectNode;
 import org.openide.actions.PasteAction;
 import org.openide.nodes.AbstractNode;
@@ -74,7 +75,8 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                 if (getSheet() != null)
                     setSheet(createSheet());
             } else {
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());                
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
+                        NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());                
             }
         }
     }
@@ -146,17 +148,17 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                         ObjectNode favoritesItem = (ObjectNode) dropNode;
                         
                         if (favoritesItem.getParentNode() instanceof FavoritesFolderNode) {
-                            List<String> objClass = new ArrayList();
+                            List<String> objClass = new ArrayList<>();
                             objClass.add(favoritesItem.getObject().getClassName());
                             
-                            List<Long> objId = new ArrayList();
+                            List<Long> objId = new ArrayList<>();
                             objId.add(favoritesItem.getObject().getOid());
                                 
                             if (CommunicationsStub.getInstance().addObjectsToFavoritesFolder(objClass, objId, localFavoritesFolder.getId())) {
                                 
                                 ((FavoritesFolderChildren) getChildren()).addNotify();
                             } else {
-                                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE, 
+                                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, 
                                 CommunicationsStub.getInstance().getError());
                             }
                         }
@@ -169,10 +171,10 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                         if (favoritesItem.getParentNode() instanceof FavoritesFolderNode) {
                             FavoritesFolderNode bookmark = (FavoritesFolderNode) favoritesItem.getParentNode();
                             
-                            List<String> objClass = new ArrayList();
+                            List<String> objClass = new ArrayList<>();
                             objClass.add(favoritesItem.getObject().getClassName());
                                 
-                            List<Long> objId = new ArrayList();
+                            List<Long> objId = new ArrayList<>();
                             objId.add(favoritesItem.getObject().getOid());
                             if (CommunicationsStub.getInstance().removeObjectsFromFavoritesFolder(
                                 objClass, 
@@ -185,11 +187,11 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                                     
                                     ((FavoritesFolderChildren) getChildren()).addNotify();
                                 } else {
-                                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE, 
+                                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, 
                                         CommunicationsStub.getInstance().getError());
                                 }
                             } else {
-                                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE, 
+                                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE, 
                                     CommunicationsStub.getInstance().getError());
                             }
                         }
@@ -206,7 +208,7 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
         Set generalPropertySet = Sheet.createPropertiesSet(); // General attributes category
         LocalFavoritesFolder lb = CommunicationsStub.getInstance().getFavoritesFolder(localFavoritesFolder.getId());
         if (lb == null) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             return sheet;
         }
         localFavoritesFolder.setName(lb.getName());
@@ -216,8 +218,8 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
                 Constants.PROPERTY_NAME, this, lb.getName());
         generalPropertySet.put(propertyName);
         
-        generalPropertySet.setName("General Info");
-        generalPropertySet.setDisplayName("General Attributes");
+        generalPropertySet.setName(I18N.gm("general_information"));
+        generalPropertySet.setDisplayName(I18N.gm("general_attributes"));
         sheet.put(generalPropertySet);
         return sheet;
     }
@@ -264,7 +266,7 @@ public class FavoritesFolderNode extends AbstractNode implements PropertyChangeL
             
             if (favoritesItems == null) {
                 setKeys(Collections.EMPTY_LIST);
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, 
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                     CommunicationsStub.getInstance().getError());
             } else {
                 Collections.sort(favoritesItems);

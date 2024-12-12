@@ -19,32 +19,35 @@ package org.kuwaiba.management.services.nodes.actions;
 import java.awt.event.ActionEvent;
 import javax.swing.JOptionPane;
 import org.inventory.communications.core.LocalPrivilege;
+import org.inventory.communications.util.Constants;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
-import org.kuwaiba.management.services.nodes.actions.endtoend.EndToEndViewSimpleScene;
-import org.kuwaiba.management.services.nodes.actions.endtoend.EndToEndViewTopComponent;
+import org.kuwaiba.management.services.views.endtoend.EndToEndViewSimpleScene;
+import org.kuwaiba.management.services.views.endtoend.EndToEndViewTopComponent;
 import org.openide.util.lookup.ServiceProvider;
 import org.openide.windows.TopComponent;
-import org.openide.windows.WindowManager;
 
 /**
  * Opens an end-to-end view of the service, by trying to match the endpoints of the 
  * logical circuits directly associated to the selected instance
  * @author Charles Edward Bedon Cortazar <charles.bedon@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.OPEN_VIEW)
 @ServiceProvider(service = GenericObjectNodeAction.class)
 public class ShowEndToEndSimpleViewAction extends GenericObjectNodeAction {
 
     public ShowEndToEndSimpleViewAction() {
-        putValue(NAME, "Show End-to-End View (Simple)");
+        putValue(NAME, "Show  End-to-End View");
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (selectedObjects.size() != 1)
-            JOptionPane.showMessageDialog(null, "Select only one node service.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Select only one node service.", I18N.gm("error"), JOptionPane.ERROR_MESSAGE);
         else{
             //TopComponent endToEndTC = ((EndToEndViewTopComponent)WindowManager.getDefault().
-              //  findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getOid()));
+            //  findTopComponent("ObjectViewTopComponent_" + selectedObjects.get(0).getOid()));
             
             TopComponent endToEndTC = new EndToEndViewTopComponent(selectedObjects.get(0), new EndToEndViewSimpleScene());
             endToEndTC.open();
@@ -53,13 +56,22 @@ public class ShowEndToEndSimpleViewAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String getValidator() {
-        return "service"; //NOI18N
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_SERVICE_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ);
     }
-
+    
+    @Override
+    public String[] appliesTo() {
+        return new String[] {Constants.CLASS_GENERICSERVICE};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
+    }
 }

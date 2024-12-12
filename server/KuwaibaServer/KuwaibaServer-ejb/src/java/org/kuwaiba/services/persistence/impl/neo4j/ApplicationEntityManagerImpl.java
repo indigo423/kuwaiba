@@ -17,7 +17,10 @@
 package org.kuwaiba.services.persistence.impl.neo4j;
 
 import com.neotropic.kuwaiba.modules.GenericCommercialModule;
+import com.neotropic.kuwaiba.sync.model.SyncDataSourceConfiguration;
+import com.neotropic.kuwaiba.sync.model.SynchronizationGroup;
 import groovy.lang.Binding;
+import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -35,6 +38,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.XMLEventWriter;
@@ -73,10 +77,12 @@ import org.kuwaiba.apis.persistence.metadata.AttributeMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadata;
 import org.kuwaiba.apis.persistence.metadata.ClassMetadataLight;
 import org.kuwaiba.apis.persistence.metadata.GenericObjectList;
+import org.kuwaiba.apis.persistence.metadata.MetadataEntityManager;
 import org.kuwaiba.services.persistence.cache.CacheManager;
 import org.kuwaiba.services.persistence.util.Constants;
 import org.kuwaiba.services.persistence.util.Util;
 import org.kuwaiba.util.ChangeDescriptor;
+import org.kuwaiba.util.dynamicname.DynamicName;
 import org.kuwaiba.ws.todeserialize.StringPair;
 import org.kuwaiba.ws.toserialize.application.TaskNotificationDescriptor;
 import org.kuwaiba.ws.toserialize.application.TaskScheduleDescriptor;
@@ -150,7 +156,8 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
      * Index for general views (those not related to a particular object)
      */
     private Index<Node> generalViewsIndex;
-    /**
+    /**    /**
+
      * Index for special nodes(like group root node)
      */
     private Index<Node> specialNodesIndex;
@@ -159,9 +166,18 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
      */
     private Index<Node> businessRulesIndex;
     /**
+     * SyncGroup index
+     */
+    private Index<Node> syncGroupsIndex;
+    
+    /**
      * Reference to the singleton instance of CacheManager
      */
     private CacheManager cm;
+    /**
+     * Reference to the metadata entity manager
+     */
+    private MetadataEntityManager mem;
     /**
      * Map with the current sessions. The key is the username, the value is the respective session object
      */
@@ -177,9 +193,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         this.configuration = new Properties();
     }
 
-    public ApplicationEntityManagerImpl(ConnectionManager cmn) {
+    public ApplicationEntityManagerImpl(ConnectionManager cmn, MetadataEntityManager mem) {
         this();
         this.graphDb = (GraphDatabaseService) cmn.getConnectionHandler();
+        this.mem = mem;
         try(Transaction tx = graphDb.beginTx()){
             this.userIndex = graphDb.index().forNodes(Constants.INDEX_USERS);
             this.groupIndex = graphDb.index().forNodes(Constants.INDEX_GROUPS);
@@ -192,6 +209,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             this.taskIndex = graphDb.index().forNodes(Constants.INDEX_TASKS);
             this.specialNodesIndex = graphDb.index().forNodes(Constants.INDEX_SPECIAL_NODES);
             this.businessRulesIndex = graphDb.index().forNodes(Constants.INDEX_BUSINESS_RULES);
+            this.syncGroupsIndex = graphDb.index().forNodes(Constants.INDEX_SYNCGROUPS);
             for (Node listTypeNode : listTypeItemsIndex.query(Constants.PROPERTY_ID, "*")) {
                 GenericObjectList aListType = Util.createGenericObjectListFromNode(listTypeNode);
                 cm.putListType(aListType);
@@ -720,7 +738,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                  cm.putClass(myClass);
              }      
 
-            if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className))
+            if (!mem.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className))
                  throw new InvalidArgumentException(String.format("Class %s is not a list type", className));
 
             if (myClass.isInDesign())
@@ -748,7 +766,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             throws MetadataObjectNotFoundException, OperationNotPermittedException, ObjectNotFoundException, InvalidArgumentException, NotAuthorizedException {
         try(Transaction tx = graphDb.beginTx())
         {
-            if (!cm.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className))
+            if (!mem.isSubClass(Constants.CLASS_GENERICOBJECTLIST, className))
                 throw new InvalidArgumentException(String.format("Class %s is not a list type", className));
 
             Node instance = getInstanceOfClass(className, oid);
@@ -804,7 +822,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
         }
     }
-
+    
     @Override
     public List<ClassMetadataLight> getInstanceableListTypes()
             throws ApplicationObjectNotFoundException {
@@ -835,7 +853,421 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         }
         
     }
+    
+    private Node getListTypeItemNode(long listTypeItemId, String listTypeItemClassName) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, listTypeItemClassName).getSingle();
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Can not find a class with name %s", listTypeItemClassName));
+            
+            if (!Util.isSubClass(Constants.CLASS_GENERICOBJECTLIST, classNode))
+                throw new InvalidArgumentException(String.format("Class %s is not a list type", listTypeItemClassName));
+            
+            Node listTypeItemNode = null;
+            
+            for (Relationship childRel : classNode.getRelationships(RelTypes.INSTANCE_OF)) {
+                Node child = childRel.getStartNode();
+                if (child.getId() == listTypeItemId) {
+                    listTypeItemNode = child;
+                    break;
+                }
+            }
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            tx.success();
+            return listTypeItemNode;
+        }
+    }
+    
+    @Override
+    public long createListTypeItemRelatedView(long listTypeItemId, String listTypeItemClassName, String viewClassName, String name, String description, byte [] structure, byte [] background) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException {
+        long id;
+        try (Transaction tx = graphDb.beginTx()) {
+            Node listTypeItemNode = getListTypeItemNode(listTypeItemId, listTypeItemClassName);
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            Node viewNode = graphDb.createNode();
+            viewNode.setProperty(Constants.PROPERTY_CLASS_NAME, viewClassName);
+            listTypeItemNode.createRelationshipTo(viewNode, RelTypes.HAS_VIEW);
+            
+            if (name != null)
+                viewNode.setProperty(Constants.PROPERTY_NAME, name);
+            
+            if (description != null)
+                viewNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
+            
+            if (structure != null)
+                viewNode.setProperty(Constants.PROPERTY_STRUCTURE, structure);
+            
+            if (background != null) {
+                try {
+                    String fileName = "view-" + listTypeItemId + "-" + viewNode.getId() + "-" + viewClassName;
+                    Util.saveFile(configuration.getProperty("backgroundsPath", DEFAULT_BACKGROUNDS_PATH), fileName, background);
+                    viewNode.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
+                } catch(Exception ex){
+                    throw new InvalidArgumentException(String.format("Background image for view %s could not be saved: %s",
+                            listTypeItemId, ex.getMessage()));
+                }
+            }
+            tx.success();
+            id = viewNode.getId();
+        }
+        return id;
+    }
+    
+    @Override
+    public ChangeDescriptor updateListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId, 
+        String name, String description, byte[] structure, byte[] background) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node listTypeItemNode = getListTypeItemNode(listTypeItemId, listTypeItemClass);
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            Node viewNode = null;
+            for (Relationship rel : listTypeItemNode.getRelationships(RelTypes.HAS_VIEW, Direction.OUTGOING)){
+                if (rel.getEndNode().getId() == viewId){
+                    viewNode = rel.getEndNode();
+                    break;
+                }
+            }
+            if (viewNode == null)
+                throw new ObjectNotFoundException("View", viewId); //NOI18N
+            
+            String affectedProperties = "", oldValues = "", newValues = "";
+            
+            if (name != null) {
+                oldValues +=  " " + viewNode.getProperty(Constants.PROPERTY_NAME);
+                newValues += " " + name;
+                affectedProperties += " " + Constants.PROPERTY_NAME;
+                viewNode.setProperty(Constants.PROPERTY_NAME, name);
+            }
 
+            if (structure != null) {
+                affectedProperties += " " + Constants.PROPERTY_STRUCTURE;
+                viewNode.setProperty(Constants.PROPERTY_STRUCTURE, structure);
+            }
+
+            if (description != null) {
+                oldValues += " " + viewNode.getProperty(Constants.PROPERTY_DESCRIPTION);
+                newValues += " " + description;
+                affectedProperties += " " + Constants.PROPERTY_DESCRIPTION;
+                viewNode.setProperty(Constants.PROPERTY_DESCRIPTION, description);
+            }
+
+            String fileName = "view-" + listTypeItemId + "-" + viewId + "-" + viewNode.getProperty(Constants.PROPERTY_CLASS_NAME);
+            if (background != null){
+                try{
+                    affectedProperties += " " + Constants.PROPERTY_BACKGROUND;
+                    Util.saveFile(configuration.getProperty("backgroundsPath", DEFAULT_BACKGROUNDS_PATH), fileName, background);
+                    viewNode.setProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME, fileName);
+                }catch(Exception ex){
+                    throw new InvalidArgumentException(String.format("Background image for view %s couldn't be saved: %s",
+                            listTypeItemId, ex.getMessage()));
+                }
+            }
+            else {
+                if (viewNode.hasProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME)){
+                    try{
+                        new File(configuration.getProperty("backgroundsPath", DEFAULT_BACKGROUNDS_PATH) + "/" + fileName).delete();
+                    }catch(Exception ex){
+                        throw new InvalidArgumentException(String.format("View background %s couldn't be deleted: %s", 
+                                configuration.getProperty("backgroundsPath", DEFAULT_BACKGROUNDS_PATH) + "/" + fileName, ex.getMessage()));
+                    }
+                    viewNode.removeProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME);
+                    affectedProperties += " " + Constants.PROPERTY_BACKGROUND;
+                }
+            }
+            tx.success();
+            return new ChangeDescriptor(affectedProperties, oldValues, newValues, null);
+        }
+    }
+    
+    @Override
+    public ViewObject getListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node listTypeItemNode = getListTypeItemNode(listTypeItemId, listTypeItemClass);
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            for (Relationship rel : listTypeItemNode.getRelationships(RelTypes.HAS_VIEW, Direction.OUTGOING)) {
+                Node viewNode = rel.getEndNode();
+                if (viewNode.getId() == viewId){
+                    ViewObject res = new ViewObject(viewId,
+                            viewNode.hasProperty(Constants.PROPERTY_NAME) ? (String)viewNode.getProperty(Constants.PROPERTY_NAME) : null,
+                            viewNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? (String)viewNode.getProperty(Constants.PROPERTY_DESCRIPTION) : null,
+                            (String)viewNode.getProperty(Constants.PROPERTY_CLASS_NAME));
+                    if (viewNode.hasProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME)){
+                        String fileName = (String)viewNode.getProperty(Constants.PROPERTY_BACKGROUND_FILE_NAME);
+                        byte[] background = null;
+                        try {
+                            background = Util.readBytesFromFile(configuration.getProperty("backgroundsPath", DEFAULT_BACKGROUNDS_PATH) + "/" + fileName);
+                        }catch(Exception e){
+                            System.out.println(e.getMessage());
+                        }
+                        res.setBackground(background);
+                    }
+                    if (viewNode.hasProperty(Constants.PROPERTY_STRUCTURE))
+                        res.setStructure((byte[])viewNode.getProperty(Constants.PROPERTY_STRUCTURE));
+                    return res;
+                }
+            }
+        }
+        throw new ObjectNotFoundException("View", viewId);                
+    }
+    
+    @Override        
+    public List<ViewObjectLight> getListTypeItemRelatedViews(long listTypeItemId, String listTypeItemClass, int limit) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node listTypeItemNode = getListTypeItemNode(listTypeItemId, listTypeItemClass);
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            List<ViewObjectLight> res = new ArrayList();
+            int i = 0;
+            for (Relationship rel : listTypeItemNode.getRelationships(RelTypes.HAS_VIEW, Direction.OUTGOING)) {
+                if (limit != -1) {
+                    if (i < limit)
+                        i += 1;
+                    else
+                        break;
+                }
+                Node viewNode = rel.getEndNode();
+                res.add(new ViewObjectLight(viewNode.getId(),
+                    viewNode.hasProperty(Constants.PROPERTY_NAME) ? (String)viewNode.getProperty(Constants.PROPERTY_NAME) : null,
+                    viewNode.hasProperty(Constants.PROPERTY_DESCRIPTION) ? (String)viewNode.getProperty(Constants.PROPERTY_DESCRIPTION) : null,
+                    (String) viewNode.getProperty(Constants.PROPERTY_CLASS_NAME)));
+            }
+            return res;
+        }
+    }
+    
+    @Override        
+    public void deleteListTypeItemRelatedView(long listTypeItemId, String listTypeItemClass, long viewId) 
+        throws MetadataObjectNotFoundException, InvalidArgumentException, ObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node listTypeItemNode = getListTypeItemNode(listTypeItemId, listTypeItemClass);            
+            if (listTypeItemNode == null)
+                throw new InvalidArgumentException(String.format("Can not find the list type item with id %s", listTypeItemId));
+            
+            for (Relationship rel : listTypeItemNode.getRelationships(RelTypes.HAS_VIEW, Direction.OUTGOING)) {
+                Node viewNode = rel.getEndNode();
+                if (viewNode.getId() == viewId) {
+                    rel.delete();
+                    viewNode.delete();
+                    tx.success();
+                    return;
+                }
+            }
+            tx.success();
+        }
+        throw new ObjectNotFoundException("View", viewId);
+    }
+    
+    @Override
+    public List<RemoteBusinessObjectLight> getDeviceLayouts() {
+        try (Transaction tx = graphDb.beginTx()) {
+            String columnName = "elements"; //NOI18N
+            String cypherQuery = String.format(
+                "MATCH (classNode)<-[r1:%s]-(templateElement)-[r2:%s]->(list)-[:%s]->(view) "
+              + "WHERE r1.name=\"template\" AND r2.name=\"model\" "
+              + "RETURN templateElement AS %s "
+              + "ORDER BY templateElement.name ASC ", 
+                 RelTypes.INSTANCE_OF_SPECIAL, RelTypes.RELATED_TO, RelTypes.HAS_VIEW, columnName);
+            
+            Result result = graphDb.execute(cypherQuery);
+            Iterator<Node> column = result.columnAs(columnName);
+            
+            List<RemoteBusinessObjectLight> templateElements = new ArrayList();
+            
+            for (Node templateElementNode : IteratorUtil.asIterable(column))
+                templateElements.add(Util.createTemplateElementLightFromNode(templateElementNode));
+                        
+            return templateElements;
+        }
+    }
+    
+    @Override
+    public byte[] getDeviceLayoutStructure(long oid, String className) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
+            XMLEventWriter xmlew = xmlof.createXMLEventWriter(baos);
+            XMLEventFactory xmlef = XMLEventFactory.newInstance();
+            
+            QName tagStructure = new QName("deviceLayoutStructure");
+            xmlew.add(xmlef.createStartElement(tagStructure, null, null));
+            
+            QName tagDevice = new QName("device"); // NOI18N
+            xmlew.add(xmlef.createStartElement(tagDevice, null, null));
+            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(oid)));
+            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), className));
+            addDeviceModelAsXML(oid, xmlew, xmlef);
+            xmlew.add(xmlef.createEndElement(tagDevice, null));
+            
+            addDeviceNodeChildrenAsXml(oid, className, xmlew, xmlef);
+            
+            xmlew.add(xmlef.createEndElement(tagStructure, null));          
+            
+            xmlew.close();
+            
+            return baos.toByteArray();
+        } catch (XMLStreamException ex) {
+            Logger.getLogger(ApplicationEntityManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
+            return null;            
+        }
+    }
+    
+    private void addDeviceNodeChildrenAsXml(long id, String className, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException {
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            String columnName = "childNode"; //NOI18N
+
+            String cypherQuery = String.format(
+                "MATCH (classNode)<-[:%s]-(objectNode)<-[:%s]-(objChildNode) "
+              + "WHERE id(objectNode)={id} AND classNode.name={className}"
+              + "RETURN objChildNode AS %s "
+              + "ORDER BY objChildNode.name ASC "
+              , RelTypes.INSTANCE_OF, RelTypes.CHILD_OF, columnName);
+
+            HashMap<String, Object> queryParameters = new HashMap<>();
+            queryParameters.put("id", id); //NOI18N
+            queryParameters.put("className", className); //NOI18N
+            
+            Result result = graphDb.execute(cypherQuery, queryParameters);
+            Iterator<Node> column = result.columnAs(columnName);
+
+            for (Node deviceNode : IteratorUtil.asIterable(column))
+                addDeviceNodeAsXML(deviceNode, id, xmlew, xmlef);
+        }
+    }
+    
+    private void addDeviceNodeAsXML(Node deviceNode, long parentId, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException {
+        QName tagDevice = new QName("device"); // NOI18N
+        
+        long id = deviceNode.getId();
+        String className = Util.getClassName(deviceNode);
+
+        xmlew.add(xmlef.createStartElement(tagDevice, null, null));
+        
+        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(id)));
+        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_NAME), deviceNode.getProperty(Constants.PROPERTY_NAME).toString()));
+        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), className));
+        xmlew.add(xmlef.createAttribute(new QName("parentId"), Long.toString(parentId))); //NOI18N     
+        
+        addDeviceModelAsXML(id, xmlew, xmlef);
+        
+        xmlew.add(xmlef.createEndElement(tagDevice, null));
+        
+        addDeviceNodeChildrenAsXml(id, className, xmlew, xmlef);
+    }
+    
+    private void addDeviceModelAsXML(long id, XMLEventWriter xmlew, XMLEventFactory xmlef) throws XMLStreamException {
+        String cypherQuery = String.format(
+            "MATCH (objectNode)-[r1:%s]->(modelNode) "
+          + "WHERE id(objectNode) = %s "
+          + "AND r1.name=\"model\" "
+          + "RETURN modelNode;",
+            RelTypes.RELATED_TO, id);
+
+        try (Transaction tx = graphDb.beginTx()) {
+            Result result = graphDb.execute(cypherQuery);
+
+            Iterator<Node> column = result.columnAs("modelNode");
+
+            if (column.hasNext()) {
+                Node modelNode = column.next();
+
+                long modelId = modelNode.getId();
+                String modelName = modelNode.getProperty(Constants.PROPERTY_NAME) != null ? (String) modelNode.getProperty(Constants.PROPERTY_NAME) : null;
+
+                cypherQuery = String.format(""
+                    + "MATCH (modelNode)-[:%s]->(classNode) "
+                    + "WHERE id(modelNode) = %s "
+                    + "RETURN classNode;",
+                    RelTypes.INSTANCE_OF, modelId);
+
+                result = graphDb.execute(cypherQuery);
+                column = result.columnAs("classNode");
+
+                String modelClassName = null;
+
+                if (column.hasNext()) {
+                    Node classNode = column.next();
+                    modelClassName = classNode.getProperty(Constants.PROPERTY_NAME) != null ? (String) classNode.getProperty(Constants.PROPERTY_NAME) : null;
+                }   
+
+                cypherQuery = String.format(""
+                    + "MATCH (modelNode)-[:%s]->(viewNode) "
+                    + "WHERE id(modelNode) = %s "
+                    + "RETURN viewNode;", 
+                    RelTypes.HAS_VIEW, modelId);
+
+                result = graphDb.execute(cypherQuery);
+                column = result.columnAs("viewNode");
+
+                if (column.hasNext()) {
+                    Node viewNode = column.next();
+                    long modelViewId = viewNode.getId();
+
+                    try {
+                        ViewObject modeViewObj = getListTypeItemRelatedView(modelId, modelClassName, modelViewId);
+
+                        QName tagModel = new QName("model");
+
+                        xmlew.add(xmlef.createStartElement(tagModel, null, null));
+
+                        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(modelId)));
+                        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), modelClassName));
+                        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_NAME), modelName));
+
+                        QName tagView = new QName("view");
+                        
+                        xmlew.add(xmlef.createStartElement(tagView, null, null));
+                        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_ID), Long.toString(modelViewId)));
+                        xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_CLASS_NAME), modeViewObj.getViewClassName()));
+                        
+                        if (modeViewObj.getName() != null)
+                            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_NAME), modeViewObj.getName()));
+                        
+                        if (modeViewObj.getDescription() != null)
+                            xmlew.add(xmlef.createAttribute(new QName(Constants.PROPERTY_DESCRIPTION), modeViewObj.getDescription()));                        
+                        
+                        QName tagStructure = new QName("structure");
+                        xmlew.add(xmlef.createStartElement(tagStructure, null, null));
+                        if (modeViewObj.getStructure() != null)
+                            xmlew.add(xmlef.createCharacters(DatatypeConverter.printBase64Binary(modeViewObj.getStructure())));
+                        xmlew.add(xmlef.createEndElement(tagStructure, null));
+                        
+                        QName tagBackground = new QName("background");
+                        xmlew.add(xmlef.createStartElement(tagBackground, null, null));
+                        if (modeViewObj.getBackground() != null)
+                            xmlew.add(xmlef.createCharacters(DatatypeConverter.printBase64Binary(modeViewObj.getBackground())));                            
+                        xmlew.add(xmlef.createEndElement(tagBackground, null));
+                        
+                        xmlew.add(xmlef.createEndElement(tagView, null));  
+
+                        xmlew.add(xmlef.createEndElement(tagModel, null));  
+
+                    } catch (MetadataObjectNotFoundException | InvalidArgumentException | ObjectNotFoundException ex) {
+                        Logger.getLogger(ApplicationEntityManagerImpl.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        }
+    }
+            
     @Override
     public long createObjectRelatedView(long oid, String objectClass, String name, String description, String viewClassName, 
         byte[] structure, byte[] background) 
@@ -1502,6 +1934,29 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             return new ChangeDescriptor(affectedProperties, oldValues, newValues, String.format("Set %s pool properties", name));
         }
     }
+    
+    @Override
+    public String getNameOfSpecialParentByScaleUp(String className, long id, int targetLevel) {
+        try(Transaction tx = graphDb.beginTx()) {
+            Node node0 = graphDb.getNodeById(id);
+            return getNameOfSpecialParentByScaleUpRecursive(node0, targetLevel, 1);
+        }
+    }
+    
+    private String getNameOfSpecialParentByScaleUpRecursive(Node node, int targetLevel, int currentLevel) {
+        if (node.hasRelationship(Direction.OUTGOING, RelTypes.CHILD_OF_SPECIAL)) {
+            for (Relationship rel : node.getRelationships(Direction.OUTGOING, RelTypes.CHILD_OF_SPECIAL)) {
+                Node endNode = rel.getEndNode();
+                
+                if (currentLevel == targetLevel)
+                    return endNode.hasProperty(Constants.PROPERTY_NAME) ? (String) endNode.getProperty(Constants.PROPERTY_NAME) : "<Not Set>";
+                else
+                    return getNameOfSpecialParentByScaleUpRecursive(endNode, targetLevel, currentLevel + 1);
+            }
+        }
+        return null;                
+    }
+    
        
     @Override
     public List<Pool> getRootPools(String className, int type, boolean includeSubclasses) {
@@ -1521,8 +1976,10 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                         if (className != null) { //We will return only those matching with the specified class name or its subclasses, depending on the value of includeSubclasses
                             String poolClass = (String)poolNode.getProperty(Constants.PROPERTY_CLASS_NAME);
                             if (includeSubclasses) {
-                                if (cm.isSubClass(className, poolClass))
-                                    pools.add(Util.createPoolFromNode(poolNode));
+                                try {
+                                    if (mem.isSubClass(className, poolClass))
+                                        pools.add(Util.createPoolFromNode(poolNode));
+                                } catch (MetadataObjectNotFoundException ex) { } //Should not happen
                             } else {
                                 if (className.equals(poolClass))
                                     pools.add(Util.createPoolFromNode(poolNode));
@@ -1656,7 +2113,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     public List<ActivityLogEntry> getBusinessObjectAuditTrail(String objectClass, long objectId, int limit) 
             throws ObjectNotFoundException, MetadataObjectNotFoundException, InvalidArgumentException {
         try(Transaction tx = graphDb.beginTx()) {
-            if (!cm.isSubClass(Constants.CLASS_INVENTORYOBJECT, objectClass))
+            if (!mem.isSubClass(Constants.CLASS_INVENTORYOBJECT, objectClass))
                 throw new InvalidArgumentException(String.format("Class %s is not subclass of %s",
                         objectClass, Constants.CLASS_INVENTORYOBJECT));
             Node instanceNode = getInstanceOfClass(objectClass, objectId);
@@ -1922,11 +2379,13 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
 
     @Override
-    public long createTask(String name, String description, boolean enabled, String script, List<StringPair> parameters, TaskScheduleDescriptor schedule, TaskNotificationDescriptor notificationType) {
+    public long createTask(String name, String description, boolean enabled, boolean commitOnExecute, String script, 
+            List<StringPair> parameters, TaskScheduleDescriptor schedule, TaskNotificationDescriptor notificationType) {
         try(Transaction tx = graphDb.beginTx()) {
             Node taskNode = graphDb.createNode();
             taskNode.setProperty(Constants.PROPERTY_NAME, name == null ? "" : name);
             taskNode.setProperty(Constants.PROPERTY_DESCRIPTION, description == null ? "" : description);
+            taskNode.setProperty(Constants.PROPERTY_COMMIT_ON_EXECUTE, commitOnExecute);
             taskNode.setProperty(Constants.PROPERTY_ENABLED, enabled);
             
             if (script != null)
@@ -1959,33 +2418,27 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
-            String affectedProperties = "", oldValues = "", newValues = "";
+            String affectedProperty, oldValue, newValue;
+            affectedProperty = propertyName;
+            oldValue = String.valueOf(taskNode.hasProperty(propertyName) ? taskNode.getProperty(propertyName) : " ");
 
             switch (propertyName) {
                 case Constants.PROPERTY_NAME:
                 case Constants.PROPERTY_DESCRIPTION:
                 case Constants.PROPERTY_SCRIPT:
-                    oldValues += " " + (taskNode.hasProperty(propertyName) ? taskNode.getProperty(propertyName) : " ");
-                    
                     taskNode.setProperty(propertyName, propertyValue);
-                    
-                    affectedProperties += " " + Constants.PROPERTY_SCRIPT;
-                    newValues += " " + propertyValue;
                     break;
                 case Constants.PROPERTY_ENABLED:
-                    oldValues += " " + (taskNode.hasProperty(propertyName) ? taskNode.getProperty(propertyName) : " ");
-                    
+                case Constants.PROPERTY_COMMIT_ON_EXECUTE:
                     taskNode.setProperty(propertyName, Boolean.valueOf(propertyValue));
-                    
-                    affectedProperties += " " + Constants.PROPERTY_ENABLED;
-                    newValues += " " + propertyValue;
                     break;
                 default:
                     throw new InvalidArgumentException(String.format("%s is not a valid task property", propertyName));
             }
             String taskName = taskNode.hasProperty(Constants.PROPERTY_NAME) ? (String) taskNode.getProperty(Constants.PROPERTY_NAME) : " ";
+            newValue = propertyValue;
             tx.success();
-            return new ChangeDescriptor(affectedProperties, oldValues, newValues, 
+            return new ChangeDescriptor(affectedProperty, oldValue, newValue, 
                 String.format("Updated properties in Task with name %s and id %s ", taskName, taskId));
         }
     }
@@ -2212,15 +2665,20 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         }
     }
     
-    
     @Override
     public TaskResult executeTask(long taskId) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        
+        Binding environmentParameters = new Binding();
+        
         try (Transaction tx = graphDb.beginTx()) {
             Node taskNode = taskIndex.get(Constants.PROPERTY_ID, taskId).getSingle();
             if (taskNode == null)
                 throw new ApplicationObjectNotFoundException(String.format("A task with id %s could not be found", taskId));
             if (!taskNode.hasProperty(Constants.PROPERTY_SCRIPT))
                 throw new InvalidArgumentException(String.format("The task with id %s does not have a script", taskId));
+            
+            if (!(boolean)taskNode.getProperty(Constants.PROPERTY_ENABLED))
+                throw new InvalidArgumentException("This task can not be executed because it's disabled");
             
             String script = (String)taskNode.getProperty(Constants.PROPERTY_SCRIPT);
             
@@ -2231,7 +2689,6 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                     scriptParameters.put(property.replace("PARAM_", ""), (String)taskNode.getProperty(property));
             }
             
-            Binding environmentParameters = new Binding();
             environmentParameters.setVariable("graphDb", graphDb); //NOI18N
             environmentParameters.setVariable("objectIndex", objectIndex); //NOI18N
             environmentParameters.setVariable("classIndex", classIndex); //NOI18N
@@ -2240,21 +2697,26 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
             environmentParameters.setVariable("Direction", Direction.class); //NOI18N
             environmentParameters.setVariable("RelTypes", RelTypes.class); //NOI18N
             environmentParameters.setVariable("scriptParameters", scriptParameters); //NOI18N
-            try {
-                GroovyShell shell = new GroovyShell(environmentParameters);
-                Object theResult = shell.evaluate(script);
-                
-                if (theResult == null)
-                    throw new InvalidArgumentException("The script returned a null object. Please check the syntax.");
-                else if (!TaskResult.class.isInstance(theResult))
-                    throw new InvalidArgumentException("The script does not return a TaskResult object. Please check the return value.");
-                
-                return (TaskResult)theResult;
-                
-            } catch(Exception ex) {
-                return TaskResult.createErrorResult(ex.getMessage());
-            }
+         
+            GroovyShell shell = new GroovyShell(ApplicationEntityManager.class.getClassLoader(), environmentParameters);
+            Object theResult = shell.evaluate(script);
+
+            if (theResult == null)
+                throw new InvalidArgumentException("The script returned a null object. Please check the syntax.");
+            else if (!TaskResult.class.isInstance(theResult))
+                throw new InvalidArgumentException("The script does not return a TaskResult object. Please check the return value.");
+            //Commit only if it's configured to do so 
+            if (taskNode.hasProperty(Constants.PROPERTY_COMMIT_ON_EXECUTE) && (boolean)taskNode.getProperty(Constants.PROPERTY_COMMIT_ON_EXECUTE))
+                tx.success();
+            else 
+                tx.failure();
+
+            return (TaskResult)theResult;
+
+        } catch(GroovyRuntimeException | InvalidArgumentException ex) {
+            return TaskResult.createErrorResult(ex.getMessage());
         }
+       
     }
     
     //Templates
@@ -2285,7 +2747,14 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     public long createTemplateElement(String templateElementClass, String templateElementParentClassName, long templateElementParentId, String templateElementName) throws 
         MetadataObjectNotFoundException, ApplicationObjectNotFoundException, OperationNotPermittedException {
         
-        if (!cm.getPossibleChildren(templateElementParentClassName).contains(templateElementClass)) 
+        boolean isPossibleChildren = false;
+        for (ClassMetadataLight possibleChildren : mem.getPossibleChildren(templateElementParentClassName)) {
+            if (possibleChildren.getName().equals(templateElementClass)) {
+                isPossibleChildren = true;
+                break;
+            }
+        }
+        if (!isPossibleChildren) 
             throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as child of %s", templateElementClass, templateElementParentClassName == null ? Constants.NODE_DUMMYROOT : templateElementParentClassName));
         
         try (Transaction tx = graphDb.beginTx()) {
@@ -2329,7 +2798,15 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     @Override    
     public long createTemplateSpecialElement(String tsElementClass, String tsElementParentClassName, long tsElementParentId, String tsElementName) 
         throws OperationNotPermittedException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException {
-        if (!cm.getPossibleSpecialChildren(tsElementParentClassName).contains(tsElementClass))
+        
+        boolean isPossibleSpecialChildren = false;
+        for (ClassMetadataLight  possibleSpecialChildren : mem.getPossibleSpecialChildren(tsElementParentClassName)) {
+            if (possibleSpecialChildren.getName().equals(tsElementClass)) {
+                isPossibleSpecialChildren = true;
+                break;
+            }
+        }
+        if (!isPossibleSpecialChildren)
             throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as special child of %s", tsElementClass, tsElementParentClassName == null ? Constants.NODE_DUMMYROOT : tsElementParentClassName));
             
         try (Transaction tx = graphDb.beginTx()) {
@@ -2370,6 +2847,133 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
         }
     }
     
+    @Override
+    public long[] createBulkTemplateElement(String templateElementClassName, String templateElementParentClassName, long templateElementParentId, int numberOfTemplateElements, String templateElementNamePattern) 
+        throws MetadataObjectNotFoundException, OperationNotPermittedException, ApplicationObjectNotFoundException, InvalidArgumentException {
+        
+        boolean isPossibleChildren = false;
+        for (ClassMetadataLight possibleChildren : mem.getPossibleChildren(templateElementParentClassName)) {
+            if (possibleChildren.getName().equals(templateElementClassName)) {
+                isPossibleChildren = true;
+                break;
+            }
+        }
+        if (!isPossibleChildren) 
+            throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as child of %s", templateElementClassName, templateElementParentClassName == null ? Constants.NODE_DUMMYROOT : templateElementParentClassName));
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, templateElementClassName).getSingle();
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", templateElementClassName));
+            
+            Node parentClassNode = classIndex.get(Constants.PROPERTY_NAME, templateElementParentClassName).getSingle();
+            if (parentClassNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Parent class %s can not be found", templateElementParentClassName));
+            
+            if (classNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                throw new OperationNotPermittedException(String.format("Abstract class %s can not be instantiated", templateElementClassName));
+            
+            Node parentNode = null;
+            
+            for(Relationship instanceOfSpecialRelationship : parentClassNode.getRelationships(Direction.INCOMING, RelTypes.INSTANCE_OF_SPECIAL)) {
+                if (instanceOfSpecialRelationship.getStartNode().getId() == templateElementParentId) {
+                    parentNode = instanceOfSpecialRelationship.getStartNode();
+                    break;
+                }
+            }
+            if (parentNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Parent object %s of class %s not found", templateElementParentId, templateElementParentClassName));
+            
+            DynamicName dynamicName = new DynamicName(templateElementNamePattern);
+            if (dynamicName.getNumberOfDynamicNames() < numberOfTemplateElements) {
+                throw new InvalidArgumentException("The given pattern to generate the name has "
+                        + "less possibilities that the number of objects to be created");
+            }            
+            long res[] = new long[numberOfTemplateElements];
+            
+            for (int i = 0; i < numberOfTemplateElements; i += 1) {
+                String templateElementName = dynamicName.getDynamicNames().get(i);
+                
+                Node templateObjectNode = graphDb.createNode();
+                templateObjectNode.setProperty(Constants.PROPERTY_NAME, templateElementName == null ? "" : templateElementName);
+
+                templateObjectNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF);
+
+                Relationship specialInstanceRelationship = templateObjectNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF_SPECIAL);
+                specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template"); //NOI18N 
+                
+                res[i] = templateObjectNode.getId();
+            }            
+            tx.success();
+            return res;
+        }
+    }
+        
+    @Override
+    public long[] createBulkSpecialTemplateElement(String stElementClass, String stElementParentClassName, long stElementParentId, int numberOfTemplateElements, String stElementNamePattern) 
+        throws OperationNotPermittedException, MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
+        
+        boolean isPossibleSpecialChildren = false;
+        for (ClassMetadataLight  possibleSpecialChildren : mem.getPossibleSpecialChildren(stElementParentClassName)) {
+            if (possibleSpecialChildren.getName().equals(stElementClass)) {
+                isPossibleSpecialChildren = true;
+                break;
+            }
+        }
+        if (!isPossibleSpecialChildren)
+            throw new OperationNotPermittedException(String.format("An instance of class %s can't be created as special child of %s", stElementClass, stElementParentClassName == null ? Constants.NODE_DUMMYROOT : stElementParentClassName));
+            
+        try (Transaction tx = graphDb.beginTx()) {
+            
+            Node classNode = classIndex.get(Constants.PROPERTY_NAME, stElementClass).getSingle();
+            if (classNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Class %s can not be found", stElementClass));
+            
+            Node parentClassNode = classIndex.get(Constants.PROPERTY_NAME, stElementParentClassName).getSingle();
+            if (parentClassNode == null)
+                throw new MetadataObjectNotFoundException(String.format("Parent class %s can not be found", stElementParentClassName));
+            
+            if (classNode.hasProperty(Constants.PROPERTY_ABSTRACT) && (boolean)classNode.getProperty(Constants.PROPERTY_ABSTRACT))
+                throw new OperationNotPermittedException(String.format("Abstract class %s can not be instantiated", stElementClass));
+            
+            Node parentNode = null;
+            
+            for(Relationship instanceOfSpecialRelationship : parentClassNode.getRelationships(Direction.INCOMING, RelTypes.INSTANCE_OF_SPECIAL)) {
+                if (instanceOfSpecialRelationship.getStartNode().getId() == stElementParentId) {
+                    parentNode = instanceOfSpecialRelationship.getStartNode();
+                    break;
+                }
+            }
+            
+            if (parentNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Parent object %s of class %s not found", stElementParentId, stElementParentClassName));
+            
+            DynamicName dynamicName = new DynamicName(stElementNamePattern);
+            if (dynamicName.getNumberOfDynamicNames() < numberOfTemplateElements) {
+                throw new InvalidArgumentException("The given pattern to generate the name has "
+                        + "less possibilities that the number of objects to be created");
+            }            
+            long res[] = new long[numberOfTemplateElements];
+            
+            for (int i = 0; i < numberOfTemplateElements; i += 1) {
+                String stElementName = dynamicName.getDynamicNames().get(i);
+
+                Node templateObjectNode = graphDb.createNode();
+                templateObjectNode.setProperty(Constants.PROPERTY_NAME, stElementName == null ? "" : stElementName);
+
+                templateObjectNode.createRelationshipTo(parentNode, RelTypes.CHILD_OF_SPECIAL);
+
+                Relationship specialInstanceRelationship = templateObjectNode.createRelationshipTo(classNode, RelTypes.INSTANCE_OF_SPECIAL);
+                specialInstanceRelationship.setProperty(Constants.PROPERTY_NAME, "template"); //NOI18N 
+                
+                res[i] = templateObjectNode.getId();
+            }
+            tx.success();
+            return res;
+        }
+    }
+        
     @Override
     public ChangeDescriptor updateTemplateElement(String templateElementClass, long templateElementId, String[] attributeNames, 
             String[] attributeValues) throws MetadataObjectNotFoundException, ApplicationObjectNotFoundException, InvalidArgumentException {
@@ -3046,7 +3650,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     
     @Override
     public void updateFavoritesFolder(long favoritesFolderId, long userId, String favoritesFolderName) 
-        throws ApplicationObjectNotFoundException, IllegalArgumentException {
+        throws ApplicationObjectNotFoundException, InvalidArgumentException {
         
         try (Transaction tx = graphDb.beginTx()) {
             Node favoritesFolderNode = getFavoritesFolderForUser(favoritesFolderId, userId);
@@ -3058,7 +3662,7 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
                 favoritesFolderNode.setProperty(Constants.PROPERTY_NAME, favoritesFolderName);
                 tx.success();
             } else 
-                throw new IllegalArgumentException("Favorites folder name can not be empty");
+                throw new InvalidArgumentException("Favorites folder name can not be empty");
         }
     }
     
@@ -3175,7 +3779,278 @@ public class ApplicationEntityManagerImpl implements ApplicationEntityManager {
     }
     
     //</editor-fold>
-    //Helpers
+
+    //<editor-fold desc="Synchronization API" defaultstate="collapsed">
+    @Override
+    public SynchronizationGroup getSyncGroup(long syncGroupId) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+        
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Sync group with id %s could not be found", syncGroupId));
+            return Util.createSyncGroupFromNode(syncGroupNode);
+
+        } 
+    }
+    
+    @Override
+    public List<SynchronizationGroup> getSyncGroups() throws InvalidArgumentException {
+        
+        List<SynchronizationGroup> synchronizationGroups = new ArrayList<>();
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            IndexHits<Node> syncGroupsNodes = syncGroupsIndex.query(Constants.PROPERTY_ID, "*");
+            
+            for (Node syncGroup : syncGroupsNodes)
+                synchronizationGroups.add(Util.createSyncGroupFromNode(syncGroup));            
+            
+            return synchronizationGroups;
+        }
+    }
+    
+    @Override
+    public  List<SyncDataSourceConfiguration> getSyncDataSourceConfigurations(long syncGroupId) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        List<SyncDataSourceConfiguration> syncDataSourcesConfigurations = new ArrayList<>();
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be found", syncGroupId));
+            
+            for(Relationship rel : syncGroupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP))
+                syncDataSourcesConfigurations.add(Util.createSyncDataSourceConfigFromNode(rel.getStartNode()));
+        }
+        return syncDataSourcesConfigurations;
+    }
+    
+    @Override
+    public long createSyncGroup(String name, String syncProvider) throws InvalidArgumentException, ApplicationObjectNotFoundException {
+        if (name == null || name.trim().isEmpty())
+                throw new InvalidArgumentException("The name of the sync group can not be empty");
+        
+        if (syncProvider == null || syncProvider.trim().isEmpty())
+                throw new InvalidArgumentException("The syncProvider of the sync group can not be empty");
+        
+        try {
+            Class.forName(syncProvider);
+        } catch (ClassNotFoundException ex) {
+            throw new ApplicationObjectNotFoundException(String.format("Provider %s could not be found", syncProvider));
+        }
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = graphDb.createNode();
+            syncGroupNode.setProperty(Constants.PROPERTY_NAME, name);
+            syncGroupNode.setProperty(Constants.PROPERTY_SYNCPROVIDER, syncProvider);
+            
+            syncGroupsIndex.putIfAbsent(syncGroupNode, Constants.PROPERTY_ID, syncGroupNode.getId());
+            tx.success();
+
+            return syncGroupNode.getId();
+        }
+    }
+    
+    @Override
+    public void updateSyncGroup(long syncGroupId, List<StringPair> syncGroupProperties) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        if (syncGroupProperties == null)
+            throw new InvalidArgumentException(String.format("The parameters of the sync group with id %s can not be null", syncGroupId));
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Synchronization Group with id %s could not be found", syncGroupId));
+            
+            for (StringPair syncGroupProperty : syncGroupProperties)
+                syncGroupNode.setProperty(syncGroupProperty.getKey(), syncGroupProperty.getValue());
+                        
+            tx.success();
+        }
+    }
+    
+    @Override
+    public void deleteSynchronizationGroup(long syncGroupId) throws ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = graphDb.getNodeById(syncGroupId);
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find the Synchronization group with id %s",syncGroupId));
+            
+            List<Relationship> relationshipsToDelete = new ArrayList();
+            List<Node> nodesToDelete = new ArrayList();
+           
+            for (Relationship relationship : syncGroupNode.getRelationships(Direction.INCOMING, RelTypes.BELONGS_TO_GROUP)) {
+                relationshipsToDelete.add(relationship);
+                nodesToDelete.add(relationship.getStartNode());
+            }
+            while (!relationshipsToDelete.isEmpty())
+                relationshipsToDelete.remove(0).delete();
+            
+            while (!nodesToDelete.isEmpty())
+                nodesToDelete.remove(0).delete();
+            
+            syncGroupsIndex.remove(syncGroupNode);
+            syncGroupNode.delete();
+            tx.success();
+        }
+    }
+    
+    @Override
+    public long createSyncDataSourceConfig(long syncGroupId, String configName, List<StringPair> parameters) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        if (configName == null || configName.trim().isEmpty())
+                throw new InvalidArgumentException("The sync configuration name can not be empty");
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            if(syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
+            
+            Node syncDataSourceConfigNode =  graphDb.createNode();
+            syncDataSourceConfigNode.setProperty(Constants.PROPERTY_NAME, configName);
+            for (StringPair parameter : parameters) {
+                if (!syncDataSourceConfigNode.hasProperty(parameter.getKey()))
+                    syncDataSourceConfigNode.setProperty(parameter.getKey(), parameter.getValue());
+                else
+                    throw new InvalidArgumentException(String.format("Parameter %s in configuration %s is duplicated", configName, parameter.getKey()));
+            }
+            
+            syncDataSourceConfigNode.createRelationshipTo(syncGroupNode, RelTypes.BELONGS_TO_GROUP);
+            tx.success();
+            return syncDataSourceConfigNode.getId();
+        }           
+    }
+    
+    @Override
+    public void updateSyncDataSourceConfig(long syncDataSourceConfigId, List<StringPair> parameters) 
+        throws ApplicationObjectNotFoundException {
+        
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncDataSourceConfig = graphDb.getNodeById(syncDataSourceConfigId);
+            if (syncDataSourceConfig == null)
+                throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSourceConfigId));
+            
+            for (StringPair parameter : parameters)
+                syncDataSourceConfig.setProperty(parameter.getKey(), parameter.getValue());
+                        
+            tx.success();
+        }
+    }
+    
+    @Override    
+    public void deleteSynchronizationDataSourceConfig(long syncDataSourceConfigId) throws ApplicationObjectNotFoundException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncDataSourceConfigNode = graphDb.getNodeById(syncDataSourceConfigId);
+            if (syncDataSourceConfigNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("Can not find the Synchronization Data Source Configuration with id %s",syncDataSourceConfigId));
+            
+            List<Relationship> relationshipsToDelete = new ArrayList();
+           
+            for (Relationship relationship : syncDataSourceConfigNode.getRelationships(Direction.OUTGOING, RelTypes.BELONGS_TO_GROUP)) {
+                relationshipsToDelete.add(relationship);
+            }
+            while (!relationshipsToDelete.isEmpty())
+                relationshipsToDelete.remove(0).delete();
+            
+            syncDataSourceConfigNode.delete();
+            tx.success();
+        }
+    }
+    
+    @Override
+    public List<SynchronizationGroup> copySyncGroup(long[] syncGroupIds) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            List<SynchronizationGroup> result = new ArrayList();
+            
+            for (long syncGroupId : syncGroupIds) {
+                Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+                if (syncGroupNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
+                
+                SynchronizationGroup syncGroup = Util.createSyncGroupFromNode(syncGroupNode);
+                long newSyncGroupId = createSyncGroup(syncGroup.getName(), syncGroup.getProvider().getClass().getName());//TODO: review the second parameter
+                
+                List<SyncDataSourceConfiguration> syncDataSources = syncGroup.getSyncDataSourceConfigurations();
+                for (SyncDataSourceConfiguration syncDataSource : syncDataSources) {
+                    List<StringPair> parameters = new ArrayList();
+                    for (String paramKey : syncDataSource.getParameters().keySet()) {
+                        String paramValue = syncDataSource.getParameters().get(paramKey);
+                        parameters.add(new StringPair(paramKey, paramValue));
+                    }
+                    createSyncDataSourceConfig(newSyncGroupId, syncDataSource.getName(), parameters);
+                }
+                
+                Node newSyncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, newSyncGroupId).getSingle();
+                if (newSyncGroupNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", newSyncGroupId));
+                result.add(Util.createSyncGroupFromNode(newSyncGroupNode));
+            }
+            tx.success();
+            return result;
+        }
+    }
+    
+    @Override
+    public List<SyncDataSourceConfiguration> copySyncDataSourceConfiguration(long syncGroupId, long[] syncDataSourceConfigurationIds) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
+            
+            List<SyncDataSourceConfiguration> result = new ArrayList();
+            
+            for (long syncDataSrcId : syncDataSourceConfigurationIds) {
+                Node syncDataSrcNode = graphDb.getNodeById(syncDataSrcId);
+                if (syncDataSrcNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSrcId));
+                
+                SyncDataSourceConfiguration syncDataSrc = Util.createSyncDataSourceConfigFromNode(syncDataSrcNode);
+                
+                List<StringPair> parameters = new ArrayList();
+                
+                for (String paramKey : syncDataSrc.getParameters().keySet()) {
+                    String paramValue = syncDataSrc.getParameters().get(paramKey);
+                    parameters.add(new StringPair(paramKey, paramValue));
+                }
+                
+                long newSyncDataSrcId = createSyncDataSourceConfig(syncGroupId, syncDataSrc.getName(), parameters);
+                Node newSyncDataSrcNode = graphDb.getNodeById(newSyncDataSrcId);
+                if (newSyncDataSrcNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", newSyncDataSrcId));
+                result.add(Util.createSyncDataSourceConfigFromNode(newSyncDataSrcNode));
+            }
+            tx.success();
+            return result;
+        }
+    }
+    
+    @Override
+    public void moveSyncDataSourceConfiguration(long syncGroupId, long[] syncDataSourceConfigurationIds) throws ApplicationObjectNotFoundException, InvalidArgumentException {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node syncGroupNode = syncGroupsIndex.get(Constants.PROPERTY_ID, syncGroupId).getSingle();
+            if (syncGroupNode == null)
+                throw new ApplicationObjectNotFoundException(String.format("The sync group with id %s could not be find", syncGroupId));
+                        
+            for (long syncDataSrcId : syncDataSourceConfigurationIds) {
+                Node syncDataSrcNode = graphDb.getNodeById(syncDataSrcId);
+                if (syncDataSrcNode == null)
+                    throw new ApplicationObjectNotFoundException(String.format("Synchronization Data Source Configuration with id %s could not be found", syncDataSrcId));
+                
+                SyncDataSourceConfiguration syncDataSrc = Util.createSyncDataSourceConfigFromNode(syncDataSrcNode);
+                
+                List<StringPair> parameters = new ArrayList();
+                
+                for (String paramKey : syncDataSrc.getParameters().keySet()) {
+                    String paramValue = syncDataSrc.getParameters().get(paramKey);
+                    parameters.add(new StringPair(paramKey, paramValue));
+                }
+                createSyncDataSourceConfig(syncGroupId, syncDataSrc.getName(), parameters);
+                deleteSynchronizationDataSourceConfig(syncDataSrcId);
+            }
+            tx.success();
+        }
+    }
+    //</editor-fold>
+
+//Helpers
     
     private Node getFavoritesFolderForUser(long favoritesFolderId, long userId) {
         Node userNode = userIndex.get(Constants.PROPERTY_ID, userId).getSingle();

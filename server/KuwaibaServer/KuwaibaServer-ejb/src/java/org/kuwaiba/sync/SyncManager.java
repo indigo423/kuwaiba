@@ -18,8 +18,16 @@ package org.kuwaiba.sync;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kuwaiba.apis.persistence.exceptions.ApplicationObjectNotFoundException;
+import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
+import org.kuwaiba.apis.persistence.exceptions.MetadataObjectNotFoundException;
+import org.kuwaiba.apis.persistence.exceptions.NotAuthorizedException;
+import org.kuwaiba.apis.persistence.exceptions.ObjectNotFoundException;
+import org.kuwaiba.apis.persistence.exceptions.OperationNotPermittedException;
+import org.kuwaiba.apis.persistence.exceptions.WrongMappingException;
 
 /**
  * Synchronization manager 
@@ -35,15 +43,14 @@ public class SyncManager{
         LoadDataFromFile ldf = new LoadDataFromFile(uploadData, commitSize, dataType, IPAddress, sessionId);
         try {
             return ldf.uploadFile();
-        } catch (Exception ex) {
+        } catch (ApplicationObjectNotFoundException | NotAuthorizedException | RemoteException | MetadataObjectNotFoundException | InvalidArgumentException | ObjectNotFoundException | OperationNotPermittedException | WrongMappingException ex) {
             Logger.getLogger(SyncManager.class.getName()).log(Level.SEVERE, null, ex);
-        } 
-        return null;
+        }
+         return null;
     }
 
     public byte [] downloadBulkLoadLog(String fileName, String ipAddress, String sessionId) throws IOException{
         File file = new File(PATH_DATA_LOAD_LOGS + fileName);
         return LoadDataFromFile.getByteArrayFromFile(file);
     }
-
 }

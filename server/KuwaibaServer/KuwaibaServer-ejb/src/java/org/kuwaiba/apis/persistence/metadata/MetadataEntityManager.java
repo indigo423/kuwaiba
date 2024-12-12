@@ -135,10 +135,14 @@ public interface MetadataEntityManager {
      * Adds an attribute to a class.
      * @param className The class the attribute will be added to.
      * @param attributeDefinition An object with the definition of the attribute.
+     * @param recursive Defines if the subclasses that has an attribute with name 
+     *                  equal to the name of the new attribute can conserve (false) it 
+     *                  or must be removed (true), in the case when the attribute must 
+     *                  be removed throws an exception
      * @throws MetadataObjectNotFoundException if there is no a class with such className
      * @throws InvalidArgumentException if any of the parameters to create the attribute has a wrong value
      */
-    public void createAttribute(String className, AttributeMetadata attributeDefinition) throws MetadataObjectNotFoundException, InvalidArgumentException;
+    public void createAttribute(String className, AttributeMetadata attributeDefinition, boolean recursive) throws MetadataObjectNotFoundException, InvalidArgumentException;
 
     /**
      * Adds an attribute to a class
@@ -148,6 +152,15 @@ public interface MetadataEntityManager {
      * @throws InvalidArgumentException if any of the parameters to create the attribute has a wrong value
      */
     public void createAttribute(long classId, AttributeMetadata attributeDefinition) throws MetadataObjectNotFoundException, InvalidArgumentException;
+    
+    /**
+     * Checks if a class has a attribute with a given name
+     * @param className Class name
+     * @param attributeName Attribute name
+     * @return True if the given class has the attribute
+     * @throws MetadataObjectNotFoundException If there is no a class with such className
+     */
+    public boolean hasAttribute(String className, String attributeName) throws MetadataObjectNotFoundException;
 
     /**
      * Gets an attribute belonging to a class
@@ -248,6 +261,23 @@ public interface MetadataEntityManager {
     public List<ClassMetadataLight> getPossibleSpecialChildrenNoRecursive(String parentClassName) throws MetadataObjectNotFoundException;
 
     /**
+     * Finds out if an instance of a given class can be child of an instance of allegedParent. This is a sort of reverse getPossibleChildren
+     * @param allegedParent Possible parent
+     * @param childToBeEvaluated Class to be evaluated
+     * @return True an instance of class childToBeEvaluated be a contained into an instance of allegedParent. False otherwise.
+     * @throws MetadataObjectNotFoundException If any of the classes involved doesn't exist
+     */
+    public boolean canBeChild(String allegedParent, String childToBeEvaluated) throws MetadataObjectNotFoundException;
+    /**
+     * Same as <code>canBeChild</code>, but using the special containment hierarchy
+     * @param allegedParent Possible parent
+     * @param childToBeEvaluated Class to be evaluated
+     * @return True an instance of class childToBeEvaluated be a contained into an instance of allegedParent (as in the special containment hierarchy). False otherwise.
+     * @throws MetadataObjectNotFoundException 
+     */
+    public boolean canBeSpecialChild(String allegedParent, String childToBeEvaluated) throws MetadataObjectNotFoundException;
+    
+    /**
      * Adds to a given class a list of possible children classes whose instances can be contained using the class id to find the parent class
      *
      * @param parentClassId Id of the class whose instances can contain the instances of the classes in possibleChildren. Use -1 to refer to the DummyRoot
@@ -313,9 +343,10 @@ public interface MetadataEntityManager {
      * Assess if a given class is subclass of another
      * @param allegedParent Alleged super class
      * @param classToBeEvaluated class to be evaluated
-     * @return True if classToBeEvaluated is subclass of allegedParent
+     * @return True if classToBeEvaluated is subclass of allegedParent. False otherwise. This method also returns true if allegedParent == classToBeEvaluated
+     * @throws MetadataObjectNotFoundException If any of the classes provided doesn't exist
      */
-    public boolean isSubClass(String allegedParent, String classToBeEvaluated);
+    public boolean isSubClass(String allegedParent, String classToBeEvaluated) throws MetadataObjectNotFoundException;
     /**
      * Get the upstream containment hierarchy for a given class, unlike getPossibleChildren (which will give you the 
      * downstream hierarchy).

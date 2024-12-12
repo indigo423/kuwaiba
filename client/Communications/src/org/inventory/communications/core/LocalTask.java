@@ -41,9 +41,13 @@ public class LocalTask implements Comparable<LocalTask> {
      */
     private String description;
     /**
-     * Id this task enabled?
+     * Is this task enabled?
      */
     private boolean enabled;
+    /**
+     * Should the changes made in this task (if any) be committed after its execution?
+     */
+    private boolean commitOnExecute;
     /**
      * Task script
      */
@@ -69,13 +73,14 @@ public class LocalTask implements Comparable<LocalTask> {
      */
     private List<VetoableChangeListener> changeListeners;
 
-    public LocalTask(long id, String name, String description, boolean enabled, 
+    public LocalTask(long id, String name, String description, boolean enabled, boolean commitOnExecute,
             String script, HashMap<String, String> parameters, LocalTaskScheduleDescriptor schedule, 
             LocalTaskNotificationDescriptor notificationType, List<LocalUserObjectLight> users) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.enabled = enabled;
+        this.commitOnExecute = commitOnExecute;
         this.script = script;
         this.parameters = parameters;
         this.schedule = schedule;
@@ -112,10 +117,24 @@ public class LocalTask implements Comparable<LocalTask> {
         return enabled;
     }
 
+    public boolean getCommitOnExecute() {
+        return commitOnExecute;
+    }
+
+    public void setCommitOnExecute(boolean commitOnExecute) {
+        boolean oldEnabled = this.isEnabled();
+        try {
+            firePropertyChange(Constants.PROPERTY_COMMIT_ON_EXECUTE, oldEnabled, String.valueOf(commitOnExecute));
+            this.commitOnExecute = commitOnExecute;
+        } catch (PropertyVetoException ex) {}
+        
+    }
+    
+
     public void setEnabled(boolean enabled) {
         boolean oldEnabled = this.isEnabled();
         try {
-            firePropertyChange(Constants.PROPERTY_ENABLED, String.valueOf(oldEnabled), String.valueOf(enabled));
+            firePropertyChange(Constants.PROPERTY_ENABLED, oldEnabled, String.valueOf(enabled));
             this.enabled = enabled;
         } catch (PropertyVetoException ex) {}
     }

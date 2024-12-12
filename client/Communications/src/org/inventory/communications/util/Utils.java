@@ -34,7 +34,9 @@ import java.util.Collections;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
+import org.inventory.*;
 import org.inventory.communications.CommunicationsStub;
+import org.inventory.communications.core.LocalAttributeMetadata;
 import org.inventory.communications.core.LocalObject;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalObjectListItem;
@@ -64,6 +66,7 @@ public class Utils {
      * A singleton used to open the file choosers in the last opened location
      */
     private static JFileChooser globalFileChooser;
+    private static Object I18N;
      /**
      * Finds the real type for a given type provided as a string
      * Possible types:
@@ -155,6 +158,7 @@ public class Utils {
                 case Constants.MAPPING_PRIMITIVE:
                 case Constants.MAPPING_DATE:
                 case Constants.MAPPING_TIMESTAMP:
+                case Constants.MAPPING_BINARY:
                     if (type.equals("Boolean"))
                         return Boolean.valueOf(valueAsString.get(0));
 
@@ -172,8 +176,12 @@ public class Utils {
 
                     if (type.equals("Date"))
                         return new Date(Long.valueOf(valueAsString.get(0)));
+                    
                     if (type.equals("Timestamp"))
                         return Timestamp.valueOf(valueAsString.get(0));
+                    
+                    if (type.equals("Binary"))
+                        return new Binary(valueAsString.get(0));
 
                     //In any other case we rise an IllegalArgumentException
                     throw new IllegalArgumentException(String.format("The type %s has a wrong mapping and will be ignored", type));
@@ -374,5 +382,35 @@ public class Utils {
         
         outputString += objectList.get(i);
         return outputString;
+    }
+    
+    
+    /**
+     * Checks if a given string text is a number or not
+     * @param s String text
+     * @return true if is number
+     */
+    public static boolean isNumeric(String s) {  
+        return s != null && s.matches("[-+]?\\d*\\.?\\d+");  
+    }
+    
+    /**
+     * Checks if a given class may have a device layout
+     * @param className className
+     * @return true if the class can have a device layout
+     * @throws Exception The same exception captured in the CommunicationsStub
+     */
+    public static boolean classMayHaveDeviceLayout(String className) throws Exception {
+        if (CommunicationsStub.getInstance().hasAttribute(className, Constants.ATTRIBUTE_MODEL)) {
+            LocalAttributeMetadata lam = CommunicationsStub.getInstance().getAttribute(className, Constants.ATTRIBUTE_MODEL);
+            if (lam == null)
+                throw new Exception(CommunicationsStub.getInstance().getError());
+
+            if (CommunicationsStub.getInstance().isSubclassOf(
+                lam.getListAttributeClassName(), Constants.CLASS_GENERICOBJECTLIST)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

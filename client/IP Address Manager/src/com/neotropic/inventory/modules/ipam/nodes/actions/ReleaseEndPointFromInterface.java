@@ -18,7 +18,6 @@ package com.neotropic.inventory.modules.ipam.nodes.actions;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ResourceBundle;
 import static javax.swing.Action.NAME;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
@@ -27,8 +26,10 @@ import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.SubMenuDialog;
 import org.inventory.core.services.utils.SubMenuItem;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -36,11 +37,12 @@ import org.openide.util.lookup.ServiceProvider;
  * Release a relation between service instance and an interface
  * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELEASE_FROM)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implements ComposedAction {
     
     public ReleaseEndPointFromInterface() {
-        putValue(NAME, ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_RELEASE_INTERFACE"));
+        putValue(NAME, I18N.gm("release_from_interface"));
     }
     
     @Override
@@ -52,9 +54,9 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
         if (serviceInstances != null) {
             if (serviceInstances.isEmpty()) {
                 JOptionPane.showMessageDialog(null, "There are no interfaces related to the selected port", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                    I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
             } else {
-                List<SubMenuItem> subMenuItems = new ArrayList();
+                List<SubMenuItem> subMenuItems = new ArrayList<>();
                 for (LocalObjectLight serviceInstance : serviceInstances) {
                     SubMenuItem subMenuItem = new SubMenuItem(serviceInstance.toString());
                     subMenuItem.addProperty("serviceInstanceId", serviceInstance.getOid()); //NOI18N
@@ -65,7 +67,7 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
                 SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
             }
         } else {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());            
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());            
         }
     }
     
@@ -73,7 +75,7 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
     public void finalActionPerformed(ActionEvent e) {
         if (e != null && e.getSource() instanceof SubMenuDialog) {
             if (JOptionPane.showConfirmDialog(null, 
-                    "Are you sure you want to release this interface?", "Warning", 
+                    "Are you sure you want to release this interface?", I18N.gm("warning"), 
                     JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
                 
                 SubMenuItem selectedItem = ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem();
@@ -82,22 +84,31 @@ public class ReleaseEndPointFromInterface extends GenericObjectNodeAction implem
                     (String) selectedItem.getProperty("portClassName"), //NOI18N
                     (long) selectedItem.getProperty("portId"), //NOI18N
                     (long) selectedItem.getProperty("serviceInstanceId"))) //NOI18N
-                    NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, 
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, 
                             java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_SUCCESS"));
                 else
-                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
             }
         }
     }
 
     @Override
-    public String getValidator() {
-        return Constants.VALIDATOR_LOGICAL_ENDPOINT;
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_IP_ADDRESS_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
     }
-   
+
+    @Override
+    public String[] appliesTo() {
+        return new String [] {Constants.CLASS_GENERICNETWORKELEMENT};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return -1;
+    }
 }

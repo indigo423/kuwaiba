@@ -20,6 +20,10 @@ import com.neotropic.kuwaiba.modules.reporting.model.RemoteReport;
 import com.neotropic.kuwaiba.modules.reporting.model.RemoteReportLight;
 import com.neotropic.kuwaiba.modules.sdh.SDHContainerLinkDefinition;
 import com.neotropic.kuwaiba.modules.sdh.SDHPosition;
+import com.neotropic.kuwaiba.scheduling.BackgroundJob;
+import com.neotropic.kuwaiba.scheduling.JobManager;
+import com.neotropic.kuwaiba.sync.model.SyncFinding;
+import com.neotropic.kuwaiba.sync.model.SyncResult;
 import java.util.List;
 import javax.annotation.Resource;
 import javax.ejb.EJB;
@@ -29,6 +33,8 @@ import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.ws.WebServiceContext;
 import org.kuwaiba.apis.persistence.business.RemoteBusinessObjectLightList;
+import org.kuwaiba.apis.persistence.exceptions.InvalidArgumentException;
+import org.kuwaiba.apis.persistence.exceptions.InventoryException;
 import org.kuwaiba.beans.WebserviceBeanRemote;
 import org.kuwaiba.exceptions.ServerSideException;
 import org.kuwaiba.util.Constants;
@@ -42,9 +48,12 @@ import org.kuwaiba.ws.toserialize.application.ResultRecord;
 import org.kuwaiba.ws.toserialize.application.GroupInfo;
 import org.kuwaiba.ws.toserialize.application.GroupInfoLight;
 import org.kuwaiba.ws.toserialize.application.PrivilegeInfo;
+import org.kuwaiba.ws.toserialize.application.RemoteBackgroundJob;
 import org.kuwaiba.ws.toserialize.application.RemoteBusinessRule;
 import org.kuwaiba.ws.toserialize.application.RemoteFavoritesFolder;
 import org.kuwaiba.ws.toserialize.application.RemotePool;
+import org.kuwaiba.ws.toserialize.application.RemoteSynchronizationConfiguration;
+import org.kuwaiba.ws.toserialize.application.RemoteSynchronizationGroup;
 import org.kuwaiba.ws.toserialize.application.RemoteTask;
 import org.kuwaiba.ws.toserialize.application.RemoteTaskResult;
 import org.kuwaiba.ws.toserialize.application.TaskNotificationDescriptor;
@@ -53,9 +62,11 @@ import org.kuwaiba.ws.toserialize.application.UserInfo;
 import org.kuwaiba.ws.toserialize.application.UserInfoLight;
 import org.kuwaiba.ws.toserialize.application.ViewInfo;
 import org.kuwaiba.ws.toserialize.application.ViewInfoLight;
+import org.kuwaiba.ws.toserialize.business.AssetLevelCorrelatedInformation;
 import org.kuwaiba.ws.toserialize.business.RemoteLogicalConnectionDetails;
 import org.kuwaiba.ws.toserialize.business.RemoteObject;
 import org.kuwaiba.ws.toserialize.business.RemoteObjectLight;
+import org.kuwaiba.ws.toserialize.business.RemoteObjectLightList;
 import org.kuwaiba.ws.toserialize.business.RemoteObjectSpecialRelationships;
 import org.kuwaiba.ws.toserialize.metadata.AttributeInfo;
 import org.kuwaiba.ws.toserialize.metadata.ClassInfo;
@@ -639,6 +650,216 @@ public class KuwaibaService {
             }
         }
     }
+    
+    /**
+     * Creates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClassName list type item class name
+     * @param viewClassName view class name
+     * @param name view name
+     * @param description view description
+     * @param structure XML document with the view structure
+     * @param background background image
+     * @param sessionId Session token
+     * @return The id of the new view.
+     * @throws ServerSideException If the list type item class can not be found
+     *                             If the view type is not supported
+     */
+    @WebMethod(operationName = "createListTypeItemRelatedView")
+    public long createListTypeItemRelatedView(
+        @WebParam(name = "listTypeItemId") long listTypeItemId, 
+        @WebParam(name = "listTypeItemClassName") String listTypeItemClassName, 
+        @WebParam(name = "viewClassName") String viewClassName, 
+        @WebParam(name = "name") String name, 
+        @WebParam(name = "description") String description, 
+        @WebParam(name = "structure") byte [] structure, 
+        @WebParam(name = "background") byte [] background, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        try {
+            return wsBean.createListTypeItemRelatedView(listTypeItemId, listTypeItemClassName, viewClassName, 
+                name, description, structure, background, getIPAddress(), sessionId);            
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createListTypeItemRelateView: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Updates a view for a given list type item. If there's already a view of the provided view type, it will be overwritten
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId viewId
+     * @param name view name
+     * @param description view description
+     * @param structure XML document with the view structure
+     * @param background Background image. If null, the previous will be removed, if 0-sized array, it will remain unchanged
+     * @param sessionId Session token
+     * @throws ServerSideException If the list type item can not be found
+     *                             If the list type item class can not be found
+     *                             If the view type is not supported
+     */
+    @WebMethod(operationName = "updateListTypeItemRelatedView")
+    public void updateListTypeItemRelatedView(
+        @WebParam(name = "listTypeItemId") long listTypeItemId, 
+        @WebParam(name = "listTypeItemClass") String listTypeItemClass, 
+        @WebParam(name = "viewId") long viewId, 
+        @WebParam(name = "name") String name, 
+        @WebParam(name = "description") String description, 
+        @WebParam(name = "structure") byte[] structure, 
+        @WebParam(name = "background") byte[] background, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        
+        try {
+            wsBean.updateListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, 
+                name, description, structure, background, getIPAddress(), sessionId);            
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in updateListTypeItemRelatedView: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets a view related to a list type item, given its id. An example of these views is a layout associated to a particular device model
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type item class
+     * @param viewId view id
+     * @param sessionId Session token
+     * @return The associated view (there should be only one of each type). Null if there's none yet
+     * @throws ServerSideException If the list type item or the view can not be found.
+     *                             If the corresponding class metadata can not be found.
+     *                             If the provided view type is not supported.
+     */
+    @WebMethod(operationName = "getListTypeItemRelatedView")
+    public ViewInfo getListTypeItemRelatedView(
+        @WebParam(name = "listTypeItemId") long listTypeItemId, 
+        @WebParam(name = "listTypeItemClass") String listTypeItemClass, 
+        @WebParam(name = "viewId") long viewId, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        try {
+            return wsBean.getListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, getIPAddress(), sessionId);            
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getListTypeItemRelatedView: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets all the views related to a list type item. An example of these views is a layout associated to a particular device model
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @param limit max number of results
+     * @param sessionId Session token
+     * @return The associated views
+     * @throws ServerSideException If the corresponding class metadata can not be found
+     *                             If the provided view type is not supported
+     */
+    @WebMethod(operationName = "getListTypeItemRelatedViews")
+    public ViewInfoLight[] getListTypeItemRelatedViews(
+        @WebParam(name = "listTypeItemId")  long listTypeItemId, 
+        @WebParam(name = "listTypeItemClass")  String listTypeItemClass, 
+        @WebParam(name = "limit")  int limit, 
+        @WebParam(name = "sessionId")  String sessionId) throws ServerSideException {
+        
+        try {
+            return wsBean.getListTypeItemRelatedViews(listTypeItemId, listTypeItemClass, limit, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getListTypeItemRelatedViews: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }        
+    }
+    
+    /**
+     * Deletes a view related to a list type item
+     * @param listTypeItemId list type item id
+     * @param listTypeItemClass list type class name
+     * @param viewId related view id
+     * @param sessionId Session token
+     * @throws ServerSideException If the list type item class can not be found
+     *                             If the list type item can no be found using the id
+     *                             If the view can not be found
+     */
+    @WebMethod(operationName = "deleteListTypeItemRelatedView")
+    public void deleteListTypeItemRelatedView(
+        @WebParam(name = "listTypeItemId") long listTypeItemId, 
+        @WebParam(name = "listTypeItemClass") String listTypeItemClass, 
+        @WebParam(name = "viewId") long viewId, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            wsBean.deleteListTypeItemRelatedView(listTypeItemId, listTypeItemClass, viewId, getIPAddress(), sessionId);
+        } catch (Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in deleteListTypeItemRelatedView: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets the list of template elements with a device layout
+     * @param sessionId Session id token
+     * @return the list of template elements with a device layout
+     * @throws ServerSideException 
+     */
+    @WebMethod(operationName = "getDeviceLayouts")
+    public List<RemoteObjectLight> getDeviceLayouts(
+        @WebParam(name = "sessionId")  String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getDeviceLayouts(getIPAddress(), sessionId);
+        } catch (Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getDeviceLayouts: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets the device layout structure
+     * @param oid object id
+     * @param className class of object
+     * @param sessionId Session id token
+     * @return the structure of the device layout
+     * @throws ServerSideException 
+     */
+    @WebMethod(operationName = "getDeviceLayoutStructure")
+    public byte[] getDeviceLayoutStructure(
+        @WebParam(name = "oid") long oid, 
+        @WebParam(name = "className") String className, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getDeviceLayoutStructure(oid, className, getIPAddress(), sessionId);
+        } catch (Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getDeviceLayoutStructure: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }    
 
     /**
      * Creates a view an relates it to an existing object
@@ -856,7 +1077,7 @@ public class KuwaibaService {
      *                             If the class provided is not a list type
      */
     @WebMethod(operationName = "getListTypeItems")
-    public RemoteObjectLight[] getListTypeItems(
+    public List<RemoteObjectLight> getListTypeItems(
             @WebParam(name = "className") String className,
             @WebParam(name = "sessionId") String sessionId) throws ServerSideException{
         try{
@@ -1365,7 +1586,7 @@ public class KuwaibaService {
      *                             If the pool id provided is not valid
      */
     @WebMethod(operationName = "getPoolItems")
-    public RemoteObjectLight[] getPoolItems(@WebParam(name = "poolId")long poolId,
+    public List<RemoteObjectLight> getPoolItems(@WebParam(name = "poolId")long poolId,
             @WebParam(name = "limit")int limit,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
@@ -1385,6 +1606,7 @@ public class KuwaibaService {
      * @param name Task name
      * @param description Task description
      * @param enabled Is the task enabled?
+     * @param commitOnExecute Should this task commit the changes (if any) after its execution? <b>Handle with extreme care, you are basically running arbitrary code and affecting the db</b>
      * @param script The script to be executed
      * @param parameters The parameters for the script
      * @param schedule When the task should be executed
@@ -1392,19 +1614,21 @@ public class KuwaibaService {
      * @param sessionId The session token
      * @return The id of the newly created task
      * @throws ServerSideException If the user is not allowed to invoke the method
+     *                             If the task is disabled
      *                             If something goes wrong
      */
     @WebMethod(operationName = "createTask")
     public long createTask(@WebParam(name = "name")String name,
             @WebParam(name = "description")String description,
             @WebParam(name = "enabled")boolean enabled,
+            @WebParam(name = "commitOnExecute")boolean commitOnExecute,
             @WebParam(name = "script")String script,
             @WebParam(name = "parameters")List<StringPair> parameters,
             @WebParam(name = "schedule")TaskScheduleDescriptor schedule,
             @WebParam(name = "notificationType")TaskNotificationDescriptor notificationType,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
-            return wsBean.createTask(name, description, enabled, script, parameters, 
+            return wsBean.createTask(name, description, enabled, commitOnExecute, script, parameters, 
                     schedule, notificationType, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
@@ -1710,12 +1934,12 @@ public class KuwaibaService {
      * @throws ServerSideException If the class could not be found
      */
     @WebMethod(operationName = "getObjectChildrenForClassWithId")
-    public RemoteObjectLight[] getObjectChildrenForClassWithId(@WebParam(name = "oid") long oid,
+    public List<RemoteObjectLight> getObjectChildrenForClassWithId(@WebParam(name = "oid") long oid,
             @WebParam(name = "objectClassId") long objectClassId,
             @WebParam(name = "maxResults") int maxResults,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
-            RemoteObjectLight[] res = wsBean.getObjectChildren(oid,objectClassId, maxResults, getIPAddress(), sessionId);
+            List<RemoteObjectLight> res = wsBean.getObjectChildren(oid,objectClassId, maxResults, getIPAddress(), sessionId);
             return res;
         } catch(Exception e){
             if (e instanceof ServerSideException)
@@ -1737,12 +1961,12 @@ public class KuwaibaService {
      * @throws ServerSideException If the class could not be found.
      */
     @WebMethod(operationName = "getObjectChildren")
-    public RemoteObjectLight[] getObjectChildren(@WebParam(name = "objectClassName") String objectClassName,
+    public List<RemoteObjectLight> getObjectChildren(@WebParam(name = "objectClassName") String objectClassName,
             @WebParam(name = "oid") long oid,
             @WebParam(name = "maxResults") int maxResults,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
-            RemoteObjectLight[] res = wsBean.getObjectChildren(objectClassName, oid, maxResults, getIPAddress(), sessionId);
+            List<RemoteObjectLight> res = wsBean.getObjectChildren(objectClassName, oid, maxResults, getIPAddress(), sessionId);
             return res;
         } catch(Exception e){
             if (e instanceof ServerSideException)
@@ -1765,12 +1989,12 @@ public class KuwaibaService {
      *                             If the object does not exist
      */
     @WebMethod(operationName = "getSiblings")
-    public RemoteObjectLight[] getSiblings(@WebParam(name = "objectClassName") String objectClassName,
+    public List<RemoteObjectLight> getSiblings(@WebParam(name = "objectClassName") String objectClassName,
             @WebParam(name = "oid") long oid,
             @WebParam(name = "maxResults") int  maxResults,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
-            RemoteObjectLight[] res = wsBean.getSiblings(objectClassName, oid, maxResults, getIPAddress(), sessionId);
+            List<RemoteObjectLight> res = wsBean.getSiblings(objectClassName, oid, maxResults, getIPAddress(), sessionId);
             return res;
         } catch(Exception e){
             if (e instanceof ServerSideException)
@@ -1795,19 +2019,51 @@ public class KuwaibaService {
      *                             If the database objects can not be correctly mapped into serializable Java objects.
      */
     @WebMethod(operationName="getChildrenOfClass")
-    public RemoteObject[] getChildrenOfClass(@WebParam(name="parentOid")long parentOid,
+    public List<RemoteObject> getChildrenOfClass(@WebParam(name="parentOid")long parentOid,
             @WebParam(name="parentClass")String parentClass,
             @WebParam(name="childrenClass")String childrenClass,
             @WebParam(name="maxResults")int maxResults,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
-            RemoteObject[] res = wsBean.getChildrenOfClass(parentOid,parentClass,childrenClass, maxResults, getIPAddress(), sessionId);
+            List<RemoteObject> res = wsBean.getChildrenOfClass(parentOid,parentClass,childrenClass, maxResults, getIPAddress(), sessionId);
             return res;
         } catch(Exception e){
             if (e instanceof ServerSideException)
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in getChildrenOfClass: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets recursively all children of an object of a given class
+     * @param parentOid Parent whose children are requested
+     * @param parentClass Class name of the element we want the children from
+     * @param childrenClass The type of children we want to retrieve
+     * @param maxResults Max number of children to be returned. O for all
+     * @param sessionId Session token
+     * @return An array with the children objects
+     * @throws ServerSideException If any of the classes can not be found
+     *                             If parent object can not be found
+     *                             If the database objects can not be correctly mapped into serializable Java objects.
+     */
+    @WebMethod(operationName="getChildrenOfClassLightRecursive")
+    public List<RemoteObjectLight> getChildrenOfClassLightRecursive(
+        @WebParam(name="parentOid") long parentOid,
+        @WebParam(name="parentClass") String parentClass,
+        @WebParam(name="childrenClass") String childrenClass,
+        @WebParam(name="maxResults") int maxResults,
+        @WebParam(name="sessionId") String sessionId) throws ServerSideException {
+        try{
+            List<RemoteObjectLight> res = wsBean.getChildrenOfClassLightRecursive(parentOid, parentClass, childrenClass, maxResults, getIPAddress(), sessionId);
+            return res;
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getChildrenOfClassLightRecursive: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
@@ -1825,7 +2081,7 @@ public class KuwaibaService {
      *                             If parent object can not be found
      */
     @WebMethod(operationName="getChildrenOfClassLight")
-    public RemoteObjectLight[] getChildrenOfClassLight(@WebParam(name="parentOid")long parentOid,
+    public List<RemoteObjectLight> getChildrenOfClassLight(@WebParam(name="parentOid")long parentOid,
             @WebParam(name="parentClass")String parentClass,
             @WebParam(name="childrenClass")String childrenClass,
             @WebParam(name="maxResults")int maxResults,
@@ -1837,6 +2093,34 @@ public class KuwaibaService {
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in getChildrenOfClassLight: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Returns the special children of a given object as RemoteObjectLight instances. This method is not recursive.
+     * @param parentOid The id of the parent object
+     * @param parentClass The class name of the parent object
+     * @param classToFilter The superclass/class to be used to filter the results. You can also use abstract superclasses.
+     * @param maxResults The max number of results to fetch. Use -1 to retrieve all
+     * @param sessionId The session token
+     * @return The list of special children of the given object, filtered using classToFilter
+     * @throws ServerSideException If the parent class name provided could not be found or if the parent object could not be found
+     */
+    @WebMethod(operationName="getSpecialChildrenOfClassLight")
+    public List<RemoteObjectLight> getSpecialChildrenOfClassLight(@WebParam(name="parentOid")long parentOid,
+            @WebParam(name="parentClass")String parentClass,
+            @WebParam(name="classToFilter")String classToFilter,
+            @WebParam(name="maxResults")int maxResults,
+            @WebParam(name ="sessionId")String sessionId) throws ServerSideException {
+        try{
+            return wsBean.getSpecialChildrenOfClassLight(parentOid, parentClass, classToFilter, maxResults, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getSpecialChildrenOfClassLight: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
@@ -1903,7 +2187,7 @@ public class KuwaibaService {
      *                             If the class is not subclass of InventoryObject
      */
     @WebMethod(operationName = "getObjectsOfClassLight")
-    public RemoteObjectLight[] getObjectsOfClassLight(@WebParam(name = "className") String className,
+    public List<RemoteObjectLight> getObjectsOfClassLight(@WebParam(name = "className") String className,
             @WebParam(name = "maxResults")int maxResults,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
@@ -1986,7 +2270,7 @@ public class KuwaibaService {
      * @throws ServerSideException In case something goes wrong.
      */
     @WebMethod(operationName = "getParents")
-    public RemoteObjectLight[] getParents(@WebParam(name = "objectclass") String objectClass,
+    public List<RemoteObjectLight> getParents(@WebParam(name = "objectclass") String objectClass,
             @WebParam(name = "oid") long oid,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
@@ -2007,7 +2291,7 @@ public class KuwaibaService {
      * @param objectClass Object class
      * @param oid Object id
      * @param sessionId Session token
-     * @return
+     * @return An object comprising the list of special relationships of the given object and the other end of such relationship
      * @throws ServerSideException If case something goes wrong
      */
     @WebMethod(operationName = "getSpecialAttributes")
@@ -2041,6 +2325,36 @@ public class KuwaibaService {
             long oid, String objectToMatchClassName, String sessionId) throws ServerSideException {
         try{
             return wsBean.getParentsUntilFirstOfClass(objectClass, oid, objectToMatchClassName, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getParentsUntilFirstOfClass: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+
+    /**
+     * Gets the first occurrence of a parent with a given class (according to the special and standard containment hierarchy)
+     * (for example "give me the parent of this port until you find the nearest rack")
+     * @param objectClass Class of the object to get the parent from
+     * @param oid Id of the object to get the parent from
+     * @param objectToMatchClassName Class of the object that will limit the search. It can be a superclass, if you want to match many classes at once
+     * @param sessionId The session id token
+     * @return The the first occurrence of a parent with a given class. If no instance of that class is found, the child of Dummy Root related in this hierarchy will be returned
+     * @throws ServerSideException If the object to evaluate can not be found
+                                   If any of the classes provided could not be found
+                                   If the object provided is not in the standard containment hierarchy
+     */
+    @WebMethod(operationName = "getFirstParentOfClass")
+    public RemoteObjectLight getFirstParentOfClass(
+            @WebParam(name = "objectClass") String objectClass, 
+            @WebParam(name = "oid") long oid, 
+            @WebParam(name = "objectToMatchClassName") String objectToMatchClassName, 
+            @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try{
+            return wsBean.getFirstParentOfClass(objectClass, oid, objectToMatchClassName, getIPAddress(), sessionId);
         } catch(Exception e){
             if (e instanceof ServerSideException)
                 throw e;
@@ -2088,7 +2402,7 @@ public class KuwaibaService {
      * @throws ServerSideException Generic exception encapsulating any possible error raised at runtime
      */
     @WebMethod(operationName = "getSpecialAttribute")
-    public RemoteObjectLight[] getSpecialAttribute(@WebParam(name = "objectclass") String objectClass,
+    public List<RemoteObjectLight> getSpecialAttribute(@WebParam(name = "objectclass") String objectClass,
             @WebParam(name = "oid") long oid,
             @WebParam(name = "attributename") String attributeName,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
@@ -2114,7 +2428,7 @@ public class KuwaibaService {
      *                             If the object could not be found
      */
     @WebMethod(operationName = "getObjectSpecialChildren")
-    public RemoteObjectLight[] getObjectSpecialChildren (@WebParam(name = "objectclass") String objectClass,
+    public List<RemoteObjectLight> getObjectSpecialChildren (@WebParam(name = "objectclass") String objectClass,
             @WebParam(name = "objectId") long objectId,
             @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
         try{
@@ -2345,6 +2659,65 @@ public class KuwaibaService {
             }
         }
     }
+    
+     /**
+     * Moves special objects from their current parent to a target object.
+     * @param  targetClass New parent object id
+     * @param targetOid The new parent's oid
+     * @param objectClasses Class names of the objects to be moved
+     * @param objectOids Oids of the objects to be moved
+     * @param sessionId Session token
+     * @throws ServerSideException If the object's or new parent's class can't be found
+     *                             If the object or its new parent can't be found
+     *                             If the update can't be performed due to a business rule
+     */
+    @WebMethod(operationName = "moveSpecialObjects")
+    public void moveSpecialObjects(@WebParam(name = "targetClass")String targetClass,
+            @WebParam(name = "targetOid")long targetOid,
+            @WebParam(name = "objectsClasses")String[] objectClasses,
+            @WebParam(name = "objectsOids")long[] objectOids,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            wsBean.moveSpecialObjects(targetClass,targetOid, objectClasses, objectOids, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in moveSpecialObjects: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Move a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @param sessionId Session token
+     * @throws ServerSideException If the pool node can not be found
+     *                             If the pool item can not be move to the selected pool
+     *                             If the pool item can not be found
+     *                             If the pool item class name can no be found
+     */
+    @WebMethod(operationName = "movePoolItemToPool")
+    public void movePoolItemToPool(
+        @WebParam(name = "poolId") long poolId, 
+        @WebParam(name = "poolItemClassName") String poolItemClassName, 
+        @WebParam(name = "poolItemId") long poolItemId, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        try{
+            wsBean.movePoolItem(poolId, poolItemClassName, poolItemId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in movePoolItemToPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }        
+    }
 
      /**
      * Copy objects from its current parent to a target. This is <b>not</b> a deep copy. Only the selected object will be copied, not the children
@@ -2379,6 +2752,72 @@ public class KuwaibaService {
         }
     }
     
+     /**
+     * Copy special objects from its current parent to a target. 
+     * This is <b>not</b> a deep copy. Only the selected object will be copied, not the children
+     * @param targetClass  The new parent class name
+     * @param targetOid The new parent oid
+     * @param objectClasses Class names of the objects to be copied
+     * @param objectOids Oids of the objects to be copied
+     * @param recursive should the objects be copied recursively? (themselves plus their children)
+     * @param sessionId Session token
+     * @return An array with the ids of the new objects
+     * @throws ServerSideException If any of the provided classes couldn't be found
+     *                             If any of the template objects couldn't be found
+     *                             If the target parent can't contain any of the new instances
+     */
+    @WebMethod(operationName = "copySpecialObjects")
+    public long[] copySpecialObjects(
+            @WebParam(name = "targetClass")String targetClass,
+            @WebParam(name = "targetOid")long targetOid,
+            @WebParam(name = "templateClases")String[] objectClasses,
+            @WebParam(name = "templateOids")long[] objectOids,
+            @WebParam(name = "recursive")boolean recursive,
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
+        try{
+            return wsBean.copySpecialObjects(targetClass,targetOid, objectClasses, objectOids, recursive, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in copySpecialObjects: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Copy a pool item from a pool to another pool
+     * @param poolId The id of the pool node
+     * @param poolItemClassName The class name for the pool item
+     * @param poolItemId The id for the pool item
+     * @param recursive If this operation should also copy the children objects recursively
+     * @param sessionId Session token
+     * @throws ServerSideException If the pool node can not be found
+     *                             If the pool item can not be move to the selected pool
+     *                             If the pool item can not be found
+     *                             If the pool item class name can no be found
+     */
+    @WebMethod(operationName = "copyPoolItemToPool")
+    public void copyPoolItemToPool(
+        @WebParam(name = "poolId") long poolId, 
+        @WebParam(name = "poolItemClassName") String poolItemClassName, 
+        @WebParam(name = "poolItemId") long poolItemId, 
+        @WebParam(name = "recursive") boolean recursive,
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        try{
+            wsBean.copyPoolItem(poolId, poolItemClassName, poolItemId, recursive, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in copyPoolItemToPool: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }        
+    }
+    
     /**
      * Retrieves the mandatory attributes for a given class
      * @param className The class name
@@ -2397,32 +2836,6 @@ public class KuwaibaService {
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in getMandatoryAttributesInClass: " + e.getMessage());
-                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
-            }
-        }
-    }
-    
-    /**
-     * 
-     * @param className
-     * @param objId
-     * @param sessionId
-     * @throws ServerSideException If the object doesn't exist
-     *                             If the class doesn't exist
-     *                             If the mandatory attribute has no value
-     */
-    @WebMethod(operationName = "objectHasValuesInMandatoryAttributes")
-    public void objectHasValuesInMandatoryAttributes(
-            @WebParam(name = "className") String className,
-            @WebParam(name = "objId") long objId, 
-            @WebParam(name = "sessionId") String sessionId) throws ServerSideException{
-        try{
-            wsBean.objectHasValuesInMandatoryAttributes(className, objId,  getIPAddress(), sessionId);
-        }catch(Exception e){
-            if (e instanceof ServerSideException)
-                throw e;
-            else {
-                System.out.println("[KUWAIBA] An unexpected error occurred in objectHasValuesInMandatoryAttributes: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
@@ -2465,7 +2878,7 @@ public class KuwaibaService {
     }
     
     /**
-     * Creates multiple special objects using a given name pattern
+     * Creates multiple special objects using a given naming pattern
      * @param className The class name for the new special objects
      * @param parentClassName The parent class name for the new special objects
      * @param parentId The object id of the parent
@@ -2517,10 +2930,10 @@ public class KuwaibaService {
      */
     @WebMethod(operationName = "connectMirrorPort")
     public void connectMirrorPort(
-            @WebParam(name = "aObjectClass")String aObjectClass,
-            @WebParam(name = "aObjectId")long aObjectId,
-            @WebParam(name = "bObjectClass")String bObjectClass,
-            @WebParam(name = "bObjectId")long bObjectId,
+            @WebParam(name = "aObjectClass")String[] aObjectClass,
+            @WebParam(name = "aObjectId")long[] aObjectId,
+            @WebParam(name = "bObjectClass")String[] bObjectClass,
+            @WebParam(name = "bObjectId")long[] bObjectId,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
             wsBean.connectMirrorPort(aObjectClass, aObjectId, bObjectClass, bObjectId, getIPAddress(), sessionId);
@@ -2661,16 +3074,74 @@ public class KuwaibaService {
     }
     
     /**
-     * Gets the physical trace of connections and ports from a port
+     * Retrieves the existing containers between two given nodes. 
+     * @param objectAClass The class of the object A.
+     * @param objectAId The id of the object A.
+     * @param objectBClass The class of the object B. (end point B class)
+     * @param objectBId The id of the object B (end point B id).
+     * @param containerClass The class of the containers to be return.
+     * @param sessionId Session token
+     * @return A list with the common wire containers between the two objects
+     * @throws ServerSideException if an objects doesn't exist or if a given class doesn't exist
+
+     */
+    @WebMethod(operationName = "getContainersBetweenObjects")
+    public List<RemoteObjectLight> getContainersBetweenObjects(@WebParam(name = "objectAClass")String objectAClass, 
+            @WebParam(name = "objectAId")long objectAId, 
+            @WebParam(name = "objectBClass")String objectBClass, 
+            @WebParam(name = "objectBId")long objectBId, 
+            @WebParam(name = "containerClass")String containerClass, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getContainersBetweenObjects(objectAClass, objectAId, objectBClass, objectBId, containerClass, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getContainersBetweenObjects: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Loops through all instances of GenericCommunicationsPort at any level inside the given object and gets the physical path. 
+     * Only the ports with connections (physicalPath.size > 1) are returned
+     * @param objectClass The class of the object.
+     * @param objectId The id of the object.
+     * @param sessionId Session token
+     * @return A list of physical paths from all the ports with connections inside the given object. See <code>getPhysicalPath</code> for details about the structure of each entry
+     * @throws ServerSideException In the same cases as <code>getChildrenOfClassLightRecursive</code> and <code>getPhysicalPath</code>
+
+     */
+    @WebMethod(operationName = "getPhysicalConnectionsInObject")
+    public List<RemoteObjectLightList> getPhysicalConnectionsInObject(@WebParam(name = "objectClass")String objectClass, 
+            @WebParam(name = "objectId")long objectId, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getPhysicalConnectionsInObject(objectClass, objectId, getIPAddress(), sessionId);
+        } catch(Exception e) {
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getPhysicalConnectionsInCommunicationsEquipment: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets the physical trace of connections and ports from a given port.
      * @param objectClass Object class
      * @param objectId Object id
      * @param sessionId Session token
-     * @return An array containing the sorted elements in the physical path of the given port
+     * @return An array containing the sorted elements in the physical path of the given port. The first element is the port from which the trace is generated, 
+     * while the last is the destination port until which there is physical continuity. If the source port does not have any connection, the physical path will have only one element (that port).
      * @throws ServerSideException If the user is not allowed to invoke the method
      *                             
      */
     @WebMethod(operationName = "getPhysicalPath")
-    public RemoteObjectLight[] getPhysicalPath (@WebParam(name = "objectClass")String objectClass,
+    public List<RemoteObjectLight> getPhysicalPath (@WebParam(name = "objectClass")String objectClass,
             @WebParam(name = "objectId")long objectId,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
         try {
@@ -2683,7 +3154,7 @@ public class KuwaibaService {
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
-    } 
+    }  
     
     /**
      * Connects pairs of ports (if they are not connected already) using physical link (cable, fibers, any subclass of GenericPhysicalLink)
@@ -2913,7 +3384,7 @@ public class KuwaibaService {
      *                             If either the object class or the attribute can not be found
      */
     @WebMethod(operationName = "getServiceResources")
-    public RemoteObjectLight[] getServiceResources (
+    public List<RemoteObjectLight> getServiceResources (
             @WebParam(name = "serviceClass")String serviceClass,
             @WebParam(name = "serviceId")long serviceId,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
@@ -3118,6 +3589,32 @@ public class KuwaibaService {
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in setClassProperty: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Checks if a class has a attribute with a given name
+     * @param className Class name
+     * @param attributeName Attribute name
+     * @param sessionId Session token
+     * @return True if the given class has the attribute
+     * @throws ServerSideException If there is no a class with such className
+     */
+    @WebMethod(operationName = "hasAttribute")
+    public boolean hasAttribute(
+        @WebParam(name = "className") String className, 
+        @WebParam(name = "attributeName") String attributeName, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        
+        try {
+            return wsBean.hasAttribute(className, attributeName, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in hasAttribute: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
@@ -4115,6 +4612,77 @@ public class KuwaibaService {
     }
     
     /**
+     * Creates multiple template elements using a given name pattern
+     * @param templateElementClassName The class name of the new set of template elements
+     * @param templateElementParentClassName The parent class name of the new set of template elements
+     * @param templateElementParentId The parent id of the new set of template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param templateElementNamePattern Name pattern of the new set of template elements
+     * @param sessionId Session id token
+     * @return An array of ids for the new template elements
+     * @throws ServerSideException If the parent class name or the template element class name cannot be found
+     *                             If the given template element class cannot be a child of the given parent
+     *                             If the parent class name cannot be found
+     *                             If the given pattern to generate the name has less possibilities that the number of template elements to be created
+     */
+    @WebMethod(operationName = "createBulkTemplateElement")
+    public long[] createBulkTemplateElement(
+        @WebParam(name = "templateElementClass") String templateElementClassName, 
+        @WebParam(name = "templateElementParentClassName") String templateElementParentClassName, 
+        @WebParam(name = "templateElementParentId") long templateElementParentId, 
+        @WebParam(name = "numberOfTemplateElements") int numberOfTemplateElements, 
+        @WebParam(name = "templateElementNamePattern") String templateElementNamePattern, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.createBulkTemplateElement(templateElementClassName, templateElementParentClassName, 
+                templateElementParentId, numberOfTemplateElements, templateElementNamePattern, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createBulkTemplateElement: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Creates multiple special template elements using a given name pattern
+     * @param stElementClass The class name of the new set of special template elements
+     * @param stElementParentClassName The parent class name of the new set of special template elements
+     * @param stElementParentId The parent id of the new set of special template elements
+     * @param numberOfTemplateElements The number of template elements
+     * @param stElementNamePattern Name pattern of the new set of special template elements
+     * @param sessionId Session id token
+     * @return An array if ids for the new special template elements
+     * @throws ServerSideException If the parent class name or the special template element class name cannot be found
+     *                             If the given special template element class cannot be a child of the given parent
+     *                             If the parent class name cannot be found
+     *                             If the given pattern to generate the name has less possibilities that the number of special template elements to be created
+     */
+    @WebMethod(operationName = "createBulkSpecialTemplateElement")
+    public long[] createBulkSpecialTemplateElement(
+        @WebParam(name = "stElementClass") String stElementClass, 
+        @WebParam(name = "stElementParentClassName") String stElementParentClassName, 
+        @WebParam(name = "stElementParentId") long stElementParentId, 
+        @WebParam(name = "numberOfTemplateElements") int numberOfTemplateElements, 
+        @WebParam(name = "stElementNamePattern") String stElementNamePattern, 
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.createBulkSpecialTemplateElement(stElementClass, stElementParentClassName, 
+                stElementParentId, numberOfTemplateElements, stElementNamePattern, getIPAddress(), sessionId);
+            
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in createBulkSpecialTemplateElement: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
      * Updates the value of an attribute of a template element.
      * @param templateElementClass Class of the element you want to update.
      * @param templateElementId Id of the element you want to update.
@@ -4464,8 +5032,10 @@ public class KuwaibaService {
      *                             If the any of the parameters has an invalid name
      */
     @WebMethod(operationName = "updateReportParameters")
-    public void updateReportParameters(@WebParam(name = "reportId")long reportId, @WebParam(name = "parameters")List<StringPair> parameters, 
-            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+    public void updateReportParameters(@WebParam(name = "reportId")long reportId, 
+            @WebParam(name = "parameters")List<StringPair> parameters, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException 
+    {
         try {
             wsBean.updateReportParameters(reportId, parameters, getIPAddress(), sessionId);
         } catch(Exception e){
@@ -4490,7 +5060,10 @@ public class KuwaibaService {
      */
     @WebMethod(operationName = "getClassLevelReports")
     public List<RemoteReportLight> getClassLevelReports(@WebParam(name = "className")String className, 
-            @WebParam(name = "recursive")boolean recursive, @WebParam(name = "includeDisabled")boolean includeDisabled, @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+            @WebParam(name = "recursive") boolean recursive, 
+            @WebParam(name = "includeDisabled") boolean includeDisabled, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException
+    {
         try {
             return wsBean.getClassLevelReports(className, recursive, includeDisabled, getIPAddress(), sessionId);
         } catch(Exception e){
@@ -4759,7 +5332,7 @@ public class KuwaibaService {
      * @return The list of objects
      */
     @WebMethod(operationName = "getObjectsInFavoritesFolder")
-    public RemoteObjectLight[] getObjectsInFavoritesFolder(
+    public List<RemoteObjectLight> getObjectsInFavoritesFolder(
         @WebParam(name = "favoritesFolderId") long favoritesFolderId, 
         @WebParam(name = "userId") long userId,
         @WebParam(name = "limit") int limit,
@@ -4932,6 +5505,157 @@ public class KuwaibaService {
                 throw e;
             else {
                 System.out.println("[KUWAIBA] An unexpected error occurred in getBusinessRules: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    //</editor-fold>
+    
+    //<editor-fold desc="Synchronization Framework methods" defaultstate="collapsed">
+    /**
+     * Executes an synchronization job, which consist on connecting to the sync data source 
+     * using the configuration attached to the given sync group and finding the differences 
+     * between the information currently in the inventory platform and what's in the sync data source. 
+     * A supervised sync job needs a human to review the differences and decide what to do,
+     * while an automated sync job automatically decides what to do based on built-in business rules.
+     * Please note that the execution might take some time, so it is expected that the client to implement an asynchronous call
+     * @param syncGroupId The sync group id
+     * @param sessionId The session token
+     * @return A list of differences that require the authorization of a user to be resolved
+     * @throws ServerSideException If the sync group could not be found or if
+     * @throws InterruptedException
+     */
+    @WebMethod(operationName = "launchSupervisedSynchronizationTask")
+    public List<SyncFinding> launchSupervisedSynchronizationTask(@WebParam(name = "syncGroupId") long syncGroupId, 
+            @WebParam(name = "sessionId") String sessionId) throws ServerSideException, InterruptedException, Exception {
+        try {
+            BackgroundJob managedJob = wsBean.launchSupervisedSynchronizationTask(syncGroupId, getIPAddress(), sessionId);                      
+            int retries = 0;
+            while (!managedJob.getStatus().equals(BackgroundJob.JOB_STATUS.FINISHED) && retries < 20) {
+                try {                
+                    //For some reason (probably thread-concurrency related), the initial "managedJob" instance is different from the one
+                    //updated in the SyncProcessor/Writer, so we have to constantly fetch it again.
+                    managedJob = JobManager.getInstance().getJob(managedJob.getId());
+
+                    if (managedJob.getStatus().equals(BackgroundJob.JOB_STATUS.ABORTED)) {
+                        Exception exceptionThrownByTheJob = managedJob.getExceptionThrownByTheJob();
+
+                        if (exceptionThrownByTheJob != null) {
+                            if (exceptionThrownByTheJob instanceof InventoryException)
+                                throw new ServerSideException(managedJob.getExceptionThrownByTheJob().getMessage());
+                            else
+                                throw exceptionThrownByTheJob;
+                        }
+                    }
+                    Thread.sleep(2000);
+                }catch (InterruptedException | InvalidArgumentException ex) {
+                    throw new RuntimeException(ex.getMessage());
+                }
+                retries ++;
+            }
+            if (retries == 20)
+                throw new ServerSideException("The supervised synchronization task can no be excecuted");
+                
+            return (List<SyncFinding>)managedJob.getJobResult();
+            
+        } catch(ServerSideException | RuntimeException e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in launchSupervisedSynchronizationTask: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    /**
+     * Executes an synchronization job, which consist on connecting to the sync data source 
+     * using the configuration attached to the given sync group and finding the differences 
+     * between the information currently in the inventory platform and what's in the sync data source. 
+     * An automated sync job does not need human intervention it automatically decides what to do based 
+     * on built-in business rules
+     * @param syncGroupId The sync group id
+     * @param sessionId The session token
+     * @return The set of results 
+     * @throws ServerSideException If the sync group could not be found
+     */
+    @WebMethod(operationName = "launchAutomatedSynchronizationTask")
+    public List<SyncResult> launchAutomatedSynchronizationTask(@WebParam(name = "syncGroupId") long syncGroupId, 
+            @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            BackgroundJob managedJob = wsBean.launchAutomatedSynchronizationTask(syncGroupId, getIPAddress(), sessionId);
+            return null;
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in launchAutomatedSynchronizationTask: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Executes the synchronization actions that the user selected after check the  list of findings
+     * @param findings the list findings
+     * @param sessionId the session token
+     * @return the list of results after the actions were executed
+     * @throws ServerSideException 
+     */
+    @WebMethod(operationName = "executeSyncActions")
+    public List<SyncResult> executeSyncActions(
+            @WebParam(name = "findings") List<SyncFinding> findings,
+            @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.executeSyncActions(findings, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in executeSyncActions: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Gets the current jobs which are executing
+     * @param sessionId the session id token
+     * @throws ServerSideException
+     * @return The list of the current jobs which are executing
+     */
+    @WebMethod(operationName = "getCurrentJobs")
+    public List<RemoteBackgroundJob> getCurrentJobs(
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getCurrentJobs(getIPAddress(), sessionId);            
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getCurrentJobs: " + e.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+    
+    /**
+     * Kills a job given its id
+     * @param jobId id of job to kill
+     * @param sessionId the session id token
+     * @throws ServerSideException If the job cannot be found
+     */
+    @WebMethod(operationName = "killJob")
+    public void killJob(
+        @WebParam(name = "jobId") long jobId,
+        @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
+    
+        try {
+            wsBean.killJob(jobId, getIPAddress(), sessionId);
+        } catch(Exception e){
+            if (e instanceof ServerSideException)
+                throw e;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in killJob: " + e.getMessage());
                 throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
             }
         }
@@ -5274,7 +5998,7 @@ public class KuwaibaService {
      * @throws ServerSideException 
      */
     @WebMethod(operationName = "getSubnets")
-    public RemoteObjectLight[] getSubnets(@WebParam(name = "poolId")long poolId,
+    public List<RemoteObjectLight> getSubnets(@WebParam(name = "poolId")long poolId,
             @WebParam(name = "limit")int limit,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
         try{
@@ -5502,7 +6226,7 @@ public class KuwaibaService {
      * @throws ServerSideException 
      */
     @WebMethod(operationName = "getSubnetUsedIps")
-    public RemoteObjectLight[] getSubnetUsedIps(@WebParam(name = "id")long id,
+    public List<RemoteObjectLight> getSubnetUsedIps(@WebParam(name = "id")long id,
             @WebParam(name = "limit")int limit,
             @WebParam(name = "className")String className,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
@@ -5528,7 +6252,7 @@ public class KuwaibaService {
      * @throws ServerSideException 
      */
     @WebMethod(operationName = "getSubnetsInSubent")
-    public RemoteObjectLight[] getSubnetsInSubent(@WebParam(name = "id")long id,
+    public List<RemoteObjectLight> getSubnetsInSubent(@WebParam(name = "id")long id,
             @WebParam(name = "limit")int limit,
             @WebParam(name = "className")String className,
             @WebParam(name = "sessionId")String sessionId) throws ServerSideException{
@@ -6070,7 +6794,7 @@ public class KuwaibaService {
      *                             If the Project pool is not found
      */
     @WebMethod(operationName = "getProjectsInProjectPool")
-    public RemoteObjectLight[] getProjectsInProjectPool(
+    public List<RemoteObjectLight> getProjectsInProjectPool(
         @WebParam(name = "poolId") long poolId, 
         @WebParam(name = "limit") int limit, 
         @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
@@ -6096,7 +6820,7 @@ public class KuwaibaService {
      *                             If the project is not subclass of GenericProject
      */
     @WebMethod(operationName = "getProjectResurces")
-    public RemoteObjectLight[] getProjectResurces(
+    public List<RemoteObjectLight> getProjectResurces(
         @WebParam(name = "projectClass") String projectClass, 
         @WebParam(name = "projectId") long projectId, 
         @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
@@ -6126,7 +6850,7 @@ public class KuwaibaService {
      *                             If the project is not found
      */
     @WebMethod(operationName = "getProjectActivities")
-    public RemoteObjectLight[] getProjectActivities(
+    public List<RemoteObjectLight> getProjectActivities(
         @WebParam(name = "projectClass") String projectClass, 
         @WebParam(name = "projectId") long projectId, 
         @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
@@ -6244,7 +6968,7 @@ public class KuwaibaService {
      *                             If the project class is no found
      */
     @WebMethod(operationName = "getProjectsAssociateToObject")
-    public RemoteObjectLight[] getProjectsAssociateToObject(
+    public List<RemoteObjectLight> getProjectsAssociateToObject(
         @WebParam(name = "objectClass") String objectClass, 
         @WebParam(name = "ObjectId") long objectId, 
         @WebParam(name = "sessionId") String sessionId) throws ServerSideException {
@@ -6290,6 +7014,330 @@ public class KuwaibaService {
         }
     }
         // </editor-fold>
+    
+        //<editor-fold desc="Fault Management Integration" defaultstate="collapsed">
+    /**
+     * Retrieves the services affected when a given network resource is alarmed (or down). 
+     * The services associated directly to the given resource are returned first, but depending on the resource type, the analysis might be more extensive. 
+     * If the resource is a link (logical or physical), the services associated to the endpoint ports are also returned. 
+     * If the the resource is a container (physical or logical), the services associated to the contained links are also returned. 
+     * If the resource is a network equipment, the services associated directly to the ports contained and their connections are also returned.
+     * @param resourceType Use 1 for hardware and 2 for logical links
+     * @param resourceDefinition A semi-colon (;) separated string. The first segment (mandatory) is the name of the affected element, 
+     * the second is the number of the slot (optional) and the third is the port (optional). Note that to address a logical connection, the 
+     * resource definition will contain only the name of such connection.
+     * @param sessionId Session token
+     * @return A compact summary with the full information about the device/interface provided, the related services and their customers
+     * @throws ServerSideException If the resource could not be found or if the resource definition/resource type is not valid
+     */
+    @WebMethod(operationName = "getAffectedServices")
+    public AssetLevelCorrelatedInformation getAffectedServices(@WebParam(name = "resourceType")int resourceType,
+            @WebParam(name = "resourceDefinition")String resourceDefinition, 
+            @WebParam(name = "sessionId")String sessionId) throws ServerSideException {
+        try {
+            return wsBean.getAffectedServices(resourceType, resourceDefinition, getIPAddress(), sessionId);
+        } catch (Exception ex) {
+            if (ex instanceof ServerSideException)
+                throw ex;
+            else {
+                System.out.println("[KUWAIBA] An unexpected error occurred in getAffectedServices: " + ex.getMessage());
+                throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+            }
+        }
+    }
+        //</editor-fold>
+    
+        //<editor-fold desc="Inventory Synchronization" defaultstate="collapsed">
+        /**
+         * Creates a Synchronization Data Source Configuration. A Sync data source configuration is a set of parameters 
+         * used to connect to a sync data source (usually IPs, paths, etc)
+         * @param name The name of the new sync data source configuration
+         * @param parameters The list of parameters to be stored as pairs name/value. 
+         * Note that the Sync provider provides metadata definition to check if the number 
+         * and format of the parameters correct, so it can be checked at server side
+         * @param syncGroupId Id of the sync group this configuration is attached to
+         * @param sessionId Session token
+         * @return The id of the newly created sync config
+         * @throws ServerSideException If the sync group could not be found or if 
+         * the any of the parameters does not comply with the expected format
+         */
+        @WebMethod(operationName = "createSynchronizationDataSourceConfig")
+        public long createSynchronizationDataSourceConfig(@WebParam(name="name")String name, 
+                @WebParam(name="parameters")List<StringPair> parameters, 
+                @WebParam(name="syncGroupId")long syncGroupId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                return wsBean.createSynchronizationDataSourceConfig(syncGroupId, name, parameters, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in createSynchronizationDataSourceConfig: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+    
+        /**
+         * Creates a Synchronization Group. A Sync Group is a set of Synchronization Configurations that will be processed by the same
+         * Synchronization Provider. Take into account that the schedule for the SG to be executed is not configured here, but in Task Manager's task
+         * @param name The name of the new sync group
+         * @param syncProviderId The id of the provider that will process the configurations. 
+         * All sync providers have a method called <code>getId</code>. This is the value that should be used here
+         * @param sessionId Session token
+         * @return The id of the newly created sync group
+         * @throws ServerSideException If the name or the sync provider are invalid 
+         */
+        @WebMethod(operationName = "createSynchronizationGroup")
+        public long createSynchronizationGroup(@WebParam(name="name")String name, 
+                @WebParam(name="syncProviderId")String syncProviderId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                return wsBean.createSynchronizationGroup(name, syncProviderId, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in createSynchronizationGroup: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+         /**
+         * Creates a Synchronization Group. A Sync Group is a set of Synchronization Configurations that will be processed by the same
+         * Synchronization Provider. Take into account that the schedule for the SG to be executed is not configured here, but in Task Manager's task
+         * @param syncGroupId The name of the new sync group
+         * @param syncGroupProperties The synchronization group properties
+         * @param sessionId Session token
+         * @throws ServerSideException If the name or the sync provider are invalid 
+         */
+        @WebMethod(operationName = "updateSynchronizationGroup")
+        public void updateSynchronizationGroup(@WebParam(name="syncGroupId") long syncGroupId,
+                @WebParam(name="syncGroupProperties")List<StringPair> syncGroupProperties, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                wsBean.updateSynchronizationGroup(syncGroupId, syncGroupProperties, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in createSynchronizationGroup: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Gets a given sync group
+         * @param syncGroupId The sync group id
+         * @param sessionId Session token
+         * @return The requested sync group
+         * @throws ServerSideException If the sync group could not be found
+         */
+        @WebMethod(operationName = "getSynchronizationGroup")
+        public RemoteSynchronizationGroup getSynchronizationGroup(
+                @WebParam(name="syncGroupId")long syncGroupId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                //return wsBean.getSynchronizationGroup(syncGroupId, getIPAddress(), sessionId);
+                return null;
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in getSynchronizationGroup: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Gets the available sync groups
+         * @param sessionId Session token
+         * @return The list of available sync groups
+         * @throws ServerSideException If something unexpected goes wrong
+         */
+        @WebMethod(operationName = "getSynchronizationGroups")
+        public List<RemoteSynchronizationGroup> getSynchronizationGroups(
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                return wsBean.getSynchronizationGroups(getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in getSynchronizationGroups: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Gets the synchronization data source configurations for a sync group
+         * @param syncGroupId the syncGroupId
+         * @param sessionId Session token
+         * @return The list of available sync groups
+         * @throws ServerSideException If something unexpected goes wrong
+         */
+        @WebMethod(operationName = "getSyncDataSourceConfigurations")
+        public List<RemoteSynchronizationConfiguration> getSyncDataSourceConfigurations(
+                @WebParam(name="syncGroupId")long syncGroupId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                return wsBean.getSyncDataSourceConfigurations(syncGroupId, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in getSyncDataSourceConfigurations: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Updates a sync data source configuration
+         * @param syncDataSourceConfigId the sync source configuration Id
+         * @param parameters the updated parameters
+         * @param sessionId session token 
+         * @throws ServerSideException If the sync data source could not be found or if 
+         * the any of the parameters does not comply with the expected format
+         */
+        @WebMethod(operationName = "updateSyncDataSourceConfiguration")
+        public void updateSyncDataSourceConfiguration(
+                @WebParam(name="syncDataSourceConfigId")long syncDataSourceConfigId, 
+                @WebParam(name="parameters")List<StringPair> parameters, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                wsBean.updateSyncDataSourceConfiguration(syncDataSourceConfigId, parameters, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in createSynchronizationDataSourceConfig: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Deletes a synchronization group and all the sync configurations associated to it
+         * @param syncGroupId The id of the group
+         * @param sessionId Session token
+         * @throws ServerSideException If the group could not be found
+         */
+        @WebMethod(operationName = "deleteSynchronizationGroup")
+        public void deleteSynchronizationGroup(@WebParam(name="syncGroupId")long syncGroupId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                wsBean.deleteSynchronizationGroup(syncGroupId, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in deleteSynchronizationGroup: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Deletes a sync data source configuration.
+         * @param syncDataSourceConfigId The id of the configuration
+         * @param sessionId Session token
+         * @throws ServerSideException If the config could not be found
+         */
+        @WebMethod(operationName = "deleteSynchronizationDataSourceConfig")
+        public void deleteSynchronizationDataSourceConfig(@WebParam(name="syncDataSourceConfigId")long syncDataSourceConfigId, 
+                @WebParam(name="sessionId")String sessionId) throws ServerSideException {
+            try {
+                wsBean.deleteSynchronizationDataSourceConfig(syncDataSourceConfigId, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in deleteSynchronizationDataSourceConfig: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            } 
+        }
+        
+        /**
+         * Copy a set of sync group
+         * @param syncGroupIds The array of sync groups ids to copy
+         * @param sessionId Session Token
+         * @return A list of new sync groups
+         * @throws ServerSideException If some of the sync group cannot be found or If the provider of the sync group cannot be found
+         *                             If the sync group is malformed
+         */
+        @WebMethod(operationName = "copySyncGroup")        
+        public List<RemoteSynchronizationGroup> copySyncGroup(
+            @WebParam(name="syncGroupIds") long[] syncGroupIds, 
+            @WebParam(name="sessionId") String sessionId) throws ServerSideException {
+            try {
+                return wsBean.copySyncGroup(syncGroupIds, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in copySyncGroup: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            }
+        }
+        
+        /**
+         * Copy a set of sync data source configuration into a given sync group
+         * @param syncGroupId The Sync Group Id target
+         * @param syncDataSourceConfigurationIds Set of sync data source configuration ids
+         * @param sessionId Session Token
+         * @return A list of new sync data source configuration
+         * @throws ServerSideException If the sync group cannot be found, or some sync data source configuration cannot be found
+         *                             If the sync group is malformed, or some sync data source configuration is malformed
+         */
+        @WebMethod(operationName = "copySyncDataSourceConfiguration")
+        public List<RemoteSynchronizationConfiguration> copySyncDataSourceConfiguration(
+            @WebParam(name="syncGroupId") long syncGroupId, 
+            @WebParam(name="syncDataSourceConfigurationId") long[] syncDataSourceConfigurationIds, 
+            @WebParam(name="sessionId") String sessionId) throws ServerSideException {
+            try {
+                return wsBean.copySyncDataSourceConfiguration(syncGroupId, syncDataSourceConfigurationIds, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in copySyncDataSourceConfiguration: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            }
+        }
+        
+        /**
+         * Moves a sync data source configuration from a sync group to another sync group
+         * @param syncGroupId The Sync Group Id target
+         * @param syncDataSourceConfigurationIds Set of sync data source configuration ids
+         * @param sessionId Session token
+         * @throws ServerSideException If the sync group cannot be found, or some sync data source configuration cannot be found
+         *                             If the sync group is malformed, or some sync data source configuration is malformed
+         */
+        @WebMethod(operationName = "moveSyncDataSourceConfiguration")
+        public void moveSyncDataSourceConfiguration(
+            @WebParam(name="syncGroupId") long syncGroupId, 
+            @WebParam(name="syncDataSourceConfiguration") long[] syncDataSourceConfigurationIds, 
+            @WebParam(name="sessionId") String sessionId) throws ServerSideException {
+            try {
+                wsBean.moveSyncDataSourceConfiguration(syncGroupId, syncDataSourceConfigurationIds, getIPAddress(), sessionId);
+            } catch (Exception ex) {
+                if (ex instanceof ServerSideException)
+                    throw ex;
+                else {
+                    System.out.println("[KUWAIBA] An unexpected error occurred in moveSyncDataSourceConfiguration: " + ex.getMessage());
+                    throw new RuntimeException("An unexpected error occurred. Contact your administrator.");
+                }
+            }
+        }
+        //</editor-fold>
     // </editor-fold>
         
     // <editor-fold defaultstate="collapsed" desc="Helpers. Click on the + sign on the left to edit the code.">/**

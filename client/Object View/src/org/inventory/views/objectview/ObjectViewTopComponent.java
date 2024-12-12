@@ -15,9 +15,14 @@
  */
 package org.inventory.views.objectview;
 
+import org.inventory.core.services.event.CurrentKeyEventDispatcher;
 import java.awt.Image;
+import java.awt.KeyEventDispatcher;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -30,6 +35,7 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.behaviors.Refreshable;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.visual.export.ExportScenePanel;
 import org.inventory.core.visual.export.filters.ImageFilter;
 import org.inventory.core.visual.export.filters.SceneExportFilter;
@@ -57,6 +63,8 @@ public final class ObjectViewTopComponent extends TopComponent
     private ChildrenViewScene scene;
     private ObjectViewConfigurationObject configObject;
     private LocalObjectLight currentObject;
+    
+    KeyEventDispatcher keyEventDispatcher;
     
     /**
      * Default constructor
@@ -96,9 +104,40 @@ public final class ObjectViewTopComponent extends TopComponent
         buttonGroupTools.add(btnContainer);
         buttonGroupTools.add(btnLink);
         
-        btnSelect.setSelected(true);
-    }
+        keyEventDispatcher = new KeyEventDispatcher() {
 
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_F5 && e.getModifiers() == 0) {
+                    btnRefreshActionPerformed(new ActionEvent(e.getSource(), e.getID(), ""));
+                    return true;
+                }
+                return false;
+            }
+        };
+        CurrentKeyEventDispatcher.getInstance().addKeyEventDispatcher(this, keyEventDispatcher);
+
+        addComponentListener(new ComponentListener() {
+
+            @Override
+            public void componentResized(ComponentEvent e) {
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+            }
+
+            @Override
+            public void componentShown(ComponentEvent e) {
+                CurrentKeyEventDispatcher.getInstance().updateKeyEventDispatcher(ObjectViewTopComponent.this);
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+            }
+        });
+    }
+    
     /** This method is called from within the constructor to
      * initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is
@@ -289,7 +328,7 @@ public final class ObjectViewTopComponent extends TopComponent
                 scene.setBackgroundImage(myBackgroundImage);
                 scene.fireChangeEvent(new ActionEvent(this, ChildrenViewScene.SCENE_CHANGE, "Add Background"));
             } catch (IOException ex) {
-                getNotifier().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, ex.getMessage());
+                getNotifier().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, ex.getMessage());
             }
         }
     }//GEN-LAST:event_btnAddBackgroundImageActionPerformed
@@ -355,17 +394,17 @@ public final class ObjectViewTopComponent extends TopComponent
     public void componentOpened() {
         if (currentObject.getClassName().equals(Constants.DUMMYROOT) || 
                 !CommunicationsStub.getInstance().getMetaForClass(currentObject.getClassName(), false).isViewable()) {
-            NotificationUtil.getInstance().showSimplePopup("Information", NotificationUtil.INFO_MESSAGE, "This object does not have a view");
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, "This object does not have a view");
             disableView();
             return;
         }
-
+        scene.addChangeListener(this);
         service.renderView();
         setDisplayName(currentObject.toString());
         toggleButtons(true);
         configObject.setProperty("saved", true);
         setHtmlDisplayName(getDisplayName());
-        scene.addChangeListener(this);
+        
     }
 
     @Override
@@ -401,7 +440,7 @@ public final class ObjectViewTopComponent extends TopComponent
         if (value)
             this.setHtmlDisplayName(this.getDisplayName());
         else
-            this.setHtmlDisplayName(String.format("<html><b>%s [Modified]</b></html>", getDisplayName()));
+            this.setHtmlDisplayName(String.format(I18N.gm("modified"), getDisplayName()));
     }
 
     @Override
@@ -412,14 +451,14 @@ public final class ObjectViewTopComponent extends TopComponent
                 break;
             case ChildrenViewScene.SCENE_CHANGEANDSAVE:
                 btnSaveActionPerformed(e);
-                NotificationUtil.getInstance().showSimplePopup("Information", NotificationUtil.INFO_MESSAGE, "An external change was detected. The view has been saved automatically");
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("information"), NotificationUtil.INFO_MESSAGE, "An external change was detected. The view has been saved automatically");
         }
     }
 
     public boolean checkForUnsavedView(boolean showCancel) {
         if (!((boolean) configObject.getProperty("saved"))){
-            switch (JOptionPane.showConfirmDialog(null, "This view has not been saved, do you want to save it?",
-                    "Confirmation", showCancel ? JOptionPane.YES_NO_CANCEL_OPTION : JOptionPane.YES_NO_OPTION)){
+            switch (JOptionPane.showConfirmDialog(null, "This view has not been saved, do you want to save it?", 
+                    I18N.gm("confirmation"), showCancel ? JOptionPane.YES_NO_CANCEL_OPTION : JOptionPane.YES_NO_OPTION)){
                 case JOptionPane.YES_OPTION:
                     
                     btnSaveActionPerformed(null);

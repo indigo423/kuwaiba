@@ -50,7 +50,6 @@ import org.inventory.core.visual.scene.AbstractScene;
 import org.netbeans.api.visual.action.ActionFactory;
 import org.netbeans.api.visual.action.ConnectProvider;
 import org.netbeans.api.visual.action.WidgetAction;
-import org.netbeans.api.visual.anchor.AnchorFactory;
 import org.netbeans.api.visual.anchor.PointShape;
 import org.netbeans.api.visual.model.ObjectState;
 import org.netbeans.api.visual.router.RouterFactory;
@@ -226,11 +225,10 @@ public class MPLSModuleScene extends AbstractScene<LocalObjectLight, LocalObject
 
                                 if (aSideWidget == null || bSideWidget == null) {
                                     fireChangeEvent(new ActionEvent(this, SCENE_CHANGE, "connectionAutomaticallyRemoved")); //NOI18N
-                                    NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.INFO_MESSAGE, String.format("One or both of the endpoints of connection of class %s and id %s could not be found, so the connection was removed from the view", className, objectId));
+                                    NotificationUtil.getInstance().showSimplePopup("Load View", NotificationUtil.INFO_MESSAGE, String.format("One or both of the endpoints of the connection of class %s and id %s could not be found. The connection was removed from the view", className, objectId));
                                 }
                                 else {
                                     ConnectionWidget newEdge = (ObjectConnectionWidget)addEdge(container);
-                                    newEdge.setLineColor(getConnectionColor(container));
                                     setEdgeSource(container, aSideObject);
                                     setEdgeTarget(container, bSideObject);
                                     List<Point> localControlPoints = new ArrayList<>();
@@ -263,15 +261,6 @@ public class MPLSModuleScene extends AbstractScene<LocalObjectLight, LocalObject
             if (Constants.DEBUG_LEVEL == Constants.DEBUG_LEVEL_FINE)
                 Exceptions.printStackTrace(ex);
         }
-    }
-
-    @Override
-    public Color getConnectionColor(LocalObjectLight theConnection) {
-        LocalClassMetadata connectionClassMetadata = CommunicationsStub.getInstance().getMetaForClass(theConnection.getClassName(), false);
-        if (connectionClassMetadata == null)
-            return Color.BLACK;
-        
-        return connectionClassMetadata.getColor() == null ? Color.BLACK : connectionClassMetadata.getColor();
     }
 
     @Override
@@ -312,28 +301,19 @@ public class MPLSModuleScene extends AbstractScene<LocalObjectLight, LocalObject
         newEdge.getActions().addAction(selectAction);
         newEdge.getActions().addAction(addRemoveControlPointAction);
         newEdge.getActions().addAction(moveControlPointAction);
-        newEdge.setStroke(new BasicStroke(1));
         newEdge.setControlPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setEndPointShape(PointShape.SQUARE_FILLED_BIG);
         newEdge.setRouter(RouterFactory.createFreeRouter());
         newEdge.getActions().addAction(ActionFactory.createPopupMenuAction(moduleActions.createMenuForConnection()));
         newEdge.setToolTipText(edge.toString());
+        LocalClassMetadata connectionClassMetadata = CommunicationsStub.getInstance().getMetaForClass(edge.getClassName(), false);
+        if (connectionClassMetadata == null || connectionClassMetadata.getColor() == null)
+            newEdge.setLineColor(Color.BLACK);
+        else
+            newEdge.setLineColor(connectionClassMetadata.getColor());
+
         edgeLayer.addChild(newEdge);
         return newEdge;
-    }
-
-    @Override
-    protected void attachEdgeSourceAnchor(LocalObjectLight edge, LocalObjectLight oldSourceNode, LocalObjectLight sourceNode) {
-        ObjectConnectionWidget connectionWidget = (ObjectConnectionWidget)findWidget(edge);
-        Widget sourceWidget = findWidget(sourceNode);
-        connectionWidget.setSourceAnchor(sourceWidget != null ? AnchorFactory.createCircularAnchor(sourceWidget, 3) : null);
-    }
-
-    @Override
-    protected void attachEdgeTargetAnchor(LocalObjectLight edge, LocalObjectLight oldTargetNode, LocalObjectLight targetNode) {
-        ObjectConnectionWidget connectionWidget = (ObjectConnectionWidget)findWidget(edge);
-        Widget targetWidget = findWidget(targetNode);
-        connectionWidget.setTargetAnchor(targetWidget != null ? AnchorFactory.createCircularAnchor(targetWidget, 3) : null);
     }
 
     @Override
@@ -354,10 +334,9 @@ public class MPLSModuleScene extends AbstractScene<LocalObjectLight, LocalObject
             if (newConnection != null) {
                 //Only create edges in the scene if the connection is a TransportLink
                 if (newConnection.getClassName().equals("MPLSLink")) {
-                    ObjectConnectionWidget newConnectionWidget = (ObjectConnectionWidget)addEdge(newConnection);
+                    addEdge(newConnection);
                     setEdgeSource(newConnection, sourceObject);
                     setEdgeTarget(newConnection, targetObject);
-                    newConnectionWidget.setLineColor(getConnectionColor(newConnection));
                     fireChangeEvent(new ActionEvent(this, SCENE_CHANGE, "attachEdge")); //NOI18N
                 }
             }

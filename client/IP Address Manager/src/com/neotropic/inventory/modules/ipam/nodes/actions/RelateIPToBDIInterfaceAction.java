@@ -24,6 +24,8 @@ import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -31,11 +33,12 @@ import org.openide.util.lookup.ServiceProvider;
  * Actions to relate a Service Instance to a BridgeDomain
  * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class RelateIPToBDIInterfaceAction extends GenericObjectNodeAction {
 
     public RelateIPToBDIInterfaceAction(){
-        putValue(NAME, java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_RELATE_TO_BDIS"));
+        putValue(NAME, I18N.gm("relate_to_bdi"));
     }
     
     @Override
@@ -44,23 +47,33 @@ public class RelateIPToBDIInterfaceAction extends GenericObjectNodeAction {
         
         if (bdis != null) {
             if (bdis.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "There are no Bridge Domain Interfaces created. Create at least one using the Navigation Tree", 
-                    "Information", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, I18N.gm("no_interfaces_created_create_at_least_one"), 
+                    I18N.gm("information"), JOptionPane.INFORMATION_MESSAGE);
             } else {
                 BDIsInterfaceFrame frame = new BDIsInterfaceFrame(selectedObjects, bdis);
                 frame.setVisible(true);
             }
         } else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
     }
     
     @Override
-    public String getValidator() {
-        return Constants.VALIDATOR_LOGICAL_SET;
+    public String[] getValidators() {
+        return null;
     }
     
     @Override
-    public LocalPrivilege getPrivilege() {
+    public LocalPrivilege getPrivilege() {        
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_IP_ADDRESS_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return new String [] {Constants.CLASS_IP_ADDRESS};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return -1;
     }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
+/*
+ * Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>
  *
  * Licensed under the EPL License, Version 1.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -195,7 +195,7 @@ public class SubnetEngine {
     public static List<List<String>> createIpv4Mask(int maskBits){
         //Create de mask in binary with de CIDR format!
         List<List<String>> binaryMask = new ArrayList<>();
-        List<String> segment = new ArrayList();
+        List<String> segment = new ArrayList<>();
         String bit = "1";
         for (int i = 1; i <= 32; i++) {
             if(i > maskBits)
@@ -203,7 +203,7 @@ public class SubnetEngine {
             segment.add(bit); 
             if(i%8 == 0){
                 binaryMask.add(segment);
-                segment = new ArrayList();
+                segment = new ArrayList<>();
             }
         }
         return binaryMask;
@@ -216,7 +216,7 @@ public class SubnetEngine {
      */
     public static List<List<String>> createIpv6Mask(int maskBits){
         List<List<String>> binaryMask = new ArrayList<>();
-        List<String> segment = new ArrayList();
+        List<String> segment = new ArrayList<>();
         String bit = "1";
         int t = 0;
         String s = "";

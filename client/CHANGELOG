@@ -143,3 +143,23 @@
 * End-to-end view for services with logical segments added
 * Now you can access the details of a list type directly (that is without having to open the List Type Manager)by clicking on the "..." button next to the list type value in the Properties window.
 * Multiple bugfixes and improvements
+
+1.6
+* Multiple objects can now be dragged and dropped at the same time to a view
+* It's possible to create SDH links that use concatenated containers. This way, the user can create SDH connections with arbitrary capacities to support services such as Ethernet/IP over SDH
+* "Show Rack View" and "Show Connections in Rack" actions were merged
+* It is possible to create layouts for certain equipment brands/models. With this, the users will be able to see how the device actually looks like and how their children are arranged inside.
+* Re-added the "Binary" data type to manage the custom shape icon. This data type will remain hidden for this release in conventional inventory types, and will be enabled in coming versions
+* Added a refresh button to all views
+* All the frames that are used to select a value from a list (like those used in "Relate to..." actions) share a common code base and behave the same way. Double click now automatically accepts the selection.
+* Copy/cut and paste actions enabled in the Service Manager Module, Contract Manager Module and Pool Manager Module
+* Common context-aware actions have icons and similar actions were grouped to simplify the node's menu 
+* Added the Inventory Synchronization module
+* Shortcuts added to the most frequently used actions in scenes
+* The class nodes in the Data Model Manager are colored with the color assigned to the class
+* There are new actions that allow the user to put links into an existing container or putting them out of an existing container 
+* Added an action to fix the possible inconsistencies in links and containers that may happen when moving elements with connections attached to them. This is the seed for a diagnostics module that will be added in future versions.
+* A contextual action that allows the user to display the container links inside a STMX in a service topology view was added.
+* Added action to create and delete connections in the rack view
+* It's now possible to create multiple template elements and delete multiple special children at once
+* Multiple bug fixes and improvements

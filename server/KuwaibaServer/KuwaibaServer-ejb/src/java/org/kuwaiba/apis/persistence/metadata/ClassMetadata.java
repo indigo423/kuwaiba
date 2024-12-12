@@ -16,7 +16,6 @@
 
 package org.kuwaiba.apis.persistence.metadata;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,14 +46,6 @@ public class ClassMetadata extends ClassMetadataLight {
      */
     private Set<AttributeMetadata> attributes;
     /**
-     * List of possible children
-     */
-    private List<String> possibleChildren;
-    /**
-     * List of possible special children
-     */
-    private List<String> possibleSpecialChildren;
-    /**
      *  Classmetada's category
      */
     private String category;
@@ -69,8 +60,6 @@ public class ClassMetadata extends ClassMetadataLight {
 
     public ClassMetadata() {
         attributes = new HashSet<>();
-        possibleChildren = new ArrayList<>();
-        possibleSpecialChildren = new ArrayList<>();
     }
     
    // <editor-fold defaultstate="collapsed" desc="getters and setters methods. Click on the + sign on the left to edit the code.">
@@ -128,22 +117,6 @@ public class ClassMetadata extends ClassMetadataLight {
 
     public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
-    }
-
-    public List<String> getPossibleChildren() {
-        return possibleChildren;
-    }
-
-    public void setPossibleChildren(List<String> possibleChildren) {
-        this.possibleChildren = possibleChildren;
-    }
-    
-    public List<String> getPossibleSpecialChildren() {
-        return possibleSpecialChildren;
-    }
-    
-    public void setPossibleSpecialChildren(List<String> possibleSpecialChildren) {
-        this.possibleSpecialChildren = possibleSpecialChildren;
     }
     // </editor-fold>
 

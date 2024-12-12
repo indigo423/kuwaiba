@@ -27,6 +27,8 @@ import org.inventory.communications.core.LocalPool;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.communications.util.Constants;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.ActionsGroupType;
 import org.inventory.navigation.navigationtree.nodes.actions.GenericObjectNodeAction;
 import org.openide.util.Lookup;
 import org.openide.util.Utilities;
@@ -36,11 +38,12 @@ import org.openide.util.lookup.ServiceProvider;
  * Actions to relate a Generic port to an IP address
  * @author Adrian Martinez Molina <adrian.martinez@kuwaiba.org>
  */
+@ActionsGroupType(group=ActionsGroupType.Group.RELATE_TO)
 @ServiceProvider(service=GenericObjectNodeAction.class)
 public class RelateEndPointToIPAddressAction extends GenericObjectNodeAction {
 
     public RelateEndPointToIPAddressAction(){
-        putValue(NAME, java.util.ResourceBundle.getBundle("com/neotropic/inventory/modules/ipam/Bundle").getString("LBL_RELATE_IP"));
+        putValue(NAME, I18N.gm("relate_to_ip"));
     }
     
     @Override
@@ -49,7 +52,7 @@ public class RelateEndPointToIPAddressAction extends GenericObjectNodeAction {
         Lookup.Result<LocalObjectLight> selectedNodes = Utilities.actionsGlobalContext().lookupResult(LocalObjectLight.class);
         
         if(subnets == null)
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, CommunicationsStub.getInstance().getError());
         else{
             Collection<? extends LocalObjectLight> lookupResult = selectedNodes.allInstances();
             List<LocalObjectLight> selectedPorts = new ArrayList<>();
@@ -64,12 +67,22 @@ public class RelateEndPointToIPAddressAction extends GenericObjectNodeAction {
     }
     
     @Override
-    public String getValidator() {
-        return Constants.VALIDATOR_PHYSICAL_ENDPOINT;
+    public String[] getValidators() {
+        return null;
     }
 
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_IP_ADDRESS_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return new String [] {Constants.CLASS_GENERICPORT};
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return -1;
     }
 }

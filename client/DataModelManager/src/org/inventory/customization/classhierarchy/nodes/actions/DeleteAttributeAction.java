@@ -18,6 +18,10 @@ package org.inventory.customization.classhierarchy.nodes.actions;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
+import static javax.swing.Action.NAME;
+import static javax.swing.Action.SMALL_ICON;
+import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalAttributeMetadata;
@@ -27,22 +31,34 @@ import org.inventory.core.services.api.notifications.NotificationUtil;
 import org.inventory.communications.core.caching.Cache;
 import org.inventory.core.services.api.actions.ComposedAction;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.core.services.utils.ImageIconResource;
 import org.inventory.core.services.utils.SubMenuDialog;
 import org.inventory.core.services.utils.SubMenuItem;
 import org.inventory.customization.classhierarchy.nodes.ClassMetadataNode;
+import org.openide.util.actions.Presenter;
 
 /**
  * Deletes an attribute
  * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
-public class DeleteAttributeAction extends GenericInventoryAction implements ComposedAction {
+public class DeleteAttributeAction extends GenericInventoryAction implements ComposedAction, Presenter.Popup {
 
     private ClassMetadataNode classNode;
     private CommunicationsStub com;
+    private final JMenuItem popupPresenter;
 
     public DeleteAttributeAction() {
-        putValue(NAME, "Delete Attribute...");
+        putValue(NAME, I18N.gm("delete_attribute"));
         com = CommunicationsStub.getInstance();
+        
+        putValue(SMALL_ICON, ImageIconResource.WARNING_ICON);
+                
+        popupPresenter = new JMenuItem();
+        popupPresenter.setName((String) getValue(NAME));
+        popupPresenter.setText((String) getValue(NAME));
+        popupPresenter.setIcon((ImageIcon) getValue(SMALL_ICON));
+        popupPresenter.addActionListener(this);
     }
 
     public DeleteAttributeAction(ClassMetadataNode classNode) {
@@ -52,11 +68,11 @@ public class DeleteAttributeAction extends GenericInventoryAction implements Com
     
     @Override
     public void actionPerformed(ActionEvent ae) {
-        LocalClassMetadata metaForThisClass = com.getMetaForClass(classNode.getClassMetadata().getOid(), false);
+        LocalClassMetadata metaForThisClass = com.getMetaForClass(classNode.getClassMetadata().getClassName(), false);
         if (metaForThisClass == null) {
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
         } else {
-            List<SubMenuItem> subMenuItems = new ArrayList();
+            List<SubMenuItem> subMenuItems = new ArrayList<>();
             for (LocalAttributeMetadata anAttribute : metaForThisClass.getAttributes())
                 subMenuItems.add(new SubMenuItem(anAttribute.getName()));
             SubMenuDialog.getInstance((String) getValue(NAME), this).showSubmenu(subMenuItems);
@@ -71,18 +87,23 @@ public class DeleteAttributeAction extends GenericInventoryAction implements Com
     @Override
     public void finalActionPerformed(ActionEvent e) {
         if (e != null && e.getSource() instanceof SubMenuDialog) {
-            if (JOptionPane.showConfirmDialog(null, "Are you sure you want to perform this operation? All subclasses will be modified as well", 
-                    "Class metadata operation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
+            if (JOptionPane.showConfirmDialog(null, I18N.gm("confirm_attribute_class_operation"), 
+                    I18N.gm("class_metadata_operation"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION){
                 if (com.deleteAttribute(classNode.getClassMetadata().getOid(), ((SubMenuDialog) e.getSource()).getSelectedSubMenuItem().getCaption())) {
-                    NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Attribute deleted successfully");
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, I18N.gm("attribute_deleted"));
                     //Force a cache reload
                     Cache.getInstace().resetAll();
                     //Refresh the class node
                     classNode.refresh();
                 }
                 else
-                    NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             }
         }
+    }
+
+    @Override
+    public JMenuItem getPopupPresenter() {
+        return popupPresenter;
     }
 }

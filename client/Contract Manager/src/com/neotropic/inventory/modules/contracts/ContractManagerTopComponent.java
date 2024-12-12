@@ -16,7 +16,14 @@
 package com.neotropic.inventory.modules.contracts;
 
 import com.neotropic.inventory.modules.contracts.nodes.ContractManagerRootNode;
+import java.awt.event.KeyEvent;
+import javax.swing.InputMap;
+import static javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW;
+import javax.swing.KeyStroke;
+import javax.swing.text.DefaultEditorKit;
 import org.inventory.core.services.api.behaviors.Refreshable;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.navigation.navigationtree.nodes.actions.DeleteBusinessObjectAction;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
@@ -25,8 +32,8 @@ import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
 import org.openide.nodes.Node;
+import org.openide.util.actions.SystemAction;
 import org.openide.windows.TopComponent;
-import org.openide.util.NbBundle.Messages;
 
 /**
  * Main top component for the COntract Manager Module
@@ -45,14 +52,10 @@ import org.openide.util.NbBundle.Messages;
 @ActionReferences(value = {@ActionReference(path = "Menu/Tools/Advanced"),
     @ActionReference(path = "Toolbars/10_Advanced", position = 2)})
 @TopComponent.OpenActionRegistration(
-        displayName = "#CTL_ContractManagerAction",
+        displayName = "#ContractManager.module.displayname",
         preferredID = "ContractManagerTopComponent"
 )
-@Messages({
-    "CTL_ContractManagerAction=Contract Manager",
-    "CTL_ContractManagerTopComponent=Contract Manager",
-    "HINT_ContractManagerTopComponent=Contract Manager"
-})
+
 public final class ContractManagerTopComponent extends TopComponent implements ExplorerManager.Provider, Refreshable {
     
     private BeanTreeView treeMain;
@@ -62,8 +65,8 @@ public final class ContractManagerTopComponent extends TopComponent implements E
         em = new ExplorerManager();
         initComponents();
         initCustomComponents();
-        setName(Bundle.CTL_ContractManagerTopComponent());
-        setToolTipText(Bundle.HINT_ContractManagerTopComponent());
+        setName(I18N.gm("ContractManager.module.name"));
+        setToolTipText(I18N.gm("ContractManager.module.tooltiptext"));
 
     }
     
@@ -71,6 +74,17 @@ public final class ContractManagerTopComponent extends TopComponent implements E
         treeMain = new BeanTreeView();
         pnlScrollMain.setViewportView(treeMain);
         associateLookup(ExplorerUtils.createLookup(em, getActionMap()));
+        
+        getActionMap().put(DefaultEditorKit.copyAction, ExplorerUtils.actionCopy(em));
+        getActionMap().put(DefaultEditorKit.cutAction, ExplorerUtils.actionCut(em));
+        getActionMap().put(DefaultEditorKit.pasteAction, ExplorerUtils.actionPaste(em));
+        getActionMap().put(DeleteBusinessObjectAction.ACTION_MAP_KEY, SystemAction.get(DeleteBusinessObjectAction.class));
+
+        //Now the keystrokes
+        InputMap keys = getInputMap(WHEN_IN_FOCUSED_WINDOW);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.copyAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.cutAction);
+        keys.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK), DefaultEditorKit.pasteAction);
     }
 
     /**

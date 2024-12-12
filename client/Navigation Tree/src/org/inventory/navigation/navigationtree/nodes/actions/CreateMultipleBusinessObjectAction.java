@@ -1,4 +1,4 @@
-/**
+/*
  *  Copyright 2010-2017 Neotropic SAS <contact@neotropic.co>.
  *
  *  Licensed under the EPL License, Version 1.0 (the "License");
@@ -28,6 +28,7 @@ import org.inventory.communications.core.LocalClassMetadataLight;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.core.services.utils.JComplexDialogPanel;
 import org.inventory.core.services.utils.MenuScroller;
 import org.inventory.navigation.navigationtree.nodes.AbstractChildren;
@@ -73,14 +74,16 @@ public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeA
         JComplexDialogPanel saveDialog = new JComplexDialogPanel(
             new String[] {"Name Pattern", "Number of Objects"}, new JComponent[] {txtNamePattern, spinnerNumberOfObjects});
         
-        if (JOptionPane.showConfirmDialog(null, saveDialog, "New Multiple", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+        if (JOptionPane.showConfirmDialog(null, saveDialog, 
+                "New Multiple Objects of [" + ((JMenuItem) e.getSource()).getName() + "]", 
+                JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             String namePattern = ((JTextField)saveDialog.getComponent("txtNamePattern")).getText();
             int numberOfObjects = 0;
             Object spinnerValue= ((JSpinner)saveDialog.getComponent("spinnerNumberOfObjects")).getValue();
             if (spinnerValue instanceof Integer) {
                 numberOfObjects = (Integer) spinnerValue;
                 if (numberOfObjects <= 0) {
-                    NotificationUtil.getInstance().showSimplePopup("Error", 
+                    NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), 
                         NotificationUtil.ERROR_MESSAGE, "The number of objects must be greater than 0");
                     return;
                 }
@@ -98,12 +101,12 @@ public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeA
                 namePattern);
             
             if (newObjects == null)
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
             else {
                 if (node.getChildren() instanceof AbstractChildren) //Some nodes are created on the fly and do not have children. For those cases, let's avoid refreshing their children lists
                     ((AbstractChildren) node.getChildren()).addNotify();
                 
-                NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "Elements created successfully");
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, "Elements created successfully");
             }
         }
     }
@@ -112,37 +115,50 @@ public final class CreateMultipleBusinessObjectAction extends GenericObjectNodeA
     public JMenuItem getPopupPresenter() {
         JMenu mnuPossibleChildren = new JMenu("New Multiple");
         
-        LocalObjectLight selectedObject = Utilities.actionsGlobalContext().lookup(LocalObjectLight.class);
-        if (selectedObject == null) 
+        //Since this action is not only available for ObjectNodes, but also for RootObjectNode instances, we can't just use setEnable(isEnabled())
+        //All object creation methods will behave the same way
+        if (Utilities.actionsGlobalContext().lookupResult(AbstractNode.class).allInstances().size() > 1) {
             mnuPossibleChildren.setEnabled(false);
-        else {
-            
-            List<LocalClassMetadataLight> items = com.getPossibleChildren(selectedObject.getClassName(), false);
-
-            if (items == null) {
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.INFO_MESSAGE,
-                    com.getError());
-                mnuPossibleChildren.setEnabled(false);
-            }
-            else {
-                if (items.isEmpty())
-                    mnuPossibleChildren.setEnabled(false);
-                else
-                    for(LocalClassMetadataLight item: items){
-                            JMenuItem smiChildren = new JMenuItem(item.getClassName());
-                            smiChildren.setName(item.getClassName());
-                            smiChildren.addActionListener(this);
-                            mnuPossibleChildren.add(smiChildren);
-                    }
-
-                MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
-            }
+            return mnuPossibleChildren;
         }
+        
+        LocalObjectLight selectedObject = Utilities.actionsGlobalContext().lookup(LocalObjectLight.class);
+        List<LocalClassMetadataLight> items = com.getPossibleChildren(selectedObject.getClassName(), false);
+
+        if (items == null) {
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.INFO_MESSAGE,
+                com.getError());
+            mnuPossibleChildren.setEnabled(false);
+        }
+        else {
+            if (items.isEmpty())
+                mnuPossibleChildren.setEnabled(false);
+            else
+                for(LocalClassMetadataLight item: items){
+                        JMenuItem smiChildren = new JMenuItem(item.getClassName());
+                        smiChildren.setName(item.getClassName());
+                        smiChildren.addActionListener(this);
+                        mnuPossibleChildren.add(smiChildren);
+                }
+
+            MenuScroller.setScrollerFor(mnuPossibleChildren, 20, 100);
+        }
+                
         return mnuPossibleChildren;
     }
 
     @Override
-    public String getValidator() {
-        return null;
+    public String[] getValidators() {
+        return null; //Enable this action for any object
+    }
+
+    @Override
+    public String[] appliesTo() {
+        return null; //Enable this action for any object
+    }
+    
+    @Override
+    public int numberOfNodes() {
+        return 1;
     }
 }

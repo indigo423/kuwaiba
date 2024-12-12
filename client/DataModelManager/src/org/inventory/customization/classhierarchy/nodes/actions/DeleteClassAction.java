@@ -16,49 +16,70 @@
 package org.inventory.customization.classhierarchy.nodes.actions;
 
 import java.awt.event.ActionEvent;
+import static javax.swing.Action.NAME;
+import static javax.swing.Action.SMALL_ICON;
+import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalClassMetadata;
 import org.inventory.communications.core.LocalPrivilege;
 import org.inventory.core.services.api.actions.GenericInventoryAction;
 import org.inventory.core.services.api.notifications.NotificationUtil;
+import org.inventory.core.services.i18n.I18N;
+import org.inventory.core.services.utils.ImageIconResource;
 import org.inventory.customization.classhierarchy.nodes.ClassMetadataChildren;
 import org.inventory.customization.classhierarchy.nodes.ClassMetadataNode;
+import org.openide.util.actions.Presenter;
 
 /**
  * Action to delete a class metadata
  * @author Adrian Martinez Molina <charles.bedon@kuwaiba.org>
  */
-public class DeleteClassAction extends GenericInventoryAction {
+public class DeleteClassAction extends GenericInventoryAction implements Presenter.Popup {
 
     private ClassMetadataNode node;
     private CommunicationsStub com;
+    private final JMenuItem popupPresenter;
 
     public DeleteClassAction(ClassMetadataNode node) {
-        putValue(NAME, "Delete Class");
+        putValue(NAME, I18N.gm("delete_class"));
         com = CommunicationsStub.getInstance();
         this.node = node;
+        
+        putValue(SMALL_ICON, ImageIconResource.WARNING_ICON);
+                
+        popupPresenter = new JMenuItem();
+        popupPresenter.setName((String) getValue(NAME));
+        popupPresenter.setText((String) getValue(NAME));
+        popupPresenter.setIcon((ImageIcon) getValue(SMALL_ICON));
+        popupPresenter.addActionListener(this);
     }
         
     @Override
     public void actionPerformed(ActionEvent ae) {
         LocalClassMetadata classMetaData = com.getMetaForClass(node.getClassMetadata().getClassName(), false);
 
-        if (JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this class?", 
-                "Data Integrity", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.CANCEL_OPTION)
+        if (JOptionPane.showConfirmDialog(null, I18N.gm("confirm_delete_class"), 
+                I18N.gm("data_integrity"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.CANCEL_OPTION)
             return;
         
         if (com.deleteClassMetadata(classMetaData.getOid())){
             if (node.getParentNode() != null) // null for the class hierarchy view widgets
                 ((ClassMetadataChildren)node.getParentNode().getChildren()).refreshList();
-            NotificationUtil.getInstance().showSimplePopup("Success", NotificationUtil.INFO_MESSAGE, "The class was deleted successfully");
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("success"), NotificationUtil.INFO_MESSAGE, I18N.gm("class_deleted"));
         }
         else
-            NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, com.getError());
+            NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, com.getError());
     }
     
     @Override
     public LocalPrivilege getPrivilege() {
         return new LocalPrivilege(LocalPrivilege.PRIVILEGE_DATA_MODEL_MANAGER, LocalPrivilege.ACCESS_LEVEL_READ_WRITE);
+    }
+
+    @Override
+    public JMenuItem getPopupPresenter() {
+        return popupPresenter;
     }
 }

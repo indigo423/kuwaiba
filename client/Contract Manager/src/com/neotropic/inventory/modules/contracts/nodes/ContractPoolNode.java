@@ -24,7 +24,7 @@ import org.inventory.communications.CommunicationsStub;
 import org.inventory.communications.core.LocalObjectLight;
 import org.inventory.communications.core.LocalPool;
 import org.inventory.core.services.api.notifications.NotificationUtil;
-import org.inventory.navigation.navigationtree.nodes.actions.ExecuteClassLevelReportAction;
+import org.inventory.core.services.i18n.I18N;
 import org.inventory.navigation.pools.nodes.PoolNode;
 import org.openide.nodes.Children;
 import org.openide.nodes.Node;
@@ -46,14 +46,14 @@ public class ContractPoolNode extends PoolNode {
     @Override
     public Action[] getActions(boolean context) {
         return new Action[] { ContractManagerActionFactory.getCreateContractAction(), 
-                              ExecuteClassLevelReportAction.getInstance(),
+                              null,
                                 ContractManagerActionFactory.getDeleteContractPoolAction(),
                             };
     }
     
     @Override
     public String getDisplayName() {
-        return String.format("%s [Pool of %s]", getPool().getName(), getPool().getClassName());
+        return String.format(I18N.gm("pool_of"), getPool().getName(), getPool().getClassName());
     }
     
     @Override
@@ -75,7 +75,7 @@ public class ContractPoolNode extends PoolNode {
             
             if (contracts == null) {
                 setKeys(Collections.EMPTY_LIST);
-                NotificationUtil.getInstance().showSimplePopup("Error", NotificationUtil.ERROR_MESSAGE, 
+                NotificationUtil.getInstance().showSimplePopup(I18N.gm("error"), NotificationUtil.ERROR_MESSAGE, 
                         CommunicationsStub.getInstance().getError());
             } else {
                 Collections.sort(contracts);
@@ -93,5 +93,4 @@ public class ContractPoolNode extends PoolNode {
             return new Node[] { new ContractNode(key)};
         }
     }
-    
 }
