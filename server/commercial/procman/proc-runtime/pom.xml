@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.neotropic.kuwaiba.modules.commercial</groupId>
         <artifactId>procman</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     
     <groupId>com.neotropic.kuwaiba.modules.commercial</groupId>
     <artifactId>proc-runtime</artifactId>
-    <version>2.1.1</version>
+    <version>2.1.2-SNAPSHOT</version>
     <name>Process Runtime</name>
     <description>Loads process definitions and manage the process instances</description>
     
@@ -17,25 +17,25 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>integration-api</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.neotropic.util</groupId>
             <artifactId>visual</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>persistence-api</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>northbound</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.flow.component</groupId>
@@ -44,7 +44,7 @@
         <dependency>
             <groupId>com.neotropic.kuwaiba.modules.commercial</groupId>
             <artifactId>whman</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>

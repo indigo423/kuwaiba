@@ -4,12 +4,12 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>core</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     
     <name>Containment Manager</name>
     <description>Containment manager, allows creates special management hierarchy</description>
-    <version>2.1.1</version>
+    <version>2.1.2-SNAPSHOT</version>
     <artifactId>containmentman</artifactId>
     <packaging>jar</packaging>
     
@@ -29,13 +29,13 @@
         <dependency>
             <groupId>org.neotropic.util</groupId>
             <artifactId>visual</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>logging</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         
          <!-- Vaadin -->

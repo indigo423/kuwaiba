@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>kuwaiba-server</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     <artifactId>branding</artifactId>
     <packaging>pom</packaging>

@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>optional</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -13,7 +13,7 @@
     <name>Physical Connections</name>
     <description>Provides tools and services that allow the creation of physical connections (optical, electrical and power-related)</description>
     <artifactId>physical-connections</artifactId>
-    <version>2.1.1</version>
+    <version>2.1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     <repositories>
         <repository>

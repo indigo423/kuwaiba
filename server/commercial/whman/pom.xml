@@ -4,11 +4,11 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>commercial</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     <groupId>com.neotropic.kuwaiba.modules.commercial</groupId>
     <artifactId>whman</artifactId>
-    <version>2.1.1</version>
+    <version>2.1.2-SNAPSHOT</version>
     <name>Warehouse Manager</name>
     <description>Manage the warehouses, spare parts and helps to support Process Manager workflows related to stored and purchased inventory assets</description>
     
@@ -22,27 +22,27 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>internationalization</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.util</groupId>
             <artifactId>visual</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>integration-api</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>navigation</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>Visualization</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
     </dependencies>
     

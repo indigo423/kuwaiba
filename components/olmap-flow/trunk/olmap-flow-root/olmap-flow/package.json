@@ -73,7 +73,7 @@
     "chokidar": "^3.5.0",
     "compression-webpack-plugin": "4.0.1",
     "copy-webpack-plugin": "5.1.2",
-    "css-loader": "4.2.1",
+    "css-loader": "5.2.7",
     "extra-watch-webpack-plugin": "1.0.3",
     "extract-loader": "5.1.0",
     "file-loader": "6.1.0",
@@ -86,7 +86,9 @@
     "webpack-babel-multi-target-plugin": "2.5.0",
     "webpack-cli": "3.3.11",
     "webpack-dev-server": "3.11.0",
-    "webpack-merge": "4.2.2"
+    "webpack-merge": "4.2.2",
+    "loader-utils": "2.0.4",
+    "@types/node": "18.14.0"
   },
   "vaadin": {
     "dependencies": {
@@ -161,7 +163,7 @@
       "chokidar": "^3.5.0",
       "compression-webpack-plugin": "4.0.1",
       "copy-webpack-plugin": "5.1.2",
-      "css-loader": "4.2.1",
+      "css-loader": "5.2.7",
       "extra-watch-webpack-plugin": "1.0.3",
       "extract-loader": "5.1.0",
       "file-loader": "6.1.0",
@@ -174,7 +176,9 @@
       "webpack-babel-multi-target-plugin": "2.5.0",
       "webpack-cli": "3.3.11",
       "webpack-dev-server": "3.11.0",
-      "webpack-merge": "4.2.2"
+      "webpack-merge": "4.2.2",
+      "loader-utils": "2.0.4",
+      "@types/node": "18.14.0"
     },
     "hash": "927f662382d3fd3b7fda8cbd04a393a7f062277ba95f841aef618bf196d042c1"
   }

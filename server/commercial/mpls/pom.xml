@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>commercial</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -13,14 +13,14 @@
     <groupId>com.neotropic.kuwaiba.modules.commercial</groupId>
     <artifactId>mpls</artifactId>
     <packaging>jar</packaging>
-    <version>2.1.1</version>
+    <version>2.1.2-SNAPSHOT</version>
     <name>MPLS Networks</name>
     <description>Tools and services to support for MPLS networks</description>
     <dependencies>
          <dependency>
             <groupId>org.neotropic.util</groupId>
             <artifactId>visual</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.neotropic.flow.component</groupId>
@@ -29,23 +29,23 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>navigation</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>Visualization</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>reports</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency> 
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>integration-api</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.vaadin.componentfactory</groupId>
@@ -55,7 +55,7 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>logging</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
     </dependencies>
     

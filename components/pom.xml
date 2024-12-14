@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.neotropic.flow.component</groupId>
+    <artifactId>flow-components-parent</artifactId>
+    <name>flow-components-parent</name>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <modules>
+        <!-- these modules allow a build of 2.1.1 (2.1.2-SNAPSHOT) -->
+        <module>ace-editor-flow/ace-editor-flow-root</module>
+        <module>gantt-chart-flow/trunk/gantt-chart-flow-root</module>
+        <module>gcharts-flow/version-1.0/gchart-flow-root</module>
+        <!-- NOTE needed to fix pom in this module so it compiles -->
+        <module>gmaps-flow/trunk</module>
+        <module>mxgraph-flow/mx-graph-flow-root</module>
+        <module>olmap-flow/trunk/olmap-flow-root</module>
+        <!-- <module>paper-autocomplete-flow</module> -->
+        <module>paper-dialog-flow</module>
+        <module>paper-toggle-button-flow</module>
+    </modules>
+</project>

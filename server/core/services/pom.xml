@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.neotropic.kuwaiba</groupId>
         <artifactId>core</artifactId>
-        <version>2.1.1</version>
+        <version>2.1.2-SNAPSHOT</version>
     </parent>
     
     <artifactId>services</artifactId>
@@ -37,7 +37,7 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>reference-implementation</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
         <!-- Vaadin -->
@@ -48,7 +48,7 @@
         <dependency>
             <groupId>org.neotropic.util</groupId>
             <artifactId>visual</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -63,7 +63,7 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>Visualization</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.neotropic.flow.component</groupId>
@@ -78,7 +78,7 @@
         <dependency>
             <groupId>org.neotropic.kuwaiba</groupId>
             <artifactId>logging</artifactId>
-            <version>2.1.1</version>
+            <version>2.1.2-SNAPSHOT</version>
         </dependency>
 
     </dependencies>
