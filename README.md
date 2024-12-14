@@ -41,9 +41,9 @@ A master build pom has also been added to the components dependencies.
 Note that this only builds modules necessary for 2.2.2-SNAPSHOT and the gmaps-flow/trunk module had to be fixed so it would compile.
 * We have modified the trunk pom.xml to use 2.2.2-SNAPSHOT so that builds will be done on each checkin and the new artifacts will be used down stream.
 * Ideally a dedicated maven repo ( artifactory / jfrog etc) would be set up to store the release and snapshot jars from a build
-* The 2.2.x branch requires java 11. Lambock will not not let thecode compile with later java versions and there may be other problems. We note that kuwaiba 2.5 targets java 17. 
+* The 2.2.x branch requires java 11. Lambock will not not let the code compile with later java versions and there may be other problems. We note that kuwaiba 2.5 targets java 17. 
 * We have only built the code but we have not tested the functionality. 
 We note that the build contains no unit tests and would recommend that at least some final integration smoke tests are provided.
 * This build does not sign the jars. For better security, jar signing should be introduced.
-* We have not (yet) recreated a docker container for the code as part of the build. We would recommend that the container is built after the main build using the signed jars.
+* We have not (yet) recreated a docker container for the code as part of the build. We would recommend that the container is built after the main build using the signed jars. RPM and DEB packages should also be created to ease deployment.
 

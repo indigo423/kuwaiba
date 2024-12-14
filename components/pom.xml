@@ -18,7 +18,7 @@
         <module>gantt-chart-flow/trunk/gantt-chart-flow-root</module>
         <module>gcharts-flow/version-1.0/gchart-flow-root</module>
         <!-- NOTE needed to fix pom in this module so it compiles -->
-        <module>gmaps-flow/trunk</module>
+        <module>gmaps-flow/trunk/gmaps-flow-root</module>
         <module>mxgraph-flow/mx-graph-flow-root</module>
         <module>olmap-flow/trunk/olmap-flow-root</module>
         <!-- <module>paper-autocomplete-flow</module> -->
