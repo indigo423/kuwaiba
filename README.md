@@ -1,7 +1,8 @@
-# Kuwaiba Open Source Inventory
+# Kuwaiba Open Source Inventory 
+
+[![kuwaiba](https://github.com/indigo423/kuwaiba/actions/workflows/build-kuwaiba.yml/badge.svg)](https://github.com/indigo423/kuwaiba/actions/workflows/build-kuwaiba.yml)
 
 This repository is an experimental github fork of [Kuwaiba on sourceforge](https://sourceforge.net/projects/kuwaiba/)
-
 It has been created to demonstrate the benefits of git and github actions for automatic CI/CD
 
 # Kuwaiba Introduction
