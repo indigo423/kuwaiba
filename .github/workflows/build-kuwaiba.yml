@@ -1,0 +1,17 @@
+---
+name: kuwaiba
+run-name: Build and run test suites
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/bluebird/java-builder:0.1.3.jdk-11.b3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cleaning project for quick validation
+        run: |
+          mvn install

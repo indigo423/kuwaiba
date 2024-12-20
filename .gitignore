@@ -22,7 +22,7 @@ target/
  
 # Mac
 .DS_Store
-
+.java-version
 
 # NetBeans specific #
 nbproject
