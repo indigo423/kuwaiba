@@ -20,10 +20,24 @@ deps:
 	@echo "Check Java version 11"
 	@java -version 2>&1 | grep -e "\"11\..*\""
 
+.PHONY oci-deps:
+oci-deps:
+	@command -v docker
+
 .PHONY kuwaiba:
 kuwaiba: deps
-	@mvn package
+	@mvn install
+	@mvn --also-make --projects webclient -f server/ -Pproduction install
+
+.PHONY sample-db:
+sample-db:
+	@unzip server/dbs/01_empty_kuwaiba.db.zip
+
+.PHONY oci:
+oci: oci-deps sample-db
+	@docker build -t kuwaiba.local .
 
 .PHONY clean:
 clean: deps
 	@mvn clean
+

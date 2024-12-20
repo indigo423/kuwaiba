@@ -1,0 +1,9 @@
+.github/
+.idea/
+client/
+components/
+docs/
+img/
+prototype/
+third-party/
+tools/
