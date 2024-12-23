@@ -46,5 +46,6 @@ Note that this only builds modules necessary for 2.2.2-SNAPSHOT and the gmaps-fl
 * We have only built the code but we have not tested the functionality. 
 We note that the build contains no unit tests and would recommend that at least some final integration smoke tests are provided.
 * This build does not sign the jars. For better security, jar signing should be introduced.
-* We have not (yet) recreated a docker container for the code as part of the build. We would recommend that the container is built after the main build using the signed jars. RPM and DEB packages should also be created to ease deployment.
+* We have recreated a docker container for the code as part of the build. THe Docker file is now at the root of the repository with a MAKE file. This should be run after the build using `make && make oci`
+* We would recommend that the container is built after the main build using the signed jars. RPM and DEB packages should also be created to ease deployment.
 
